@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.astro/
+.wrangler/
+.devenv/
+devenv.local.nix
+.env
+.dev.vars
+*.tsbuildinfo

@@ -1,0 +1,102 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "promise", "unicorn", "typescript", "oxc"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "nursery": "warn"
+  },
+  "rules": {
+    "no-magic-numbers": [
+      "error",
+      {
+        "ignore": [0, 1],
+        "ignoreArrayIndexes": true
+      }
+    ],
+    "unicorn/no-null": "off",
+    "no-console": "error",
+    "no-debugger": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+    "unicorn/prefer-ternary": "off",
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "args": "all",
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-explicit-any": [
+      "error",
+      {
+        "fixToUnknown": true
+      }
+    ],
+    "sort-imports": "off",
+    "import/no-duplicates": [
+      "error",
+      {
+        "preferInline": true
+      }
+    ],
+    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
+    "import/max-dependencies": [
+      "error",
+      {
+        "max": 10,
+        "ignoreTypeImports": true
+      }
+    ],
+    "oxc/no-async-await": "off",
+    "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
+    "import/default": "off",
+    "typescript/prefer-readonly-parameter-types": "off",
+    "import/no-named-export": "off",
+    "import/no-default-export": "off",
+    "import/prefer-default-export": "off",
+    "one-var": "off"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2025": true
+  },
+  "ignorePatterns": ["dist", ".astro", "node_modules", "src/legacy"],
+  "overrides": [
+    {
+      "files": ["*.test.ts"],
+      "rules": {
+        "typescript/no-explicit-any": "off",
+        "no-console": "off",
+        "eslint/max-lines": "off",
+        "eslint/max-lines-per-function": "off",
+        "eslint/max-statements": "off",
+        "eslint/no-magic-numbers": "off"
+      }
+    },
+    {
+      "files": ["**/*.astro"],
+      "globals": {
+        "Astro": "readonly"
+      },
+      "rules": {
+        "import/no-unassigned-import": "off"
+      }
+    },
+    {
+      "files": ["*.config.ts"],
+      "rules": {
+        "import/no-nodejs-modules": "off"
+      }
+    }
+  ]
+}
