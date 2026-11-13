@@ -126,6 +126,7 @@ const render = (parts: Parts, drill: Drill): void => {
   parts.hint.textContent = describe(drill);
   parts.root.dataset.wrong = String(drill.wrong);
   parts.root.dataset.done = String(isDone(drill));
+  parts.root.dataset.started = String(drill.position > createDrill(drill.target).position);
   highlight(parts.keyboard, drill);
 };
 
