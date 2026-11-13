@@ -48,7 +48,7 @@ const opening: readonly Beat[] = [
   {
     append: true,
     id: 'line-braces',
-    lines: '5,7',
+    lines: '5,6,7',
     say: '未來大部分東西都會放在 {} 這裡面。',
     stage: 'code',
   },
