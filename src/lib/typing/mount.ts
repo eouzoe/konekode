@@ -1,6 +1,18 @@
-import { createDrill, expectedChar, isDone, press, type Drill } from './drill';
+import {
+  createDrill,
+  escape,
+  expectedChar,
+  hasStarted,
+  insertKey,
+  isDone,
+  isTyped,
+  press,
+  remind,
+  type Drill,
+} from './drill';
 import {
   enterKey,
+  escapeKey,
   findKey,
   rows,
   shiftKey,
@@ -8,8 +20,7 @@ import {
   type KeyCap,
   type KeyPress,
 } from './keyboard';
-
-const deleteKeys = new Set(['Backspace', 'Delete']);
+import { messages } from './messages';
 
 interface Parts {
   readonly current: HTMLElement;
@@ -17,9 +28,12 @@ interface Parts {
   readonly hint: HTMLElement;
   readonly input: HTMLTextAreaElement;
   readonly keyboard: HTMLElement;
+  readonly mode: HTMLElement;
   readonly rest: HTMLElement;
   readonly root: HTMLElement;
 }
+
+const deleteKeys = new Set(['Backspace', 'Delete']);
 
 const findPart = (root: Element, role: string): HTMLElement => {
   const found = root.querySelector(`[data-role="${role}"]`);
@@ -57,6 +71,7 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
     row.map((cap) => makeKey(cap.base, capLabel(cap), false)),
   );
   keyboard.replaceChildren(
+    makeRow([makeKey(escapeKey, 'Esc', true)]),
     makeRow(digits),
     makeRow(upper),
     makeRow([...home, makeKey(enterKey, 'Enter', true)]),
@@ -67,28 +82,70 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
 
 const describeNext = (char: string): string => {
   if (char === '\n') {
-    return '按 Enter';
+    return messages.pressEnter;
   }
   if (char === ' ') {
-    return '按空白鍵';
+    return messages.pressSpace;
   }
-  return `輸入 ${char}`;
+  return `${messages.typeChar}${char}`;
+};
+
+const describeNormal = (drill: Drill): string => {
+  if (drill.feedback === 'ime') {
+    return messages.ime;
+  }
+  if (drill.feedback === 'need-insert') {
+    return messages.needInsert;
+  }
+  if (hasStarted(drill)) {
+    return messages.resume;
+  }
+  return messages.begin;
+};
+
+const describeTyped = (drill: Drill): string => {
+  if (drill.feedback === 'none') {
+    return messages.pressEscape;
+  }
+  return messages.extraKey;
+};
+
+const describeInsert = (drill: Drill): string => {
+  const next = describeNext(expectedChar(drill));
+  if (drill.feedback === 'ime') {
+    return messages.ime;
+  }
+  if (drill.feedback === 'no-delete') {
+    return `${messages.noDelete}${next}`;
+  }
+  if (drill.feedback === 'wrong-key') {
+    return `${messages.wrong}${next}`;
+  }
+  return next;
 };
 
 const describe = (drill: Drill): string => {
   if (isDone(drill)) {
-    return `打完了。打錯 ${String(drill.mistakes)} 次。`;
+    return messages.done;
   }
-  const next = describeNext(expectedChar(drill));
-  if (drill.wrong) {
-    return `不是這個鍵。${next}`;
+  if (drill.mode === 'normal') {
+    return describeNormal(drill);
   }
-  return next;
+  if (isTyped(drill)) {
+    return describeTyped(drill);
+  }
+  return describeInsert(drill);
 };
 
 const nextKey = (drill: Drill): KeyPress | null => {
   if (isDone(drill)) {
     return null;
+  }
+  if (drill.mode === 'normal') {
+    return findKey(insertKey);
+  }
+  if (isTyped(drill)) {
+    return { key: escapeKey, shift: false };
   }
   return findKey(expectedChar(drill));
 };
@@ -116,23 +173,65 @@ const renderCode = (parts: Parts, drill: Drill): void => {
   parts.rest.textContent = target.slice(position + 1);
 };
 
+const modeLabel = (drill: Drill): string => {
+  if (drill.mode === 'insert') {
+    return messages.modeInsert;
+  }
+  return messages.modeNormal;
+};
+
 const render = (parts: Parts, drill: Drill): void => {
   renderCode(parts, drill);
   parts.hint.textContent = describe(drill);
-  parts.root.dataset.wrong = String(drill.wrong);
-  parts.root.dataset.done = String(isDone(drill));
-  parts.root.dataset.started = String(drill.position > createDrill(drill.target).position);
+  parts.mode.textContent = modeLabel(drill);
+  Object.assign(parts.root.dataset, {
+    done: String(isDone(drill)),
+    mode: drill.mode,
+    started: String(hasStarted(drill)),
+    wrong: String(drill.feedback === 'wrong-key'),
+  });
   highlight(parts.keyboard, drill);
 };
 
-const readInput = (event: InputEvent): string | null => {
+const readInput = (event: InputEvent): string => {
   if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
     return '\n';
   }
   if (event.inputType === 'insertText') {
-    return event.data;
+    return event.data ?? '';
   }
-  return null;
+  return '';
+};
+
+const typeInto = (drill: Drill, text: string): Drill => {
+  let next = drill;
+  for (const char of text) {
+    next = press(next, char);
+  }
+  return next;
+};
+
+const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
+  if (event.isComposing) {
+    return drill;
+  }
+  if (event.key === escapeKey) {
+    event.preventDefault();
+    return escape(drill);
+  }
+  if (deleteKeys.has(event.key)) {
+    event.preventDefault();
+    return remind(drill, 'no-delete');
+  }
+  return drill;
+};
+
+const onInput = (drill: Drill, event: InputEvent): Drill => {
+  event.preventDefault();
+  if (event.isComposing || event.inputType === 'insertCompositionText') {
+    return remind(drill, 'ime');
+  }
+  return typeInto(drill, readInput(event));
 };
 
 const collectParts = (root: HTMLElement): Parts => {
@@ -146,6 +245,7 @@ const collectParts = (root: HTMLElement): Parts => {
     hint: findPart(root, 'hint'),
     input,
     keyboard: findPart(root, 'keyboard'),
+    mode: findPart(root, 'mode'),
     rest: findPart(root, 'rest'),
     root,
   };
@@ -154,28 +254,21 @@ const collectParts = (root: HTMLElement): Parts => {
 const mountDrill = (root: HTMLElement): void => {
   const parts = collectParts(root);
   let drill = createDrill(root.dataset.target ?? '');
-  buildKeyboard(parts.keyboard);
-  render(parts, drill);
-  parts.input.addEventListener('beforeinput', (event) => {
-    event.preventDefault();
-    if (event.isComposing || event.inputType === 'insertCompositionText') {
-      parts.hint.textContent = '現在是中文輸入。先切到英文輸入再打。';
-      return;
-    }
+  const update = (next: Drill): void => {
     const wasDone = isDone(drill);
-    for (const char of readInput(event) ?? '') {
-      drill = press(drill, char);
-    }
+    drill = next;
     render(parts, drill);
     if (!wasDone && isDone(drill)) {
       root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
     }
+  };
+  buildKeyboard(parts.keyboard);
+  render(parts, drill);
+  parts.input.addEventListener('beforeinput', (event) => {
+    update(onInput(drill, event));
   });
   parts.input.addEventListener('keydown', (event) => {
-    if (deleteKeys.has(event.key)) {
-      event.preventDefault();
-      parts.hint.textContent = `不用刪除喔！直接${describeNext(expectedChar(drill))}`;
-    }
+    update(onKeyDown(drill, event));
   });
   parts.input.addEventListener('compositionend', () => {
     parts.input.value = '';

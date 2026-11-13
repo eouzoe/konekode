@@ -1,9 +1,16 @@
+type Mode = 'insert' | 'normal';
+
+type Feedback = 'ime' | 'need-insert' | 'no-delete' | 'none' | 'wrong-key';
+
 interface Drill {
+  readonly feedback: Feedback;
   readonly mistakes: number;
+  readonly mode: Mode;
   readonly position: number;
   readonly target: string;
-  readonly wrong: boolean;
 }
+
+const insertKey = 'i';
 
 const skipIndent = (target: string, start: number): number => {
   let index = start;
@@ -14,29 +21,70 @@ const skipIndent = (target: string, start: number): number => {
 };
 
 const createDrill = (target: string): Drill => ({
+  feedback: 'none',
   mistakes: 0,
+  mode: 'normal',
   position: skipIndent(target, 0),
   target,
-  wrong: false,
 });
 
 const expectedChar = (drill: Drill): string => drill.target.charAt(drill.position);
 
-const isDone = (drill: Drill): boolean => drill.position >= drill.target.length;
+const isTyped = (drill: Drill): boolean => drill.position >= drill.target.length;
 
-const press = (drill: Drill, input: string): Drill => {
-  if (isDone(drill)) {
+const isDone = (drill: Drill): boolean => isTyped(drill) && drill.mode === 'normal';
+
+const hasStarted = (drill: Drill): boolean => drill.position > skipIndent(drill.target, 0);
+
+const command = (drill: Drill, input: string): Drill => {
+  if (isTyped(drill)) {
     return drill;
   }
+  if (input === insertKey) {
+    return { ...drill, feedback: 'none', mode: 'insert' };
+  }
+  return { ...drill, feedback: 'need-insert' };
+};
+
+const insert = (drill: Drill, input: string): Drill => {
   const expected = expectedChar(drill);
-  if (input !== expected) {
-    return { ...drill, mistakes: drill.mistakes + 1, wrong: true };
+  if (isTyped(drill) || input !== expected) {
+    return { ...drill, feedback: 'wrong-key', mistakes: drill.mistakes + 1 };
   }
   const next = drill.position + 1;
   if (expected === '\n') {
-    return { ...drill, position: skipIndent(drill.target, next), wrong: false };
+    return { ...drill, feedback: 'none', position: skipIndent(drill.target, next) };
   }
-  return { ...drill, position: next, wrong: false };
+  return { ...drill, feedback: 'none', position: next };
 };
 
-export { createDrill, expectedChar, isDone, press, type Drill };
+const press = (drill: Drill, input: string): Drill => {
+  if (drill.mode === 'normal') {
+    return command(drill, input);
+  }
+  return insert(drill, input);
+};
+
+const escape = (drill: Drill): Drill => ({ ...drill, feedback: 'none', mode: 'normal' });
+
+const remind = (drill: Drill, feedback: Feedback): Drill => {
+  if (isDone(drill)) {
+    return drill;
+  }
+  return { ...drill, feedback };
+};
+
+export {
+  createDrill,
+  escape,
+  expectedChar,
+  hasStarted,
+  insertKey,
+  isDone,
+  isTyped,
+  press,
+  remind,
+  type Drill,
+  type Feedback,
+  type Mode,
+};

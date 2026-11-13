@@ -9,6 +9,7 @@ interface KeyPress {
 }
 
 const enterKey = 'Enter';
+const escapeKey = 'Escape';
 const shiftKey = 'Shift';
 const spaceKey = 'Space';
 
@@ -40,4 +41,4 @@ const findKey = (char: string): KeyPress | null => {
   return null;
 };
 
-export { enterKey, findKey, rows, shiftKey, spaceKey, type KeyCap, type KeyPress };
+export { enterKey, escapeKey, findKey, rows, shiftKey, spaceKey, type KeyCap, type KeyPress };

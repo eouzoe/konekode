@@ -10,6 +10,7 @@ const { target } = Astro.props;
   <div class="drill-top">
     <pre
       class="drill-code"><span data-role="done" class="is-done" /><span data-role="current" class="is-current" /><span data-role="rest" class="is-rest" /></pre>
+    <p class="drill-mode" data-role="mode"></p>
     <textarea
       data-role="input"
       class="drill-input"
@@ -46,7 +47,7 @@ const { target } = Astro.props;
   }
   .drill-code {
     margin: 0;
-    padding: 1.25rem;
+    padding: 1.25rem 1.25rem 2.25rem;
     border: 1px solid var(--line);
     border-radius: 0.75rem;
     background: var(--panel);
@@ -75,6 +76,21 @@ const { target } = Astro.props;
   }
   .drill[data-done='true'] .is-current {
     display: none;
+  }
+  .drill-mode {
+    position: absolute;
+    left: 1.25rem;
+    bottom: 0.5rem;
+    margin: 0;
+    color: var(--soft);
+    font-family: var(--mono);
+    font-size: 0.875rem;
+    user-select: none;
+  }
+  .drill[data-mode='normal'] .is-current {
+    background: none;
+    color: var(--faint);
+    outline: 2px solid var(--accent);
   }
   .drill-input {
     position: absolute;
