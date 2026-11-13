@@ -10,6 +10,7 @@ interface Scene {
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
   readonly stdin: HTMLTextAreaElement | null;
+  timer: ReturnType<typeof setTimeout> | null;
   readonly unit: string;
 }
 
@@ -71,17 +72,44 @@ const setNote = (scene: Scene, text: string): void => {
   }
 };
 
+const isShown = (scene: Scene, at: number): boolean => {
+  if (at > scene.index) {
+    return false;
+  }
+  return scene.beats
+    .slice(at + forward, scene.index + forward)
+    .every((beat) => beat.dataset.append === 'true');
+};
+
+const schedule = (scene: Scene, beat: HTMLElement): void => {
+  if (scene.timer !== null) {
+    clearTimeout(scene.timer);
+    scene.timer = null;
+  }
+  const delay = Number(beat.dataset.auto ?? '');
+  if (delay > 0) {
+    scene.timer = setTimeout(() => {
+      scene.root.dispatchEvent(new CustomEvent('scene:auto'));
+    }, delay);
+  }
+};
+
+const refresh = (scene: Scene, beat: HTMLElement): void => {
+  schedule(scene, beat);
+  showStage(scene, beat);
+  fillInput(scene, beat);
+  setNote(scene, '');
+};
+
 const show = (scene: Scene): void => {
   const beat = scene.beats[scene.index];
   if (beat === undefined) {
     return;
   }
   for (const [at, other] of scene.beats.entries()) {
-    other.hidden = at !== scene.index;
+    other.hidden = !isShown(scene, at);
   }
-  showStage(scene, beat);
-  fillInput(scene, beat);
-  setNote(scene, '');
+  refresh(scene, beat);
   if (beat.dataset.wait === 'drill' && isWaiting(scene)) {
     scene.root.querySelector<HTMLElement>('[data-role="input"]')?.focus();
   }
@@ -159,6 +187,9 @@ const onKey = (scene: Scene, event: KeyboardEvent): void => {
 };
 
 const listenChecks = (scene: Scene): void => {
+  scene.root.addEventListener('scene:auto', () => {
+    move(scene, forward);
+  });
   scene.root.addEventListener('drill:done', () => {
     complete(scene, 'drill', '');
   });
@@ -200,6 +231,7 @@ const mountScene = (root: HTMLElement): void => {
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
     stdin: root.querySelector<HTMLTextAreaElement>('[data-role="stdin"]'),
+    timer: null,
     unit: root.dataset.unit ?? '',
   };
   restore(scene);

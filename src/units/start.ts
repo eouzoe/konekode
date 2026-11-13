@@ -1,4 +1,6 @@
 interface Beat {
+  readonly append?: boolean;
+  readonly auto?: number;
   readonly expect?: string;
   readonly id: string;
   readonly input?: string;
@@ -40,9 +42,16 @@ const task = '輸入有兩個整數。請先印出第二個數，換行；再印
 const opening: readonly Beat[] = [
   { id: 'intro', say: '好的，那就讓我們從第一步開始吧！', stage: 'empty' },
   { id: 'see-template', say: '看看這些東東。', stage: 'code' },
-  { id: 'line-include', lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
-  { id: 'line-using', lines: '2', say: '一行用來讓我們少打 std 的東西。', stage: 'code' },
-  { id: 'line-main', lines: '4,5,7', say: '然後是我們的主函式。', stage: 'code' },
+  { id: 'line-include', lines: '1', say: '一行 include 萬能標頭檔。', stage: 'code' },
+  { id: 'line-using', lines: '2', say: '一行用來讓我們少打 std:: 的東東。', stage: 'code' },
+  { auto: 3000, id: 'line-main', lines: '4', say: '然後是我們的主函式。', stage: 'code' },
+  {
+    append: true,
+    id: 'line-braces',
+    lines: '5,7',
+    say: '未來大部分東西都會放在 {} 這裡面。',
+    stage: 'code',
+  },
   { id: 'line-fastio', lines: '6', say: '還有輸入輸出加速。', stage: 'code' },
   { id: 'lost', say: '是不是完全聽不懂？', stage: 'code' },
   { id: 'never-mind', say: '沒關係，先別管這些。', stage: 'code' },
