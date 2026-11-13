@@ -1,3 +1,5 @@
+import { readDraft, writeDraft } from '@/lib/progress/store';
+
 import { type Outcome } from './protocol';
 import { runProgram, warmUp } from './runner';
 
@@ -96,6 +98,17 @@ const preload = (): void => {
   }
 };
 
+const keepDraft = (parts: Parts): void => {
+  const name = parts.root.dataset.draft ?? '';
+  if (name === '') {
+    return;
+  }
+  parts.source.value = readDraft(name) ?? parts.source.value;
+  parts.source.addEventListener('input', () => {
+    writeDraft(name, parts.source.value);
+  });
+};
+
 const mountRunner = (root: HTMLElement): void => {
   const parts: Parts = {
     button: find(root, 'run', HTMLButtonElement),
@@ -111,6 +124,7 @@ const mountRunner = (root: HTMLElement): void => {
   parts.source.addEventListener('keydown', (event) => {
     insertIndent(event, parts.source);
   });
+  keepDraft(parts);
 };
 
 const mountRunners = (): void => {

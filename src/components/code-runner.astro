@@ -3,12 +3,13 @@ interface Props {
   source: string;
   input?: string;
   withInput?: boolean;
+  draft?: string;
 }
 
-const { source, input = '', withInput = false } = Astro.props;
+const { source, input = '', withInput = false, draft = '' } = Astro.props;
 ---
 
-<section class="runner" data-code-runner>
+<section class="runner" data-code-runner data-draft={draft}>
   <label class="field">
     <span>程式</span>
     <textarea

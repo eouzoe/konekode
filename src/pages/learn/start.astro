@@ -4,6 +4,7 @@ import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
 
 interface Beat {
+  id: string;
   say: string;
   stage: 'code' | 'drill' | 'empty' | 'run';
   lines?: string;
@@ -44,78 +45,96 @@ cout << a << '\n';`;
 const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
 
 const beats: Beat[] = [
-  { say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
-  { say: '先記住底下這些東西。', stage: 'code' },
-  { lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
-  { lines: '2', say: '一行用來讓你少打 std 的東西。', stage: 'code' },
-  { lines: '4,5,7', say: '然後是你的主函式。', stage: 'code' },
-  { lines: '6', say: '還有輸入輸出加速。', stage: 'code' },
-  { say: '是不是完全聽不懂？', stage: 'code' },
-  { say: '沒關係，先別管這些。', stage: 'code' },
-  { say: '反正你接下來每一支能執行的程式，都要寫這些東西。', stage: 'code' },
-  { say: '所以，記下來。', stage: 'code' },
-  { say: '在進入下一段之前，請親自手打一次吧。', stage: 'drill', wait: 'drill' },
-  { say: '好，就是這樣。', stage: 'code' },
-  { say: '現在開始讓程式做事。', stage: 'run' },
-  { say: '請在大括號裡面那一行空白，打上這一行。', snippet: print7, stage: 'run' },
-  { expect: '7', say: '打好之後，請按執行。', snippet: print7, stage: 'run', wait: 'run' },
-  { say: '有看到 7 嗎？cout 的工作就是把東西印出來。', stage: 'run' },
-  { say: '接下來，我們再多印一個 8。', stage: 'run' },
-  { expect: '78', say: '請在下面再加一行，然後按執行。', snippet: print78, stage: 'run', wait: 'run' },
-  { say: '結果變成 78 了，兩個數字黏在一起。', stage: 'run' },
-  { say: '這是因為電腦很老實。你沒有叫它換行，它就不會換行。', stage: 'run' },
-  { say: String.raw`換行要自己印出來，寫法是 '\n'。`, snippet: printLines, stage: 'run' },
+  { id: 'intro', say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
+  { id: 'see-template', say: '先記住底下這些東西。', stage: 'code' },
+  { id: 'line-include', lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
+  { id: 'line-using', lines: '2', say: '一行用來讓你少打 std 的東西。', stage: 'code' },
+  { id: 'line-main', lines: '4,5,7', say: '然後是你的主函式。', stage: 'code' },
+  { id: 'line-fastio', lines: '6', say: '還有輸入輸出加速。', stage: 'code' },
+  { id: 'lost', say: '是不是完全聽不懂？', stage: 'code' },
+  { id: 'never-mind', say: '沒關係，先別管這些。', stage: 'code' },
+  { id: 'every-program', say: '反正你接下來每一支能執行的程式，都要寫這些東西。', stage: 'code' },
+  { id: 'remember', say: '所以，記下來。', stage: 'code' },
+  { id: 'type-template', say: '在進入下一段之前，請親自手打一次吧。', stage: 'drill', wait: 'drill' },
+  { id: 'typed', say: '好，就是這樣。', stage: 'code' },
+  { id: 'do-things', say: '現在開始讓程式做事。', stage: 'run' },
+  { id: 'add-cout', say: '請在大括號裡面那一行空白，打上這一行。', snippet: print7, stage: 'run' },
+  { id: 'indent', say: '寫在大括號裡面的每一行，都要往右縮進去四格。', snippet: print7, stage: 'run' },
+  {
+    id: 'indent-why',
+    say: '這樣一眼就看得出來，哪幾行是屬於這個大括號的。',
+    snippet: print7,
+    stage: 'run',
+  },
+  {
+    id: 'tab',
+    say: '你不用自己按四次空白鍵。按一下鍵盤左邊的 Tab，就會一次空四格。',
+    snippet: print7,
+    stage: 'run',
+  },
+  { expect: '7', id: 'run-cout', say: '先按 Tab，再打上這一行。打好之後，請按執行。', snippet: print7, stage: 'run', wait: 'run' },
+  { id: 'saw-7', say: '有看到 7 嗎？cout 的工作就是把東西印出來。', stage: 'run' },
+  { id: 'add-8', say: '接下來，我們再多印一個 8。', stage: 'run' },
+  { expect: '78', id: 'run-78', say: '請在下面再加一行，然後按執行。', snippet: print78, stage: 'run', wait: 'run' },
+  { id: 'stuck-together', say: '結果變成 78 了，兩個數字黏在一起。', stage: 'run' },
+  { id: 'honest', say: '這是因為電腦很老實。你沒有叫它換行，它就不會換行。', stage: 'run' },
+  { id: 'newline', say: String.raw`換行要自己印出來，寫法是 '\n'。`, snippet: printLines, stage: 'run' },
   {
     expect: '7\n8',
+    id: 'run-newline',
     say: '請把兩行都改成這樣，再按一次執行。',
     snippet: printLines,
     stage: 'run',
     wait: 'run',
   },
-  { say: String.raw`這次 7 和 8 各佔一行了。以後每印完一行，都要記得加上 '\n'。`, stage: 'run' },
-  { say: '現在來讓程式記住一個數字。', stage: 'run' },
+  { id: 'each-line', say: String.raw`這次 7 和 8 各佔一行了。以後每印完一行，都要記得加上 '\n'。`, stage: 'run' },
+  { id: 'remember-number', say: '現在來讓程式記住一個數字。', stage: 'run' },
   {
+    id: 'int-explained',
     say: 'int 是整數的意思，a 是你幫它取的名字，大括號裡面放的是它一開始的值。',
     snippet: remember,
     stage: 'run',
   },
   {
     expect: '7',
+    id: 'run-int',
     say: '請把剛才那兩行換成這兩行，再按執行。',
     snippet: remember,
     stage: 'run',
     wait: 'run',
   },
-  { say: '印出來的還是 7，不過這次的 7 是從 a 裡面拿出來的。', stage: 'run' },
-  { say: '像 a 這樣可以放東西的名字，叫做變數。', stage: 'run' },
-  { say: '最後一樣東西，是讓程式聽你說話。', stage: 'run' },
-  { say: 'cin 會把你輸入的數字，放進你指定的變數裡。', snippet: listen, stage: 'run' },
-  { say: '這次大括號裡面是空的，因為 a 的值等一下會由你輸入。', snippet: listen, stage: 'run' },
+  { id: 'from-a', say: '印出來的還是 7，不過這次的 7 是從 a 裡面拿出來的。', stage: 'run' },
+  { id: 'variable', say: '像 a 這樣可以放東西的名字，叫做變數。', stage: 'run' },
+  { id: 'listen', say: '最後一樣東西，是讓程式聽你說話。', stage: 'run' },
+  { id: 'cin-explained', say: 'cin 會把你輸入的數字，放進你指定的變數裡。', snippet: listen, stage: 'run' },
+  { id: 'empty-braces', say: '這次大括號裡面是空的，因為 a 的值等一下會由你輸入。', snippet: listen, stage: 'run' },
   {
     expect: '42',
+    id: 'run-cin',
     input: '42',
     say: '下面多了一格「輸入」，我已經幫你填了 42。請把程式改好，然後按執行。',
     snippet: listen,
     stage: 'run',
     wait: 'run',
   },
-  { say: '你輸入什麼，它就印出什麼。你可以把輸入改成別的數字，再執行一次看看。', stage: 'run' },
-  { say: String.raw`到這裡，cout、'\n'、int、cin 你都用過了。`, stage: 'run' },
-  { say: '現在換你自己來。這一題我不會給你程式。', stage: 'run' },
+  { id: 'echo', say: '你輸入什麼，它就印出什麼。你可以把輸入改成別的數字，再執行一次看看。', stage: 'run' },
+  { id: 'recap', say: String.raw`到這裡，cout、'\n'、int、cin 你都用過了。`, stage: 'run' },
+  { id: 'your-turn', say: '現在換你自己來。這一題我不會給你程式。', stage: 'run' },
   {
     expect: '5\n3',
+    id: 'task',
     input: '3 5',
     say: '請照上面的題目寫出程式，然後按執行。',
     snippet: task,
     stage: 'run',
     wait: 'run',
   },
-  { say: '做到了。你已經會讓程式讀東西、記東西、印東西了。', stage: 'run' },
+  { id: 'done', say: '做到了。你已經會讓程式讀東西、記東西、印東西了。', stage: 'run' },
 ];
 ---
 
 <Base title="起步" full>
-  <section class="scene" data-scene>
+  <section class="scene" data-scene data-unit="start">
     <div class="stage">
       <div class="code" data-show="code">
         {codeLines.map((line, at) => <span class="line" data-line={String(at + 1)} set:text={line} />)}
@@ -125,7 +144,7 @@ const beats: Beat[] = [
       </div>
       <div class="run-slot" data-show="run">
         <pre class="snippet" data-role="snippet"></pre>
-        <CodeRunner source={starter} />
+        <CodeRunner source={starter} draft="start" />
       </div>
     </div>
 
@@ -136,6 +155,7 @@ const beats: Beat[] = [
           beats.map((beat) => (
             <p
               data-beat
+              data-id={beat.id}
               data-stage={beat.stage}
               data-lines={beat.lines}
               data-wait={beat.wait}
@@ -149,8 +169,15 @@ const beats: Beat[] = [
         }
       </div>
       <p class="note" data-role="note" aria-live="polite"></p>
-      <button class="back" type="button" data-role="back">上一句</button>
-      <span class="more" aria-hidden="true">▼</span>
+      <div class="tools">
+        <button class="back" type="button" data-role="back">上一句</button>
+        <button class="back" type="button" data-role="restart">從頭開始</button>
+      </div>
+      <span class="more" aria-hidden="true">
+        <span class="by-key">按任意鍵繼續</span>
+        <span class="by-tap">點一下繼續</span>
+        ▼
+      </span>
     </div>
   </section>
 </Base>
@@ -273,9 +300,16 @@ const beats: Beat[] = [
   .note:empty {
     display: none;
   }
-  .back {
+  .tools {
+    display: grid;
     grid-column: 3;
     grid-row: 1;
+    justify-items: end;
+  }
+  .scene:not([data-ready='true']) .tools {
+    display: none;
+  }
+  .back {
     border: 0;
     background: none;
     color: var(--soft);
@@ -288,8 +322,19 @@ const beats: Beat[] = [
     right: 1.1rem;
     bottom: 0.6rem;
     color: var(--accent);
-    font-size: 0.75rem;
+    font-size: 0.8125rem;
     animation: bob 1.2s ease-in-out infinite;
+  }
+  .by-tap {
+    display: none;
+  }
+  @media (pointer: coarse) {
+    .by-key {
+      display: none;
+    }
+    .by-tap {
+      display: inline;
+    }
   }
   .scene:not([data-ready='true']) .more,
   .scene:not([data-ready='true']) .back,

@@ -1,3 +1,6 @@
+import { unitState } from '@/lib/progress/events';
+import { clearDraft, readEvents, record } from '@/lib/progress/store';
+
 interface Scene {
   readonly beats: readonly HTMLElement[];
   readonly finished: Set<number>;
@@ -7,15 +10,23 @@ interface Scene {
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
   readonly stdin: HTMLTextAreaElement | null;
+  readonly unit: string;
 }
 
 const forward = 1;
 const backward = -forward;
-const forwardKeys = new Set(['ArrowRight', 'Enter', ' ']);
 const backwardKeys = new Set(['ArrowLeft']);
+const silentKeys = new Set(['Alt', 'CapsLock', 'Control', 'Escape', 'Meta', 'Shift', 'Tab']);
 
-const isTyping = (target: EventTarget | null): boolean =>
-  target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement;
+const isControl = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement ||
+  target instanceof HTMLInputElement ||
+  target instanceof HTMLButtonElement;
+
+const isShortcut = (event: KeyboardEvent): boolean =>
+  event.ctrlKey || event.metaKey || event.altKey || silentKeys.has(event.key);
+
+const beatId = (beat: HTMLElement | undefined): string => beat?.dataset.id ?? '';
 
 const isWaiting = (scene: Scene): boolean => {
   const wait = scene.beats[scene.index]?.dataset.wait ?? '';
@@ -84,12 +95,13 @@ const move = (scene: Scene, step: number): void => {
     return;
   }
   scene.index = next;
+  record('beat.reached', scene.unit, beatId(scene.beats[next]));
   show(scene);
 };
 
 const complete = (scene: Scene, kind: string, output: string): void => {
   const beat = scene.beats[scene.index];
-  if (beat?.dataset.wait !== kind) {
+  if (beat?.dataset.wait !== kind || scene.finished.has(scene.index)) {
     return;
   }
   const { expect } = beat.dataset;
@@ -98,21 +110,51 @@ const complete = (scene: Scene, kind: string, output: string): void => {
     return;
   }
   scene.finished.add(scene.index);
+  record('check.passed', scene.unit, beatId(beat));
   move(scene, forward);
 };
 
+const restore = (scene: Scene): void => {
+  const state = unitState(readEvents(), scene.unit);
+  for (const [at, beat] of scene.beats.entries()) {
+    if (state.passed.has(beatId(beat))) {
+      scene.finished.add(at);
+    }
+  }
+  const found = scene.beats.findIndex((beat) => beatId(beat) === state.position);
+  scene.index = Math.max(found, 0);
+  for (const beat of scene.beats.slice(0, scene.index)) {
+    fillInput(scene, beat);
+  }
+};
+
+const restart = (scene: Scene): void => {
+  record('unit.restarted', scene.unit, '');
+  clearDraft(scene.unit);
+  globalThis.location.reload();
+};
+
 const onKey = (scene: Scene, event: KeyboardEvent): void => {
-  if (isTyping(event.target)) {
+  if (isControl(event.target) || isShortcut(event)) {
     return;
   }
-  if (forwardKeys.has(event.key)) {
-    event.preventDefault();
-    move(scene, forward);
-  }
+  event.preventDefault();
   if (backwardKeys.has(event.key)) {
-    event.preventDefault();
     move(scene, backward);
+    return;
   }
+  move(scene, forward);
+};
+
+const listenChecks = (scene: Scene): void => {
+  scene.root.addEventListener('drill:done', () => {
+    complete(scene, 'drill', '');
+  });
+  scene.root.addEventListener('run:ok', (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'string') {
+      complete(scene, 'run', event.detail);
+    }
+  });
 };
 
 const listen = (scene: Scene): void => {
@@ -124,17 +166,14 @@ const listen = (scene: Scene): void => {
     event.stopPropagation();
     move(scene, backward);
   });
+  root.querySelector('[data-role="restart"]')?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    restart(scene);
+  });
   document.addEventListener('keydown', (event) => {
     onKey(scene, event);
   });
-  root.addEventListener('drill:done', () => {
-    complete(scene, 'drill', '');
-  });
-  root.addEventListener('run:ok', (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'string') {
-      complete(scene, 'run', event.detail);
-    }
-  });
+  listenChecks(scene);
 };
 
 const mountScene = (root: HTMLElement): void => {
@@ -147,7 +186,9 @@ const mountScene = (root: HTMLElement): void => {
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
     stdin: root.querySelector<HTMLTextAreaElement>('[data-role="stdin"]'),
+    unit: root.dataset.unit ?? '',
   };
+  restore(scene);
   listen(scene);
   root.dataset.ready = 'true';
   show(scene);
