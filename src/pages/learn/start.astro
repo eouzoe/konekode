@@ -10,6 +10,7 @@ interface Beat {
   wait?: string;
   snippet?: string;
   expect?: string;
+  input?: string;
 }
 
 const template = `#include <bits/stdc++.h>
@@ -31,6 +32,17 @@ int main()
 
 }`;
 
+const print7 = 'cout << 7;';
+const print78 = 'cout << 7;\ncout << 8;';
+const printLines = String.raw`cout << 7 << '\n';
+cout << 8 << '\n';`;
+const remember = String.raw`int a{7};
+cout << a << '\n';`;
+const listen = String.raw`int a{};
+cin >> a;
+cout << a << '\n';`;
+const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
+
 const beats: Beat[] = [
   { say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
   { say: '先記住底下這些東西。', stage: 'code' },
@@ -45,9 +57,60 @@ const beats: Beat[] = [
   { say: '在進入下一段之前，請親自手打一次吧。', stage: 'drill', wait: 'drill' },
   { say: '好，就是這樣。', stage: 'code' },
   { say: '現在開始讓程式做事。', stage: 'run' },
-  { say: '在大括號裡面那一行空白，打上這一行。', snippet: 'cout << 7;', stage: 'run' },
-  { expect: '7', say: '打好之後，按執行。', snippet: 'cout << 7;', stage: 'run', wait: 'run' },
-  { say: '看到 7 了嗎？cout 就是把東西印出來。', stage: 'run' },
+  { say: '請在大括號裡面那一行空白，打上這一行。', snippet: print7, stage: 'run' },
+  { expect: '7', say: '打好之後，請按執行。', snippet: print7, stage: 'run', wait: 'run' },
+  { say: '有看到 7 嗎？cout 的工作就是把東西印出來。', stage: 'run' },
+  { say: '接下來，我們再多印一個 8。', stage: 'run' },
+  { expect: '78', say: '請在下面再加一行，然後按執行。', snippet: print78, stage: 'run', wait: 'run' },
+  { say: '結果變成 78 了，兩個數字黏在一起。', stage: 'run' },
+  { say: '這是因為電腦很老實。你沒有叫它換行，它就不會換行。', stage: 'run' },
+  { say: String.raw`換行要自己印出來，寫法是 '\n'。`, snippet: printLines, stage: 'run' },
+  {
+    expect: '7\n8',
+    say: '請把兩行都改成這樣，再按一次執行。',
+    snippet: printLines,
+    stage: 'run',
+    wait: 'run',
+  },
+  { say: String.raw`這次 7 和 8 各佔一行了。以後每印完一行，都要記得加上 '\n'。`, stage: 'run' },
+  { say: '現在來讓程式記住一個數字。', stage: 'run' },
+  {
+    say: 'int 是整數的意思，a 是你幫它取的名字，大括號裡面放的是它一開始的值。',
+    snippet: remember,
+    stage: 'run',
+  },
+  {
+    expect: '7',
+    say: '請把剛才那兩行換成這兩行，再按執行。',
+    snippet: remember,
+    stage: 'run',
+    wait: 'run',
+  },
+  { say: '印出來的還是 7，不過這次的 7 是從 a 裡面拿出來的。', stage: 'run' },
+  { say: '像 a 這樣可以放東西的名字，叫做變數。', stage: 'run' },
+  { say: '最後一樣東西，是讓程式聽你說話。', stage: 'run' },
+  { say: 'cin 會把你輸入的數字，放進你指定的變數裡。', snippet: listen, stage: 'run' },
+  { say: '這次大括號裡面是空的，因為 a 的值等一下會由你輸入。', snippet: listen, stage: 'run' },
+  {
+    expect: '42',
+    input: '42',
+    say: '下面多了一格「輸入」，我已經幫你填了 42。請把程式改好，然後按執行。',
+    snippet: listen,
+    stage: 'run',
+    wait: 'run',
+  },
+  { say: '你輸入什麼，它就印出什麼。你可以把輸入改成別的數字，再執行一次看看。', stage: 'run' },
+  { say: String.raw`到這裡，cout、'\n'、int、cin 你都用過了。`, stage: 'run' },
+  { say: '現在換你自己來。這一題我不會給你程式。', stage: 'run' },
+  {
+    expect: '5\n3',
+    input: '3 5',
+    say: '請照上面的題目寫出程式，然後按執行。',
+    snippet: task,
+    stage: 'run',
+    wait: 'run',
+  },
+  { say: '做到了。你已經會讓程式讀東西、記東西、印東西了。', stage: 'run' },
 ];
 ---
 
@@ -78,12 +141,14 @@ const beats: Beat[] = [
               data-wait={beat.wait}
               data-snippet={beat.snippet}
               data-expect={beat.expect}
+              data-input={beat.input}
             >
               {beat.say}
             </p>
           ))
         }
       </div>
+      <p class="note" data-role="note" aria-live="polite"></p>
       <button class="back" type="button" data-role="back">上一句</button>
       <span class="more" aria-hidden="true">▼</span>
     </div>
@@ -198,7 +263,19 @@ const beats: Beat[] = [
   .scene[data-ready='true'] .words p {
     margin: 0;
   }
+  .note {
+    grid-column: 2;
+    grid-row: 2;
+    margin: 0;
+    color: var(--bad);
+    font-size: 1rem;
+  }
+  .note:empty {
+    display: none;
+  }
   .back {
+    grid-column: 3;
+    grid-row: 1;
     border: 0;
     background: none;
     color: var(--soft);
