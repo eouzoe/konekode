@@ -64,20 +64,13 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
 };
 
 const describeNext = (char: string): string => {
-  const found = findKey(char);
-  if (found === null) {
-    return '';
+  if (char === '\n') {
+    return '按 Enter';
   }
-  if (found.key === enterKey) {
-    return '下一個：Enter';
+  if (char === ' ') {
+    return '按空白鍵';
   }
-  if (found.key === spaceKey) {
-    return '下一個：空白鍵';
-  }
-  if (found.shift) {
-    return `下一個：按住 Shift，再按 ${found.key}`;
-  }
-  return `下一個：${found.key}`;
+  return `輸入 ${char}`;
 };
 
 const describe = (drill: Drill): string => {
