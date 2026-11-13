@@ -50,11 +50,19 @@ const show = (parts: Parts, view: View): void => {
   parts.output.textContent = view.text;
 };
 
+const announce = (parts: Parts, outcome: Outcome): void => {
+  if (outcome.kind === 'finished' && outcome.exitCode === 0) {
+    parts.root.dispatchEvent(new CustomEvent('run:ok', { bubbles: true, detail: outcome.output }));
+  }
+};
+
 const execute = async (parts: Parts): Promise<void> => {
   parts.button.disabled = true;
   show(parts, { state: 'busy', status: '執行中（第一次要先下載編譯器，會比較久）', text: '' });
   try {
-    show(parts, describe(await runProgram(parts.source.value, parts.input.value)));
+    const outcome = await runProgram(parts.source.value, parts.input.value);
+    show(parts, describe(outcome));
+    announce(parts, outcome);
   } catch (error) {
     show(parts, { state: 'error', status: '執行不了', text: String(error) });
   } finally {

@@ -1,9 +1,10 @@
 interface Scene {
   readonly beats: readonly HTMLElement[];
-  readonly finished: Set<string>;
+  readonly finished: Set<number>;
   index: number;
   readonly lines: readonly HTMLElement[];
   readonly root: HTMLElement;
+  readonly snippet: HTMLElement | null;
 }
 
 const forward = 1;
@@ -16,7 +17,7 @@ const isTyping = (target: EventTarget | null): boolean =>
 
 const isWaiting = (scene: Scene): boolean => {
   const wait = scene.beats[scene.index]?.dataset.wait ?? '';
-  return wait !== '' && !scene.finished.has(wait);
+  return wait !== '' && !scene.finished.has(scene.index);
 };
 
 const markLines = (scene: Scene, beat: HTMLElement): void => {
@@ -24,6 +25,18 @@ const markLines = (scene: Scene, beat: HTMLElement): void => {
   for (const line of scene.lines) {
     line.dataset.marked = String(marked.has(line.dataset.line ?? ''));
   }
+};
+
+const showStage = (scene: Scene, beat: HTMLElement): void => {
+  markLines(scene, beat);
+  if (scene.snippet !== null) {
+    scene.snippet.textContent = beat.dataset.snippet ?? '';
+  }
+  Object.assign(scene.root.dataset, {
+    last: String(scene.index === scene.beats.length - forward),
+    stage: beat.dataset.stage ?? 'empty',
+    waiting: String(isWaiting(scene)),
+  });
 };
 
 const show = (scene: Scene): void => {
@@ -34,13 +47,8 @@ const show = (scene: Scene): void => {
   for (const [at, other] of scene.beats.entries()) {
     other.hidden = at !== scene.index;
   }
-  markLines(scene, beat);
-  Object.assign(scene.root.dataset, {
-    last: String(scene.index === scene.beats.length - forward),
-    stage: beat.dataset.stage ?? 'empty',
-    waiting: String(isWaiting(scene)),
-  });
-  if (isWaiting(scene)) {
+  showStage(scene, beat);
+  if (beat.dataset.wait === 'drill' && isWaiting(scene)) {
     scene.root.querySelector<HTMLElement>('[data-role="input"]')?.focus();
   }
 };
@@ -55,6 +63,19 @@ const move = (scene: Scene, step: number): void => {
   }
   scene.index = next;
   show(scene);
+};
+
+const complete = (scene: Scene, kind: string, output: string): void => {
+  const beat = scene.beats[scene.index];
+  if (beat?.dataset.wait !== kind) {
+    return;
+  }
+  const { expect } = beat.dataset;
+  if (expect !== undefined && output.trim() !== expect) {
+    return;
+  }
+  scene.finished.add(scene.index);
+  move(scene, forward);
 };
 
 const onKey = (scene: Scene, event: KeyboardEvent): void => {
@@ -84,18 +105,23 @@ const listen = (scene: Scene): void => {
     onKey(scene, event);
   });
   root.addEventListener('drill:done', () => {
-    scene.finished.add('drill');
-    move(scene, forward);
+    complete(scene, 'drill', '');
+  });
+  root.addEventListener('run:ok', (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'string') {
+      complete(scene, 'run', event.detail);
+    }
   });
 };
 
 const mountScene = (root: HTMLElement): void => {
   const scene: Scene = {
     beats: [...root.querySelectorAll<HTMLElement>('[data-beat]')],
-    finished: new Set<string>(),
+    finished: new Set<number>(),
     index: 0,
     lines: [...root.querySelectorAll<HTMLElement>('[data-line]')],
     root,
+    snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
   };
   listen(scene);
   root.dataset.ready = 'true';

@@ -1,12 +1,15 @@
 ---
+import CodeRunner from '@/components/code-runner.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
 
 interface Beat {
   say: string;
-  stage: 'code' | 'drill' | 'empty';
+  stage: 'code' | 'drill' | 'empty' | 'run';
   lines?: string;
   wait?: string;
+  snippet?: string;
+  expect?: string;
 }
 
 const template = `#include <bits/stdc++.h>
@@ -18,6 +21,15 @@ int main()
 }`;
 
 const codeLines = template.split('\n');
+
+const starter = `#include <bits/stdc++.h>
+using namespace std;
+
+int main()
+{
+    cin.tie(nullptr)->sync_with_stdio(false);
+
+}`;
 
 const beats: Beat[] = [
   { say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
@@ -32,6 +44,10 @@ const beats: Beat[] = [
   { say: '所以，記下來。', stage: 'code' },
   { say: '在進入下一段之前，請親自手打一次吧。', stage: 'drill', wait: 'drill' },
   { say: '好，就是這樣。', stage: 'code' },
+  { say: '現在開始讓程式做事。', stage: 'run' },
+  { say: '在大括號裡面那一行空白，打上這一行。', snippet: 'cout << 7;', stage: 'run' },
+  { expect: '7', say: '打好之後，按執行。', snippet: 'cout << 7;', stage: 'run', wait: 'run' },
+  { say: '看到 7 了嗎？cout 就是把東西印出來。', stage: 'run' },
 ];
 ---
 
@@ -44,6 +60,10 @@ const beats: Beat[] = [
       <div class="drill-slot" data-show="drill">
         <TypingDrill target={template} />
       </div>
+      <div class="run-slot" data-show="run">
+        <pre class="snippet" data-role="snippet"></pre>
+        <CodeRunner source={starter} />
+      </div>
     </div>
 
     <div class="dialogue" data-role="dialogue">
@@ -51,7 +71,14 @@ const beats: Beat[] = [
       <div class="words">
         {
           beats.map((beat) => (
-            <p data-beat data-stage={beat.stage} data-lines={beat.lines} data-wait={beat.wait}>
+            <p
+              data-beat
+              data-stage={beat.stage}
+              data-lines={beat.lines}
+              data-wait={beat.wait}
+              data-snippet={beat.snippet}
+              data-expect={beat.expect}
+            >
               {beat.say}
             </p>
           ))
@@ -119,6 +146,22 @@ const beats: Beat[] = [
   .scene[data-stage='drill'] .drill-slot[data-show] {
     display: block;
     height: 100%;
+  }
+  .scene[data-stage='run'] .run-slot[data-show] {
+    display: grid;
+    gap: 0.75rem;
+    width: min(100%, 44rem);
+    margin: 0 auto;
+  }
+  .snippet {
+    margin: 0;
+    padding: 0.5rem 1rem;
+    border-left: 3px solid var(--accent);
+    background: color-mix(in oklch, var(--accent) 12%, transparent);
+    font-size: 1.125rem;
+  }
+  .snippet:empty {
+    display: none;
   }
   .dialogue {
     position: relative;

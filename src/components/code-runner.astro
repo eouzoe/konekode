@@ -2,9 +2,10 @@
 interface Props {
   source: string;
   input?: string;
+  withInput?: boolean;
 }
 
-const { source, input = '' } = Astro.props;
+const { source, input = '', withInput = false } = Astro.props;
 ---
 
 <section class="runner" data-code-runner>
@@ -13,14 +14,14 @@ const { source, input = '' } = Astro.props;
     <textarea
       data-role="source"
       class="source"
-      rows="14"
+      rows="9"
       autocapitalize="off"
       autocomplete="off"
       spellcheck="false"
       set:text={source}
     />
   </label>
-  <label class="field">
+  <label class="field" hidden={!withInput}>
     <span>輸入</span>
     <textarea
       data-role="stdin"
@@ -55,6 +56,9 @@ const { source, input = '' } = Astro.props;
     gap: 0.25rem;
     color: var(--soft);
     font-size: 0.8125rem;
+  }
+  .field[hidden] {
+    display: none;
   }
   textarea {
     width: 100%;
