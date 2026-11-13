@@ -38,17 +38,17 @@ cout << a << '\n';`;
 const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
 
 const opening: readonly Beat[] = [
-  { id: 'intro', say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
+  { id: 'intro', say: '好的，那就讓我們從第一步開始吧！', stage: 'empty' },
   { id: 'see-template', say: '先記住底下這些東西。', stage: 'code' },
   { id: 'line-include', lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
-  { id: 'line-using', lines: '2', say: '一行用來讓你少打 std 的東西。', stage: 'code' },
-  { id: 'line-main', lines: '4,5,7', say: '然後是你的主函式。', stage: 'code' },
+  { id: 'line-using', lines: '2', say: '一行用來讓我們少打 std 的東西。', stage: 'code' },
+  { id: 'line-main', lines: '4,5,7', say: '然後是我們的主函式。', stage: 'code' },
   { id: 'line-fastio', lines: '6', say: '還有輸入輸出加速。', stage: 'code' },
   { id: 'lost', say: '是不是完全聽不懂？', stage: 'code' },
   { id: 'never-mind', say: '沒關係，先別管這些。', stage: 'code' },
   {
     id: 'every-program',
-    say: '反正你接下來每一支能執行的程式，都要寫這些東西。',
+    say: '反正我們接下來每一支能執行的程式，都要寫這些東西。',
     stage: 'code',
   },
   { id: 'remember', say: '所以，記下來。', stage: 'code' },
@@ -63,7 +63,7 @@ const opening: readonly Beat[] = [
 
 const editing: readonly Beat[] = [
   { id: 'do-things', say: '現在開始讓程式做事。', stage: 'run' },
-  { id: 'editor', say: '上面這一塊，是你寫程式的地方。', stage: 'run' },
+  { id: 'editor', say: '上面這一塊，是我們寫程式的地方。', stage: 'run' },
   {
     id: 'vim-modes',
     say: '它有兩種狀態。一種是用來打字的，另一種是用來移動和下指令的。',
@@ -71,7 +71,7 @@ const editing: readonly Beat[] = [
   },
   {
     id: 'vim-normal',
-    say: '它現在是下指令的狀態，所以你按鍵盤，字不會跑出來。',
+    say: '它現在是下指令的狀態，所以現在按鍵盤，字不會跑出來。',
     stage: 'run',
   },
   { id: 'vim-i', say: '按一下 i，左下角會出現 INSERT，這時候才能打字。', stage: 'run' },
@@ -82,7 +82,7 @@ const editing: readonly Beat[] = [
   },
   {
     id: 'add-cout',
-    say: '等一下，你要在大括號裡面那一行空白，打上這一行。',
+    say: '等一下，我們要在大括號裡面那一行空白，打上這一行。',
     snippet: print7,
     stage: 'run',
   },
@@ -100,7 +100,7 @@ const editing: readonly Beat[] = [
   },
   {
     id: 'tab',
-    say: '你不用自己按四次空白鍵。按一下鍵盤左邊的 Tab，就會一次空四格。',
+    say: '我們不用自己按四次空白鍵。按一下鍵盤左邊的 Tab，就會一次空四格。',
     snippet: print7,
     stage: 'run',
   },
@@ -112,7 +112,7 @@ const editing: readonly Beat[] = [
   },
   {
     id: 'what-run',
-    say: '打好之後要按執行。執行的意思，是叫電腦照你寫的程式做一遍。',
+    say: '打好之後要按執行。執行的意思，是叫電腦照我們寫的程式做一遍。',
     snippet: print7,
     stage: 'run',
   },
@@ -146,7 +146,7 @@ const printing: readonly Beat[] = [
   { id: 'stuck-together', say: '結果變成 78 了，兩個數字黏在一起。', stage: 'run' },
   {
     id: 'honest',
-    say: '這是因為電腦很老實。你沒有叫它換行，它就不會換行。',
+    say: '這是因為電腦很老實。我們沒有叫它換行，它就不會換行。',
     stage: 'run',
   },
   {
@@ -174,7 +174,7 @@ const storing: readonly Beat[] = [
   { id: 'remember-number', say: '現在來讓程式記住一個數字。', stage: 'run' },
   {
     id: 'int-explained',
-    say: 'int 是整數的意思，a 是你幫它取的名字，大括號裡面放的是它一開始的值。',
+    say: 'int 是整數的意思，a 是我們幫它取的名字，大括號裡面放的是它一開始的值。',
     snippet: remember,
     stage: 'run',
   },
@@ -188,10 +188,10 @@ const storing: readonly Beat[] = [
   },
   { id: 'from-a', say: '印出來的還是 7，不過這次的 7 是從 a 裡面拿出來的。', stage: 'run' },
   { id: 'variable', say: '像 a 這樣可以放東西的名字，叫做變數。', stage: 'run' },
-  { id: 'listen', say: '最後一樣東西，是讓程式聽你說話。', stage: 'run' },
+  { id: 'listen', say: '最後一樣東西，是讓程式聽我們說話。', stage: 'run' },
   {
     id: 'cin-explained',
-    say: 'cin 會把你輸入的數字，放進你指定的變數裡。',
+    say: 'cin 會把我們輸入的數字，放進我們指定的變數裡。',
     snippet: listen,
     stage: 'run',
   },
@@ -203,7 +203,7 @@ const storing: readonly Beat[] = [
   },
   {
     id: 'empty-braces',
-    say: '這次大括號裡面是空的，因為 a 的值等一下會由你輸入。',
+    say: '這次大括號裡面是空的，因為 a 的值等一下會由我們輸入。',
     snippet: listen,
     stage: 'run',
   },
@@ -211,21 +211,21 @@ const storing: readonly Beat[] = [
     expect: '42',
     id: 'run-cin',
     input: '42',
-    say: '下面多了一格「輸入」，我已經幫你填了 42。請把程式改好，然後執行。',
+    say: '下面多了一格「輸入」，裡面已經填好 42 了。請把程式改好，然後執行。',
     snippet: listen,
     stage: 'run',
     wait: 'run',
   },
   {
     id: 'echo',
-    say: '你輸入什麼，它就印出什麼。你可以把輸入改成別的數字，再執行一次看看。',
+    say: '我們輸入什麼，它就印出什麼。把輸入改成別的數字再執行一次，結果也會跟著變。',
     stage: 'run',
   },
 ];
 
 const closing: readonly Beat[] = [
-  { id: 'recap', say: String.raw`到這裡，cout、'\n'、int、cin 你都用過了。`, stage: 'run' },
-  { id: 'your-turn', say: '現在換你自己來。這一題我不會給你程式。', stage: 'run' },
+  { id: 'recap', say: String.raw`到這裡，cout、'\n'、int、cin 我們都用過了。`, stage: 'run' },
+  { id: 'your-turn', say: '最後一題，我們不看範例，自己寫寫看。', stage: 'run' },
   {
     id: 'two-vars',
     say: '兩個數就需要兩個變數。第二個變數可以叫 b，寫法和 a 一樣。',
@@ -241,7 +241,7 @@ const closing: readonly Beat[] = [
     stage: 'run',
     wait: 'run',
   },
-  { id: 'done', say: '做到了。你已經會讓程式讀東西、記東西、印東西了。', stage: 'run' },
+  { id: 'done', say: '做到了。我們已經會讓程式讀東西、記東西、印東西了。', stage: 'run' },
 ];
 
 const beats: readonly Beat[] = [...opening, ...editing, ...printing, ...storing, ...closing];
