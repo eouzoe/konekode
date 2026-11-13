@@ -1,0 +1,42 @@
+---
+import SpriteSays from '@/components/sprite-says.astro';
+import TypingDrill from '@/components/typing-drill.astro';
+import Base from '@/layouts/base.astro';
+
+const template = `#include <bits/stdc++.h>
+using namespace std;
+
+int main()
+{
+    cin.tie(nullptr)->sync_with_stdio(false);
+}`;
+---
+
+<Base title="起步">
+  <h1>起步</h1>
+
+  <SpriteSays>
+    <p>好的，現在你要寫出你的第一支程式。</p>
+    <p>先記住底下這些東西。</p>
+  </SpriteSays>
+
+  <pre class="sample">{template}</pre>
+
+  <SpriteSays>
+    <p>一行 include 標頭檔。</p>
+    <p>一行用來讓你少打 std 的東西。</p>
+    <p>然後是你的主函式，還有輸入輸出加速。</p>
+  </SpriteSays>
+
+  <SpriteSays>
+    <p>是不是完全聽不懂？</p>
+    <p>沒關係，先別管這些。</p>
+    <p>反正你接下來每一支能執行的程式，都要寫這些東西。所以，記下來。</p>
+  </SpriteSays>
+
+  <SpriteSays>
+    <p>在進入下一段之前，請親自手打一次吧。</p>
+  </SpriteSays>
+
+  <TypingDrill target={template} />
+</Base>

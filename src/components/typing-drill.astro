@@ -1,0 +1,141 @@
+---
+interface Props {
+  target: string;
+}
+
+const { target } = Astro.props;
+---
+
+<section class="drill" data-typing-drill data-target={target}>
+  <div class="drill-top">
+    <pre
+      class="drill-code"><span data-role="done" class="is-done" /><span data-role="current" class="is-current" /><span data-role="rest" class="is-rest" /></pre>
+    <textarea
+      data-role="input"
+      class="drill-input"
+      aria-label="在這裡打字"
+      autocapitalize="off"
+      autocomplete="off"
+      spellcheck="false"></textarea>
+  </div>
+  <div class="drill-bottom">
+    <p data-role="hint" class="drill-hint" aria-live="polite"></p>
+    <div data-role="keyboard" class="keyboard" aria-hidden="true"></div>
+  </div>
+</section>
+
+<script>
+  import { mountAll } from '@/lib/typing/mount';
+
+  mountAll();
+</script>
+
+<style>
+  .drill {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 1rem;
+    min-height: 100dvh;
+    padding: 1.5rem 0;
+    cursor: text;
+  }
+  .drill-top {
+    position: relative;
+    display: grid;
+    align-content: center;
+  }
+  .drill-code {
+    margin: 0;
+    padding: 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--panel);
+    font-family: var(--mono);
+    font-size: 1.125rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .drill:focus-within .drill-code {
+    border-color: var(--accent);
+  }
+  .is-done {
+    color: var(--ink);
+  }
+  .is-current {
+    background: var(--accent);
+    color: var(--panel);
+    border-radius: 0.2rem;
+  }
+  .is-rest {
+    color: var(--faint);
+  }
+  .drill[data-wrong='true'] .is-current {
+    background: var(--bad);
+  }
+  .drill[data-done='true'] .is-current {
+    display: none;
+  }
+  .drill-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    resize: none;
+    border: 0;
+    cursor: text;
+  }
+  .drill-hint {
+    min-height: 1.6em;
+    margin: 0 0 0.75rem;
+    text-align: center;
+    color: var(--soft);
+  }
+  .drill[data-wrong='true'] .drill-hint {
+    color: var(--bad);
+  }
+  .keyboard {
+    display: grid;
+    gap: 0.35rem;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+  .keyboard :global(.key-row) {
+    display: flex;
+    gap: 0.35rem;
+    justify-content: center;
+  }
+  .keyboard :global(.key) {
+    display: grid;
+    place-items: center;
+    min-width: 2.6rem;
+    height: 2.6rem;
+    padding: 0 0.4rem;
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    background: var(--panel);
+    color: var(--soft);
+    white-space: nowrap;
+  }
+  .keyboard :global(.key[data-wide='true']) {
+    min-width: 5.5rem;
+  }
+  .keyboard :global(.key[data-key='Space']) {
+    min-width: 18rem;
+  }
+  .keyboard :global(.key[data-next='true']) {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--panel);
+  }
+  @media (pointer: coarse) {
+    .keyboard {
+      display: none;
+    }
+    .drill {
+      min-height: 60dvh;
+    }
+  }
+</style>

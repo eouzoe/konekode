@@ -16,7 +16,10 @@ lint:
 format:
     bun x oxfmt --write .
 
-check: typecheck lint build
+test:
+    bun test src
+
+check: typecheck lint test build
     bun x oxfmt --check .
 
 clean:

@@ -1,0 +1,54 @@
+:root {
+  color-scheme: light dark;
+  --page: light-dark(#fbfaf7, #14151a);
+  --panel: light-dark(#ffffff, #1c1e25);
+  --ink: light-dark(#1c1d22, #ecebe6);
+  --soft: light-dark(#5a5c66, #a9abb6);
+  --faint: light-dark(#b4b6c0, #555866);
+  --line: light-dark(#dedcd4, #2e313b);
+  --accent: light-dark(#2f5bd9, #8fa8ff);
+  --bad: light-dark(#c23b3b, #ff8a8a);
+  --sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+
+.page {
+  width: min(100% - 2rem, 46rem);
+  margin: 0 auto;
+  padding: 3rem 0 6rem;
+}
+
+h1 {
+  margin: 0 0 2rem;
+  font-size: 1.75rem;
+  line-height: 1.3;
+}
+
+pre,
+code {
+  font-family: var(--mono);
+}
+
+.sample {
+  margin: 1rem 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--panel);
+  font-size: 1rem;
+  line-height: 1.7;
+  overflow-x: auto;
+}

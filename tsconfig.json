@@ -11,7 +11,8 @@
     "erasableSyntaxOnly": true,
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": ["@types/bun"]
   },
   "contentMappers": [
     {

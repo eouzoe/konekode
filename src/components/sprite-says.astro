@@ -1,0 +1,29 @@
+<div class="says">
+  <span class="who" aria-hidden="true">小精靈</span>
+  <div class="words"><slot /></div>
+</div>
+
+<style>
+  .says {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.9rem;
+    align-items: start;
+    margin: 1.75rem 0;
+  }
+  .who {
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--page);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+  .words :global(p) {
+    margin: 0 0 0.6rem;
+  }
+  .words :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>
