@@ -1,0 +1,85 @@
+import { type Outcome } from './protocol';
+import { runProgram } from './runner';
+
+interface Parts {
+  readonly button: HTMLButtonElement;
+  readonly input: HTMLTextAreaElement;
+  readonly output: HTMLElement;
+  readonly root: HTMLElement;
+  readonly source: HTMLTextAreaElement;
+  readonly status: HTMLElement;
+}
+
+const find = <Kind extends HTMLElement>(
+  root: Element,
+  role: string,
+  kind: new () => Kind,
+): Kind => {
+  const found = root.querySelector(`[data-role="${role}"]`);
+  if (!(found instanceof kind)) {
+    throw new TypeError(`找不到 ${role}`);
+  }
+  return found;
+};
+
+interface View {
+  readonly state: string;
+  readonly status: string;
+  readonly text: string;
+}
+
+const describe = (outcome: Outcome): View => {
+  if (outcome.kind === 'compile-error') {
+    return { state: 'error', status: '編譯沒有過', text: outcome.message };
+  }
+  if (outcome.kind === 'timeout') {
+    return { state: 'error', status: '跑太久，已經停下來', text: '' };
+  }
+  if (outcome.kind === 'crashed') {
+    return { state: 'error', status: '執行時出錯', text: outcome.message };
+  }
+  if (outcome.exitCode !== 0) {
+    return { state: 'error', status: '程式中途結束', text: outcome.output };
+  }
+  return { state: 'ok', status: '執行完成', text: outcome.output };
+};
+
+const show = (parts: Parts, view: View): void => {
+  parts.root.dataset.state = view.state;
+  parts.status.textContent = view.status;
+  parts.output.textContent = view.text;
+};
+
+const execute = async (parts: Parts): Promise<void> => {
+  parts.button.disabled = true;
+  show(parts, { state: 'busy', status: '執行中（第一次要先下載編譯器，會比較久）', text: '' });
+  try {
+    show(parts, describe(await runProgram(parts.source.value, parts.input.value)));
+  } catch (error) {
+    show(parts, { state: 'error', status: '執行不了', text: String(error) });
+  } finally {
+    parts.button.disabled = false;
+  }
+};
+
+const mountRunner = (root: HTMLElement): void => {
+  const parts: Parts = {
+    button: find(root, 'run', HTMLButtonElement),
+    input: find(root, 'stdin', HTMLTextAreaElement),
+    output: find(root, 'output', HTMLElement),
+    root,
+    source: find(root, 'source', HTMLTextAreaElement),
+    status: find(root, 'status', HTMLElement),
+  };
+  parts.button.addEventListener('click', () => {
+    void execute(parts);
+  });
+};
+
+const mountRunners = (): void => {
+  for (const root of document.querySelectorAll<HTMLElement>('[data-code-runner]')) {
+    mountRunner(root);
+  }
+};
+
+export { mountRunners };

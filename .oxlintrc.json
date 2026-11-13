@@ -63,7 +63,14 @@
     "import/no-named-export": "off",
     "import/no-default-export": "off",
     "import/prefer-default-export": "off",
-    "one-var": "off"
+    "one-var": "off",
+    "unicorn/require-post-message-target-origin": "off",
+    "no-underscore-dangle": [
+      "error",
+      {
+        "allow": ["_start"]
+      }
+    ]
   },
   "env": {
     "browser": true,

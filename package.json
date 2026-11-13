@@ -12,6 +12,8 @@
     "format:check": "oxfmt --check ."
   },
   "dependencies": {
+    "@bjorn3/browser_wasi_shim": "^0.4.2",
+    "@yowasp/clang": "^22.0.0-git20542-10",
     "astro": "^7.4.11"
   },
   "devDependencies": {
