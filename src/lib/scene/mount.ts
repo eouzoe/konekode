@@ -16,7 +16,7 @@ interface Scene {
 
 const forward = 1;
 const backward = -forward;
-const backwardKeys = new Set(['ArrowLeft']);
+const backwardKeys = new Set(['ArrowLeft', 'ArrowUp']);
 const silentKeys = new Set(['Alt', 'CapsLock', 'Control', 'Escape', 'Meta', 'Shift', 'Tab']);
 
 const isControl = (target: EventTarget | null): boolean =>
@@ -24,6 +24,9 @@ const isControl = (target: EventTarget | null): boolean =>
   target instanceof HTMLInputElement ||
   target instanceof HTMLButtonElement ||
   (target instanceof HTMLElement && target.closest('.cm-editor') !== null);
+
+const isDrillInput = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement && target.dataset.role === 'input';
 
 const isShortcut = (event: KeyboardEvent): boolean =>
   event.ctrlKey || event.metaKey || event.altKey || silentKeys.has(event.key);
@@ -110,8 +113,11 @@ const show = (scene: Scene): void => {
     other.hidden = !isShown(scene, at);
   }
   refresh(scene, beat);
+  const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
   if (beat.dataset.wait === 'drill' && isWaiting(scene)) {
-    scene.root.querySelector<HTMLElement>('[data-role="input"]')?.focus();
+    typing?.focus();
+  } else {
+    typing?.blur();
   }
 };
 
@@ -174,8 +180,15 @@ const restart = (scene: Scene): void => {
   globalThis.location.reload();
 };
 
+const isIgnored = (event: KeyboardEvent): boolean => {
+  if (isDrillInput(event.target)) {
+    return !backwardKeys.has(event.key);
+  }
+  return isControl(event.target) || isShortcut(event);
+};
+
 const onKey = (scene: Scene, event: KeyboardEvent): void => {
-  if (isControl(event.target) || isShortcut(event)) {
+  if (isIgnored(event)) {
     return;
   }
   event.preventDefault();
