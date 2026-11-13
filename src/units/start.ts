@@ -39,7 +39,7 @@ const task = '輸入有兩個整數。請先印出第二個數，換行；再印
 
 const opening: readonly Beat[] = [
   { id: 'intro', say: '好的，那就讓我們從第一步開始吧！', stage: 'empty' },
-  { id: 'see-template', say: '先記住底下這些東西。', stage: 'code' },
+  { id: 'see-template', say: '看看這些東東。', stage: 'code' },
   { id: 'line-include', lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
   { id: 'line-using', lines: '2', say: '一行用來讓我們少打 std 的東西。', stage: 'code' },
   { id: 'line-main', lines: '4,5,7', say: '然後是我們的主函式。', stage: 'code' },
@@ -51,7 +51,7 @@ const opening: readonly Beat[] = [
     say: '反正我們接下來每一支能執行的程式，都要寫這些東西。',
     stage: 'code',
   },
-  { id: 'remember', say: '所以，記下來。', stage: 'code' },
+  { id: 'remember', say: '所以，我們先把它記起來吧。', stage: 'code' },
   {
     id: 'type-template',
     say: '在進入下一段之前，請親自手打一次吧。',
@@ -211,7 +211,7 @@ const storing: readonly Beat[] = [
     expect: '42',
     id: 'run-cin',
     input: '42',
-    say: '下面多了一格「輸入」，裡面已經填好 42 了。請把程式改好，然後執行。',
+    say: '上面多了一格「輸入」，裡面已經填好 42 了。請把程式改好，然後執行。',
     snippet: listen,
     stage: 'run',
     wait: 'run',
