@@ -1,19 +1,25 @@
 import { readDraft, writeDraft } from '@/lib/progress/store';
 
+import { createEditor, type Editor } from './editor';
 import { type Outcome } from './protocol';
 import { runProgram, warmUp } from './runner';
 
-const indent = '    ';
-const firstTouch = ['pointerdown', 'keydown'];
-
 interface Parts {
   readonly button: HTMLButtonElement;
+  readonly editor: Editor;
   readonly input: HTMLTextAreaElement;
   readonly output: HTMLElement;
   readonly root: HTMLElement;
-  readonly source: HTMLTextAreaElement;
   readonly status: HTMLElement;
 }
+
+interface View {
+  readonly state: string;
+  readonly status: string;
+  readonly text: string;
+}
+
+const firstTouch = ['pointerdown', 'keydown'];
 
 const find = <Kind extends HTMLElement>(
   root: Element,
@@ -26,12 +32,6 @@ const find = <Kind extends HTMLElement>(
   }
   return found;
 };
-
-interface View {
-  readonly state: string;
-  readonly status: string;
-  readonly text: string;
-}
 
 const describe = (outcome: Outcome): View => {
   if (outcome.kind === 'compile-error') {
@@ -62,10 +62,13 @@ const announce = (parts: Parts, outcome: Outcome): void => {
 };
 
 const execute = async (parts: Parts): Promise<void> => {
+  if (parts.button.disabled) {
+    return;
+  }
   parts.button.disabled = true;
-  show(parts, { state: 'busy', status: '執行中（第一次要先下載編譯器，會比較久）', text: '' });
+  show(parts, { state: 'busy', status: '執行中', text: '' });
   try {
-    const outcome = await runProgram(parts.source.value, parts.input.value);
+    const outcome = await runProgram(parts.editor.getText(), parts.input.value);
     show(parts, describe(outcome));
     announce(parts, outcome);
   } catch (error) {
@@ -73,14 +76,6 @@ const execute = async (parts: Parts): Promise<void> => {
   } finally {
     parts.button.disabled = false;
   }
-};
-
-const insertIndent = (event: KeyboardEvent, source: HTMLTextAreaElement): void => {
-  if (event.key !== 'Tab' || event.shiftKey || event.isComposing) {
-    return;
-  }
-  event.preventDefault();
-  source.setRangeText(indent, source.selectionStart, source.selectionEnd, 'end');
 };
 
 const preload = (): void => {
@@ -98,33 +93,40 @@ const preload = (): void => {
   }
 };
 
-const keepDraft = (parts: Parts): void => {
-  const name = parts.root.dataset.draft ?? '';
-  if (name === '') {
-    return;
-  }
-  parts.source.value = readDraft(name) ?? parts.source.value;
-  parts.source.addEventListener('input', () => {
-    writeDraft(name, parts.source.value);
+const makeEditor = (root: HTMLElement, run: () => void): Editor => {
+  const parent = find(root, 'editor', HTMLElement);
+  const name = root.dataset.draft ?? '';
+  const text = readDraft(name) ?? parent.dataset.source ?? '';
+  parent.replaceChildren();
+  return createEditor({
+    onChange: (next) => {
+      if (name !== '') {
+        writeDraft(name, next);
+      }
+    },
+    onRun: run,
+    parent,
+    text,
   });
 };
 
 const mountRunner = (root: HTMLElement): void => {
+  const run = (): void => {
+    root.dispatchEvent(new CustomEvent('runner:run'));
+  };
   const parts: Parts = {
     button: find(root, 'run', HTMLButtonElement),
+    editor: makeEditor(root, run),
     input: find(root, 'stdin', HTMLTextAreaElement),
     output: find(root, 'output', HTMLElement),
     root,
-    source: find(root, 'source', HTMLTextAreaElement),
     status: find(root, 'status', HTMLElement),
   };
-  parts.button.addEventListener('click', () => {
+  const start = (): void => {
     void execute(parts);
-  });
-  parts.source.addEventListener('keydown', (event) => {
-    insertIndent(event, parts.source);
-  });
-  keepDraft(parts);
+  };
+  parts.button.addEventListener('click', start);
+  root.addEventListener('runner:run', start);
 };
 
 const mountRunners = (): void => {

@@ -21,7 +21,8 @@ const silentKeys = new Set(['Alt', 'CapsLock', 'Control', 'Escape', 'Meta', 'Shi
 const isControl = (target: EventTarget | null): boolean =>
   target instanceof HTMLTextAreaElement ||
   target instanceof HTMLInputElement ||
-  target instanceof HTMLButtonElement;
+  target instanceof HTMLButtonElement ||
+  (target instanceof HTMLElement && target.closest('.cm-editor') !== null);
 
 const isShortcut = (event: KeyboardEvent): boolean =>
   event.ctrlKey || event.metaKey || event.altKey || silentKeys.has(event.key);
@@ -99,18 +100,29 @@ const move = (scene: Scene, step: number): void => {
   show(scene);
 };
 
+const matches = (beat: HTMLElement, output: string): boolean => {
+  const { expect } = beat.dataset;
+  return expect === undefined || output.trim() === expect;
+};
+
+const settle = (scene: Scene, beat: HTMLElement): void => {
+  scene.finished.add(scene.index);
+  record('check.passed', scene.unit, beatId(beat));
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+};
+
 const complete = (scene: Scene, kind: string, output: string): void => {
   const beat = scene.beats[scene.index];
   if (beat?.dataset.wait !== kind || scene.finished.has(scene.index)) {
     return;
   }
-  const { expect } = beat.dataset;
-  if (expect !== undefined && output.trim() !== expect) {
+  if (!matches(beat, output)) {
     setNote(scene, '印出來的東西和要的不一樣，請再檢查一次。');
     return;
   }
-  scene.finished.add(scene.index);
-  record('check.passed', scene.unit, beatId(beat));
+  settle(scene, beat);
   move(scene, forward);
 };
 

@@ -10,24 +10,15 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
 ---
 
 <section class="runner" data-code-runner data-draft={draft}>
-  <label class="field">
-    <span>程式</span>
-    <textarea
-      data-role="source"
-      class="source"
-      rows="9"
-      autocapitalize="off"
-      autocomplete="off"
-      spellcheck="false"
-      set:text={source}
-    />
-  </label>
+  <div class="editor" data-role="editor" data-source={source}>
+    <pre set:text={source} />
+  </div>
   <label class="field" hidden={!withInput}>
     <span>輸入</span>
     <textarea
       data-role="stdin"
       class="stdin"
-      rows="3"
+      rows="2"
       autocapitalize="off"
       autocomplete="off"
       spellcheck="false"
@@ -60,6 +51,13 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   }
   .field[hidden] {
     display: none;
+  }
+  .editor pre {
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.6rem;
+    background: var(--panel);
   }
   textarea {
     width: 100%;
