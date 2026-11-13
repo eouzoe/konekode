@@ -186,6 +186,13 @@ const onKey = (scene: Scene, event: KeyboardEvent): void => {
   move(scene, forward);
 };
 
+const release = (event: Event): void => {
+  event.stopPropagation();
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget.blur();
+  }
+};
+
 const listenChecks = (scene: Scene): void => {
   scene.root.addEventListener('scene:auto', () => {
     move(scene, forward);
@@ -208,11 +215,11 @@ const listen = (scene: Scene): void => {
     }
   });
   root.querySelector('[data-role="back"]')?.addEventListener('click', (event) => {
-    event.stopPropagation();
+    release(event);
     move(scene, backward);
   });
   root.querySelector('[data-role="restart"]')?.addEventListener('click', (event) => {
-    event.stopPropagation();
+    release(event);
     restart(scene);
   });
   document.addEventListener('keydown', (event) => {
