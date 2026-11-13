@@ -1,5 +1,8 @@
 import { type Outcome } from './protocol';
-import { runProgram } from './runner';
+import { runProgram, warmUp } from './runner';
+
+const indent = '    ';
+const firstTouch = ['pointerdown', 'keydown'];
 
 interface Parts {
   readonly button: HTMLButtonElement;
@@ -70,6 +73,29 @@ const execute = async (parts: Parts): Promise<void> => {
   }
 };
 
+const insertIndent = (event: KeyboardEvent, source: HTMLTextAreaElement): void => {
+  if (event.key !== 'Tab' || event.shiftKey || event.isComposing) {
+    return;
+  }
+  event.preventDefault();
+  source.setRangeText(indent, source.selectionStart, source.selectionEnd, 'end');
+};
+
+const preload = (): void => {
+  const controller = new AbortController();
+  const { signal } = controller;
+  for (const name of firstTouch) {
+    document.addEventListener(
+      name,
+      () => {
+        controller.abort();
+        void warmUp();
+      },
+      { signal },
+    );
+  }
+};
+
 const mountRunner = (root: HTMLElement): void => {
   const parts: Parts = {
     button: find(root, 'run', HTMLButtonElement),
@@ -82,11 +108,18 @@ const mountRunner = (root: HTMLElement): void => {
   parts.button.addEventListener('click', () => {
     void execute(parts);
   });
+  parts.source.addEventListener('keydown', (event) => {
+    insertIndent(event, parts.source);
+  });
 };
 
 const mountRunners = (): void => {
-  for (const root of document.querySelectorAll<HTMLElement>('[data-code-runner]')) {
+  const roots = [...document.querySelectorAll<HTMLElement>('[data-code-runner]')];
+  for (const root of roots) {
     mountRunner(root);
+  }
+  if (roots.length > 0) {
+    preload();
   }
 };
 

@@ -54,12 +54,35 @@ const execute = async (request: RunRequest): Promise<Outcome> => {
   }
 };
 
+let pending: Promise<unknown> = Promise.resolve();
+
+const compile = async (source: string): Promise<CompileReply> => {
+  const previous = pending;
+  const { promise, resolve } = Promise.withResolvers<null>();
+  pending = promise;
+  try {
+    await previous;
+    return await once<CompileReply>(getCompiler(), { source });
+  } finally {
+    resolve(null);
+  }
+};
+
+const warmUp = async (): Promise<boolean> => {
+  try {
+    await compile('int main() {}');
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const runProgram = async (source: string, input: string): Promise<Outcome> => {
-  const compiled = await once<CompileReply>(getCompiler(), { source });
+  const compiled = await compile(source);
   if (!compiled.ok) {
     return { kind: 'compile-error', message: compiled.message };
   }
   return execute({ input, wasm: compiled.wasm });
 };
 
-export { runProgram };
+export { runProgram, warmUp };
