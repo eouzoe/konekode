@@ -3,7 +3,7 @@ import { cpp } from '@codemirror/lang-cpp';
 import { indentUnit } from '@codemirror/language';
 import { EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { Vim, vim } from '@replit/codemirror-vim';
+import { Vim, getCM, vim } from '@replit/codemirror-vim';
 import { basicSetup } from 'codemirror';
 
 interface Editor {
@@ -19,6 +19,9 @@ interface Options {
 
 const tabWidth = 4;
 const runEvent = 'editor:run';
+const stepEvent = 'scene:step';
+const forward = 1;
+const backward = -forward;
 
 const look = EditorView.theme({
   '&': {
@@ -60,6 +63,33 @@ const vimLayer = (): Extension[] => {
   return [vim({ status: true })];
 };
 
+const isInserting = (view: EditorView): boolean => {
+  const state: unknown = getCM(view)?.state.vim;
+  if (typeof state !== 'object' || state === null || !('insertMode' in state)) {
+    return true;
+  }
+  return state.insertMode === true || ('visualMode' in state && state.visualMode === true);
+};
+
+const stepBy =
+  (step: number) =>
+  (view: EditorView): boolean => {
+    if (isInserting(view)) {
+      return false;
+    }
+    view.dom.dispatchEvent(new CustomEvent(stepEvent, { bubbles: true, detail: step }));
+    return true;
+  };
+
+const arrows = Prec.highest(
+  keymap.of([
+    { key: 'ArrowLeft', run: stepBy(backward) },
+    { key: 'ArrowUp', run: stepBy(backward) },
+    { key: 'ArrowRight', run: stepBy(forward) },
+    { key: 'ArrowDown', run: stepBy(forward) },
+  ]),
+);
+
 const createEditor = (options: Options): Editor => {
   const run = (): boolean => {
     options.onRun();
@@ -68,6 +98,7 @@ const createEditor = (options: Options): Editor => {
   const view = new EditorView({
     doc: options.text,
     extensions: [
+      arrows,
       ...vimLayer(),
       Prec.highest(keymap.of([{ key: 'Mod-Enter', run }])),
       basicSetup,

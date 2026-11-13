@@ -8,6 +8,7 @@ interface KeyPress {
   readonly shift: boolean;
 }
 
+const backspaceKey = 'Backspace';
 const enterKey = 'Enter';
 const shiftKey = 'Shift';
 const spaceKey = 'Space';
@@ -40,4 +41,4 @@ const findKey = (char: string): KeyPress | null => {
   return null;
 };
 
-export { enterKey, findKey, rows, shiftKey, spaceKey, type KeyCap, type KeyPress };
+export { backspaceKey, enterKey, findKey, rows, shiftKey, spaceKey, type KeyCap, type KeyPress };

@@ -67,11 +67,17 @@ const { target } = Astro.props;
     color: var(--panel);
     border-radius: 0.2rem;
   }
+  .drill-code :global(.is-bad) {
+    background: var(--bad);
+    color: var(--panel);
+    border-radius: 0.2rem;
+  }
   .is-rest {
     color: var(--faint);
   }
   .drill[data-wrong='true'] .is-current {
-    background: var(--bad);
+    background: none;
+    color: var(--faint);
   }
   .drill[data-done='true'] .is-current {
     display: none;

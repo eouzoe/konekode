@@ -210,6 +210,11 @@ const listenChecks = (scene: Scene): void => {
   scene.root.addEventListener('scene:auto', () => {
     move(scene, forward);
   });
+  scene.root.addEventListener('scene:step', (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'number') {
+      move(scene, event.detail);
+    }
+  });
   scene.root.addEventListener('drill:done', () => {
     complete(scene, 'drill', '');
   });
