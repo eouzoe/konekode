@@ -78,8 +78,9 @@ const codeLines = template.split('\n');
   }
   .stage {
     display: grid;
-    align-content: center;
+    align-content: safe center;
     min-height: 0;
+    overflow-y: auto;
   }
   .code {
     margin: 0 auto;
@@ -137,12 +138,13 @@ const codeLines = template.split('\n');
     grid-template-columns: auto 1fr auto;
     gap: 1rem;
     align-items: start;
-    min-height: 6.5rem;
-    padding: 1.1rem 1.25rem;
+    min-height: 9.5rem;
+    padding: 1.5rem 1.75rem;
     border: 1px solid var(--line);
-    border-radius: 0.9rem;
+    border-radius: 1.1rem;
     background: var(--panel);
-    font-size: 1.1875rem;
+    font-size: 1.375rem;
+    line-height: 1.75;
   }
   .scene[data-ready='true'] .dialogue {
     cursor: pointer;
@@ -200,8 +202,8 @@ const codeLines = template.split('\n');
   }
   .more {
     position: absolute;
-    right: 1.1rem;
-    bottom: 0.6rem;
+    right: 1.5rem;
+    bottom: 0.9rem;
     color: var(--accent);
     font-size: 0.8125rem;
     animation: bob 1.2s ease-in-out infinite;
