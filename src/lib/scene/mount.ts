@@ -172,7 +172,9 @@ const listenChecks = (scene: Scene): void => {
 const listen = (scene: Scene): void => {
   const { root } = scene;
   root.querySelector('[data-role="dialogue"]')?.addEventListener('click', () => {
-    move(scene, forward);
+    if (globalThis.getSelection()?.isCollapsed ?? true) {
+      move(scene, forward);
+    }
   });
   root.querySelector('[data-role="back"]')?.addEventListener('click', (event) => {
     event.stopPropagation();
