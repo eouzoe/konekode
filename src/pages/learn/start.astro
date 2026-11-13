@@ -1,7 +1,13 @@
 ---
-import SpriteSays from '@/components/sprite-says.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
+
+interface Beat {
+  say: string;
+  stage: 'code' | 'drill' | 'empty';
+  lines?: string;
+  wait?: string;
+}
 
 const template = `#include <bits/stdc++.h>
 using namespace std;
@@ -10,33 +16,175 @@ int main()
 {
     cin.tie(nullptr)->sync_with_stdio(false);
 }`;
+
+const codeLines = template.split('\n');
+
+const beats: Beat[] = [
+  { say: '好的，現在你要寫出你的第一支程式。', stage: 'empty' },
+  { say: '先記住底下這些東西。', stage: 'code' },
+  { lines: '1', say: '一行 include 標頭檔。', stage: 'code' },
+  { lines: '2', say: '一行用來讓你少打 std 的東西。', stage: 'code' },
+  { lines: '4,5,7', say: '然後是你的主函式。', stage: 'code' },
+  { lines: '6', say: '還有輸入輸出加速。', stage: 'code' },
+  { say: '是不是完全聽不懂？', stage: 'code' },
+  { say: '沒關係，先別管這些。', stage: 'code' },
+  { say: '反正你接下來每一支能執行的程式，都要寫這些東西。', stage: 'code' },
+  { say: '所以，記下來。', stage: 'code' },
+  { say: '在進入下一段之前，請親自手打一次吧。', stage: 'drill', wait: 'drill' },
+  { say: '好，就是這樣。', stage: 'code' },
+];
 ---
 
-<Base title="起步">
-  <h1>起步</h1>
+<Base title="起步" full>
+  <section class="scene" data-scene>
+    <div class="stage">
+      <div class="code" data-show="code">
+        {codeLines.map((line, at) => <span class="line" data-line={String(at + 1)} set:text={line} />)}
+      </div>
+      <div class="drill-slot" data-show="drill">
+        <TypingDrill target={template} />
+      </div>
+    </div>
 
-  <SpriteSays>
-    <p>好的，現在你要寫出你的第一支程式。</p>
-    <p>先記住底下這些東西。</p>
-  </SpriteSays>
-
-  <pre class="sample">{template}</pre>
-
-  <SpriteSays>
-    <p>一行 include 標頭檔。</p>
-    <p>一行用來讓你少打 std 的東西。</p>
-    <p>然後是你的主函式，還有輸入輸出加速。</p>
-  </SpriteSays>
-
-  <SpriteSays>
-    <p>是不是完全聽不懂？</p>
-    <p>沒關係，先別管這些。</p>
-    <p>反正你接下來每一支能執行的程式，都要寫這些東西。所以，記下來。</p>
-  </SpriteSays>
-
-  <SpriteSays>
-    <p>在進入下一段之前，請親自手打一次吧。</p>
-  </SpriteSays>
-
-  <TypingDrill target={template} />
+    <div class="dialogue" data-role="dialogue">
+      <span class="who">小精靈</span>
+      <div class="words">
+        {
+          beats.map((beat) => (
+            <p data-beat data-stage={beat.stage} data-lines={beat.lines} data-wait={beat.wait}>
+              {beat.say}
+            </p>
+          ))
+        }
+      </div>
+      <button class="back" type="button" data-role="back">上一句</button>
+      <span class="more" aria-hidden="true">▼</span>
+    </div>
+  </section>
 </Base>
+
+<script>
+  import { mountScenes } from '@/lib/scene/mount';
+
+  mountScenes();
+</script>
+
+<style>
+  .scene {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 1rem;
+    width: min(100% - 2rem, 60rem);
+    margin: 0 auto;
+    padding: 1.5rem 0;
+  }
+  .scene[data-ready='true'] {
+    height: 100dvh;
+  }
+  .stage {
+    display: grid;
+    align-content: center;
+    min-height: 0;
+  }
+  .code {
+    margin: 0 auto;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--panel);
+    font-family: var(--mono);
+    font-size: 1.125rem;
+    line-height: 1.7;
+    width: min(100%, 40rem);
+    overflow-x: auto;
+  }
+  .line {
+    display: block;
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem;
+    border-radius: 0.3rem;
+    min-height: 1.7em;
+    white-space: pre;
+    transition: background-color 0.2s;
+  }
+  .line[data-marked='true'] {
+    background: color-mix(in oklch, var(--accent) 22%, transparent);
+  }
+  .scene[data-ready='true'] [data-show] {
+    display: none;
+  }
+  .scene[data-stage='code'] .code[data-show] {
+    display: block;
+  }
+  .scene[data-stage='drill'] .drill-slot[data-show] {
+    display: block;
+    height: 100%;
+  }
+  .dialogue {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 1rem;
+    align-items: start;
+    min-height: 6.5rem;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+    background: var(--panel);
+    font-size: 1.1875rem;
+  }
+  .scene[data-ready='true'] .dialogue {
+    cursor: pointer;
+    user-select: none;
+  }
+  .scene[data-waiting='true'] .dialogue {
+    cursor: default;
+  }
+  .who {
+    padding: 0.1rem 0.7rem;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--page);
+    font-size: 0.8125rem;
+    line-height: 1.8;
+    white-space: nowrap;
+  }
+  .words p {
+    margin: 0 0 0.5rem;
+  }
+  .scene[data-ready='true'] .words p {
+    margin: 0;
+  }
+  .back {
+    border: 0;
+    background: none;
+    color: var(--soft);
+    font: inherit;
+    font-size: 0.8125rem;
+    cursor: pointer;
+  }
+  .more {
+    position: absolute;
+    right: 1.1rem;
+    bottom: 0.6rem;
+    color: var(--accent);
+    font-size: 0.75rem;
+    animation: bob 1.2s ease-in-out infinite;
+  }
+  .scene:not([data-ready='true']) .more,
+  .scene:not([data-ready='true']) .back,
+  .scene[data-waiting='true'] .more,
+  .scene[data-last='true'] .more {
+    display: none;
+  }
+  @keyframes bob {
+    50% {
+      translate: 0 0.25rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .more {
+      animation: none;
+    }
+  }
+</style>

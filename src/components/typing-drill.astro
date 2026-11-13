@@ -35,8 +35,7 @@ const { target } = Astro.props;
     display: grid;
     grid-template-rows: 1fr auto;
     gap: 1rem;
-    min-height: 100dvh;
-    padding: 1.5rem 0;
+    height: 100%;
     cursor: text;
   }
   .drill-top {
@@ -133,9 +132,6 @@ const { target } = Astro.props;
   @media (pointer: coarse) {
     .keyboard {
       display: none;
-    }
-    .drill {
-      min-height: 60dvh;
     }
   }
 </style>

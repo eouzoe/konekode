@@ -166,10 +166,14 @@ const mountDrill = (root: HTMLElement): void => {
       parts.hint.textContent = '現在是中文輸入。先切到英文輸入再打。';
       return;
     }
+    const wasDone = isDone(drill);
     for (const char of readInput(event) ?? '') {
       drill = press(drill, char);
     }
     render(parts, drill);
+    if (!wasDone && isDone(drill)) {
+      root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
+    }
   });
   parts.input.addEventListener('compositionend', () => {
     parts.input.value = '';
