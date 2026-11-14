@@ -1,0 +1,22 @@
+name: 合併請求的目標分支
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  base:
+    runs-on: ubuntu-latest
+    if: github.base_ref != 'dev' && !(github.base_ref == 'main' && github.head_ref == 'dev')
+    steps:
+      - name: 留言並標記失敗
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "::error::合併請求請以 dev 為目標；main 只接受從 dev 來的發布。"
+          gh pr comment "$PR" --repo "$REPO" --body '這個版本庫的合併請求請以 `dev` 為目標分支。`main` 只接受從 `dev` 來的發布。請把目標分支改成 `dev`。'
