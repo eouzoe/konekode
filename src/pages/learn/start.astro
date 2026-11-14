@@ -79,6 +79,9 @@ const codeLines = template.split('\n');
   .scene[data-ready='true'] {
     height: 100dvh;
   }
+  :global(.js) .scene:not([data-ready='true']) {
+    visibility: hidden;
+  }
   .stage {
     display: grid;
     align-content: safe center;
@@ -153,8 +156,8 @@ const codeLines = template.split('\n');
     grid-template-columns: auto 1fr auto;
     gap: 1rem;
     align-items: start;
-    min-height: 9.5rem;
-    padding: 1.5rem 1.75rem;
+    min-height: 7.5rem;
+    padding: 1.25rem 1.75rem;
     border: 1px solid var(--line);
     border-radius: 1.1rem;
     background: var(--panel);
@@ -181,6 +184,10 @@ const codeLines = template.split('\n');
     font-size: 0.8125rem;
     line-height: 1.8;
     white-space: nowrap;
+  }
+  .words {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .words p {
     margin: 0 0 0.5rem;

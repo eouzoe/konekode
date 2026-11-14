@@ -154,6 +154,21 @@ test('文字還沒出完就完成檢查，也算通過', () => {
   expect(actor.getSnapshot().context.passed).toEqual(['type']);
 });
 
+test('畫面變成全螢幕時，自動換到稱讚的那一句', () => {
+  const asking = fresh('ask');
+  asking.send({ full: true, type: 'SCREEN' });
+  expect(at(asking)).toBe('yes');
+  const declined = start('no');
+  declined.send({ full: true, type: 'SCREEN' });
+  expect(at(declined)).toBe('yes');
+  const later = start('demo');
+  later.send({ full: true, type: 'SCREEN' });
+  expect(at(later)).toBe('demo');
+  const leaving = start('ask');
+  leaving.send({ full: false, type: 'SCREEN' });
+  expect(at(leaving)).toBe('ask');
+});
+
 test('已經通過的檢查不會被重複記錄', () => {
   const actor = fresh('type');
   actor.send(typed);
@@ -182,6 +197,7 @@ test('不管怎麼操作，都不會越過還沒通過的檢查', () => {
     { full: false, type: 'AUTO' },
     { full: false, type: 'PLAYED' },
     { type: 'REVEALED' },
+    { full: true, type: 'SCREEN' },
   ];
   const paths = getShortestPaths(sceneMachine, {
     events,

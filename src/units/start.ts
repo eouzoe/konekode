@@ -31,6 +31,7 @@ int main()
 
 }`;
 
+const newline = String.raw`'\n'`;
 const print7 = 'cout << 7;';
 const print78 = 'cout << 7;\ncout << 8;';
 const printLines = String.raw`cout << 7 << '\n';
@@ -136,25 +137,9 @@ const opening: readonly Beat[] = [
 
 const editing: readonly Beat[] = [
   { id: 'do-things', say: '現在開始讓程式做事。', stage: 'run' },
-  { id: 'editor', say: '上面這一塊，是我們寫程式的地方。', stage: 'run' },
   {
-    id: 'vim-modes',
-    say: '它有兩種模式。一種是用來打字的輸入模式，另一種是用來移動和下指令的一般模式。',
-    stage: 'run',
-  },
-  {
-    id: 'vim-normal',
-    say: '它現在是一般模式，所以現在按鍵盤，字不會跑出來。',
-    stage: 'run',
-  },
-  {
-    id: 'vim-i',
-    say: '按一下 i，左下角會出現 INSERT，這就是輸入模式，這時候才能打字。',
-    stage: 'run',
-  },
-  {
-    id: 'vim-esc',
-    say: '打完之後，按一下鍵盤左上角的 Esc，就會回到一般模式。',
+    id: 'editor',
+    say: '上面這一塊，是我們寫程式的地方。用法和剛才一樣：按 i 打字，按 Esc 回到一般模式。',
     stage: 'run',
   },
   {
@@ -228,7 +213,7 @@ const printing: readonly Beat[] = [
   },
   {
     id: 'newline',
-    say: String.raw`換行要自己印出來，寫法是 '\n'。`,
+    say: `換行要自己印出來，寫法是 ${newline}。`,
     snippet: printLines,
     stage: 'run',
   },
@@ -242,7 +227,7 @@ const printing: readonly Beat[] = [
   },
   {
     id: 'each-line',
-    say: String.raw`這次 7 和 8 各佔一行了。以後每印完一行，都要記得加上 '\n'。`,
+    say: `這次 7 和 8 各佔一行了。以後每印完一行，都要記得加上 ${newline}。`,
     stage: 'run',
   },
 ];
@@ -301,7 +286,7 @@ const storing: readonly Beat[] = [
 ];
 
 const closing: readonly Beat[] = [
-  { id: 'recap', say: String.raw`到這裡，cout、'\n'、int、cin 我們都用過了。`, stage: 'run' },
+  { id: 'recap', say: `到這裡，cout、${newline}、int、cin 我們都用過了。`, stage: 'run' },
   { id: 'your-turn', say: '最後一題，我們不看範例，自己寫寫看。', stage: 'run' },
   {
     id: 'two-vars',

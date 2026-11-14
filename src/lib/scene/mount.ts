@@ -5,12 +5,13 @@ import { clearDraft, readEvents, record } from '@/lib/progress/store';
 
 import { isFullScreen } from './conditions';
 import { direct } from './demo';
-import { readIntent } from './keys';
+import { fitStage } from './fit';
+import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { readMeta } from './meta';
 import { createReveal, type Reveal } from './reveal';
 
-type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED';
+type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 
 interface Scene {
   readonly actor: Actor<typeof sceneMachine>;
@@ -168,6 +169,7 @@ const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void =
   notePassed(scene, passed);
   scene.waiting = snapshot.matches('blocked');
   speak(scene, snapshot.matches('revealing'), enter(scene, index));
+  fitStage(scene.root);
   if (mismatch) {
     setNote(scene, mismatchNote);
     return;
@@ -185,68 +187,28 @@ const restart = (scene: Scene): void => {
   globalThis.location.reload();
 };
 
-const onKey = (scene: Scene, event: KeyboardEvent): void => {
-  const intent = readIntent(event);
-  if (intent === 'none') {
-    return;
-  }
-  event.preventDefault();
-  if (intent === 'backward') {
-    step(scene, 'BACK');
-    return;
-  }
-  step(scene, 'NEXT');
-};
-
-const release = (event: Event): void => {
-  event.stopPropagation();
-  if (event.currentTarget instanceof HTMLElement) {
-    event.currentTarget.blur();
-  }
-};
-
-const listenChecks = (scene: Scene): void => {
-  scene.root.addEventListener('scene:step', (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'number') {
-      if (event.detail > 0) {
-        step(scene, 'NEXT');
-      } else {
-        step(scene, 'BACK');
-      }
-    }
-  });
-  scene.root.addEventListener('drill:played', () => {
-    step(scene, 'PLAYED');
-  });
-  scene.root.addEventListener('drill:done', () => {
-    check(scene, 'drill', '');
-  });
-  scene.root.addEventListener('run:ok', (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'string') {
-      check(scene, 'run', event.detail);
-    }
-  });
-};
-
 const listen = (scene: Scene): void => {
-  const { root } = scene;
-  root.querySelector('[data-role="dialogue"]')?.addEventListener('click', () => {
-    if (globalThis.getSelection()?.isCollapsed ?? true) {
+  listenInput(scene.root, {
+    back: () => {
+      step(scene, 'BACK');
+    },
+    checked: (kind, output) => {
+      check(scene, kind, output);
+    },
+    next: () => {
       step(scene, 'NEXT');
-    }
+    },
+    played: () => {
+      step(scene, 'PLAYED');
+    },
+    restart: () => {
+      restart(scene);
+    },
+    screen: () => {
+      step(scene, 'SCREEN');
+      fitStage(scene.root);
+    },
   });
-  root.querySelector('[data-role="back"]')?.addEventListener('click', (event) => {
-    release(event);
-    step(scene, 'BACK');
-  });
-  root.querySelector('[data-role="restart"]')?.addEventListener('click', (event) => {
-    release(event);
-    restart(scene);
-  });
-  document.addEventListener('keydown', (event) => {
-    onKey(scene, event);
-  });
-  listenChecks(scene);
 };
 
 const build = (root: HTMLElement): Scene => {
@@ -288,6 +250,7 @@ const mountScene = (root: HTMLElement): void => {
   root.dataset.ready = 'true';
   show(scene);
   startReveal(scene);
+  fitStage(scene.root);
 };
 
 const mountScenes = (): void => {

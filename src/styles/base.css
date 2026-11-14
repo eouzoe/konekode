@@ -1,13 +1,14 @@
 :root {
-  color-scheme: light dark;
-  --page: light-dark(#fbfaf7, #14151a);
-  --panel: light-dark(#ffffff, #1c1e25);
-  --ink: light-dark(#1c1d22, #ecebe6);
-  --soft: light-dark(#5a5c66, #a9abb6);
-  --faint: light-dark(#b4b6c0, #555866);
-  --line: light-dark(#dedcd4, #2e313b);
-  --accent: light-dark(#2f5bd9, #8fa8ff);
-  --bad: light-dark(#c23b3b, #ff8a8a);
+  color-scheme: dark;
+  --page: #1a1b26;
+  --panel: #1f2335;
+  --ink: #c0caf5;
+  --soft: #a9b1d6;
+  --faint: #565f89;
+  --line: #3b4261;
+  --accent: #7aa2f7;
+  --bad: #f7768e;
+  --good: #9ece6a;
   --sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
 }

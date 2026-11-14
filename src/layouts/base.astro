@@ -16,6 +16,9 @@ const { title, full = false } = Astro.props;
     <meta name="robots" content="noindex, nofollow" />
     <link rel="icon" href="/favicon.ico" />
     <title>{title}｜Konekode 貓貓競程</title>
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
   </head>
   <body>
     <main class:list={[full ? 'full' : 'page']}><slot /></main>

@@ -127,6 +127,19 @@ const follow = ({ context, event }: { context: Context; event: Move }): Arrival 
   return move(context, forward, event.full);
 };
 
+const adapt = ({ context, event }: { context: Context; event: Move }): Arrival | undefined => {
+  if (!event.full || needsCheck(context) || current(context)?.when === 'fullscreen') {
+    return undefined;
+  }
+  const index = [context.index + forward, context.index + backward].find(
+    (at) => context.beats[at]?.when === 'fullscreen',
+  );
+  if (index === undefined) {
+    return undefined;
+  }
+  return { context: { ...context, index, mismatch: false }, target: 'revealing' };
+};
+
 const sceneMachine = createMachine({
   context: ({ input }) => ({
     beats: input.beats,
@@ -148,6 +161,7 @@ const sceneMachine = createMachine({
       NEXT: moveSchema,
       PLAYED: moveSchema,
       REVEALED: object({}),
+      SCREEN: moveSchema,
     },
     input: inputSchema,
   },
@@ -164,6 +178,7 @@ const sceneMachine = createMachine({
         BACK: goBack,
         NEXT: goNext,
         PLAYED: follow,
+        SCREEN: adapt,
       },
     },
     revealing: {
@@ -174,6 +189,7 @@ const sceneMachine = createMachine({
         NEXT: { target: 'settling' },
         PLAYED: follow,
         REVEALED: { target: 'settling' },
+        SCREEN: adapt,
       },
     },
     settling: {
