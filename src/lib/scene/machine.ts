@@ -45,7 +45,7 @@ type Checked = InferOutput<typeof checkedSchema>;
 
 interface Arrival {
   readonly context: Context;
-  readonly target: 'entering';
+  readonly target: 'revealing' | 'settling';
 }
 
 const forward = 1;
@@ -78,10 +78,14 @@ const needsCheck = (context: Context): boolean => {
 
 const move = (context: Context, step: number, full: boolean): Arrival | undefined => {
   const index = seek(context, step, full);
-  if (index === context.index) {
+  if (index === context.index || (step > 0 && needsCheck(context))) {
     return undefined;
   }
-  return { context: { ...context, index, mismatch: false }, target: 'entering' };
+  const next = { ...context, index, mismatch: false };
+  if (step < 0) {
+    return { context: next, target: 'settling' };
+  }
+  return { context: next, target: 'revealing' };
 };
 
 const goBack = ({ context, event }: { context: Context; event: Move }): Arrival | undefined =>
@@ -103,7 +107,7 @@ const settle = ({
   event: Checked;
 }): Arrival | Settled | undefined => {
   const beat = current(context);
-  if (beat === undefined || event.kind !== beat.wait) {
+  if (beat === undefined || event.kind !== beat.wait || context.passed.includes(beat.id)) {
     return undefined;
   }
   if (beat.expect !== null && event.output.trim() !== beat.expect) {
@@ -134,7 +138,7 @@ const sceneMachine = createMachine({
     passed: input.passed,
   }),
   id: 'scene',
-  initial: 'entering',
+  initial: 'revealing',
   schemas: {
     context: contextSchema,
     events: {
@@ -143,6 +147,7 @@ const sceneMachine = createMachine({
       CHECKED: checkedSchema,
       NEXT: moveSchema,
       PLAYED: moveSchema,
+      REVEALED: object({}),
     },
     input: inputSchema,
   },
@@ -153,15 +158,6 @@ const sceneMachine = createMachine({
         CHECKED: settle,
       },
     },
-    entering: {
-      choice: ({ context }) => {
-        if (needsCheck(context)) {
-          return { target: 'blocked' };
-        }
-        return { target: 'ready' };
-      },
-      type: 'choice',
-    },
     ready: {
       on: {
         AUTO: goNext,
@@ -169,6 +165,25 @@ const sceneMachine = createMachine({
         NEXT: goNext,
         PLAYED: follow,
       },
+    },
+    revealing: {
+      on: {
+        AUTO: goNext,
+        BACK: goBack,
+        CHECKED: settle,
+        NEXT: { target: 'settling' },
+        PLAYED: follow,
+        REVEALED: { target: 'settling' },
+      },
+    },
+    settling: {
+      choice: ({ context }) => {
+        if (needsCheck(context)) {
+          return { target: 'blocked' };
+        }
+        return { target: 'ready' };
+      },
+      type: 'choice',
     },
   },
 });

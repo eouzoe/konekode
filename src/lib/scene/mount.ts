@@ -4,9 +4,11 @@ import { unitState } from '@/lib/progress/events';
 import { clearDraft, readEvents, record } from '@/lib/progress/store';
 
 import { isFullScreen } from './conditions';
+import { direct } from './demo';
 import { readIntent } from './keys';
 import { sceneMachine, type Check } from './machine';
 import { readMeta } from './meta';
+import { createReveal, type Reveal } from './reveal';
 
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED';
 
@@ -17,6 +19,7 @@ interface Scene {
   readonly lines: readonly HTMLElement[];
   readonly note: HTMLElement | null;
   passed: number;
+  readonly reveal: Reveal;
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
   readonly stdin: HTMLTextAreaElement | null;
@@ -90,26 +93,6 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
   }
 };
 
-const demoStart = (scene: Scene): number =>
-  scene.beats.findLastIndex(
-    (beat, at) => at <= scene.index && (beat.dataset.demo ?? '').startsWith('reset'),
-  );
-
-const direct = (scene: Scene, beat: HTMLElement): void => {
-  const start = demoStart(scene);
-  if (start < 0 || beat.dataset.stage !== 'drill') {
-    return;
-  }
-  const before = scene.beats
-    .slice(start, scene.index)
-    .map((earlier) => earlier.dataset.demo ?? '')
-    .join(' ');
-  const detail = { before, now: beat.dataset.demo ?? '' };
-  scene.root
-    .querySelector('[data-typing-drill]')
-    ?.dispatchEvent(new CustomEvent('drill:demo', { detail }));
-};
-
 const focusTyping = (scene: Scene, beat: HTMLElement): void => {
   const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
   if (beat.dataset.wait === 'drill' && scene.waiting) {
@@ -127,7 +110,7 @@ const show = (scene: Scene): void => {
   for (const [at, other] of scene.beats.entries()) {
     other.hidden = !isShown(scene, at);
   }
-  direct(scene, beat);
+  direct(scene.root, scene.beats, scene.index);
   schedule(scene, beat);
   showStage(scene, beat);
   fillInput(scene, beat);
@@ -144,21 +127,47 @@ const notePassed = (scene: Scene, passed: readonly string[]): void => {
   scene.passed = passed.length;
 };
 
-const enter = (scene: Scene, index: number): void => {
+const enter = (scene: Scene, index: number): boolean => {
+  const beat = scene.beats[index];
   if (index === scene.index) {
     scene.root.dataset.waiting = String(scene.waiting);
-    return;
+    if (beat !== undefined && scene.waiting) {
+      focusTyping(scene, beat);
+    }
+    return false;
   }
   scene.index = index;
   record('beat.reached', scene.unit, scene.beats[index]?.dataset.id ?? '');
   show(scene);
+  return true;
+};
+
+const startReveal = (scene: Scene): void => {
+  const beat = scene.beats[scene.index];
+  scene.root.dataset.revealing = 'true';
+  if (beat !== undefined) {
+    scene.reveal.start(beat, () => {
+      scene.actor.send({ type: 'REVEALED' });
+    });
+  }
+};
+
+const speak = (scene: Scene, revealing: boolean, moved: boolean): void => {
+  if (!revealing) {
+    scene.root.dataset.revealing = 'false';
+    scene.reveal.finish();
+    return;
+  }
+  if (moved) {
+    startReveal(scene);
+  }
 };
 
 const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void => {
   const { index, mismatch, passed } = snapshot.context;
   notePassed(scene, passed);
   scene.waiting = snapshot.matches('blocked');
-  enter(scene, index);
+  speak(scene, snapshot.matches('revealing'), enter(scene, index));
   if (mismatch) {
     setNote(scene, mismatchNote);
     return;
@@ -257,6 +266,7 @@ const build = (root: HTMLElement): Scene => {
     lines: [...root.querySelectorAll<HTMLElement>('[data-line]')],
     note: root.querySelector<HTMLElement>('[data-role="note"]'),
     passed: first.context.passed.length,
+    reveal: createReveal(),
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
     stdin: root.querySelector<HTMLTextAreaElement>('[data-role="stdin"]'),
@@ -277,6 +287,7 @@ const mountScene = (root: HTMLElement): void => {
   listen(scene);
   root.dataset.ready = 'true';
   show(scene);
+  startReveal(scene);
 };
 
 const mountScenes = (): void => {

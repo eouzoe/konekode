@@ -20,6 +20,18 @@ const beats: BeatMeta[] = [
 const start = (position: string | null = null, passed: string[] = []) => {
   const actor = createActor(sceneMachine, { input: { beats, passed, position } });
   actor.start();
+  actor.send({ type: 'REVEALED' });
+  return actor;
+};
+
+const go = (actor: ReturnType<typeof start>, event: SceneEvent): void => {
+  actor.send(event);
+  actor.send({ type: 'REVEALED' });
+};
+
+const fresh = (position: string): ReturnType<typeof start> => {
+  const actor = createActor(sceneMachine, { input: { beats, passed: [], position } });
+  actor.start();
   return actor;
 };
 
@@ -40,60 +52,60 @@ const printed = (output: string): SceneEvent => ({
 
 test('往下時跳過不符合畫面狀態的拍子', () => {
   const windowed = start();
-  windowed.send(next);
+  go(windowed, next);
   expect(at(windowed)).toBe('no');
   const full = start();
-  full.send({ full: true, type: 'NEXT' });
+  go(full, { full: true, type: 'NEXT' });
   expect(at(full)).toBe('yes');
-  full.send({ full: true, type: 'NEXT' });
+  go(full, { full: true, type: 'NEXT' });
   expect(at(full)).toBe('demo');
 });
 
 test('往回時同樣跳過不符合的拍子', () => {
   const actor = start('demo');
-  actor.send({ full: true, type: 'BACK' });
+  go(actor, { full: true, type: 'BACK' });
   expect(at(actor)).toBe('yes');
 });
 
 test('第一拍不能再往回，最後一拍不能再往下', () => {
   const first = start();
-  first.send(back);
+  go(first, back);
   expect(at(first)).toBe('ask');
   const last = start('end');
-  last.send(next);
+  go(last, next);
   expect(at(last)).toBe('end');
 });
 
 test('示範播完只在標記要接下一句的拍子自動往下', () => {
   const actor = start('demo');
-  actor.send({ full: false, type: 'PLAYED' });
+  go(actor, { full: false, type: 'PLAYED' });
   expect(at(actor)).toBe('type');
   const other = start('ask');
-  other.send({ full: false, type: 'PLAYED' });
+  go(other, { full: false, type: 'PLAYED' });
   expect(at(other)).toBe('ask');
 });
 
 test('打字練習沒完成前不能往下，完成後停在原地等按鍵', () => {
   const actor = start('type');
   expect(actor.getSnapshot().value).toBe('blocked');
-  actor.send(next);
-  actor.send({ full: false, type: 'AUTO' });
+  go(actor, next);
+  go(actor, { full: false, type: 'AUTO' });
   expect(at(actor)).toBe('type');
-  actor.send(typed);
+  go(actor, typed);
   expect(at(actor)).toBe('type');
   expect(actor.getSnapshot().value).toBe('ready');
-  actor.send(next);
+  go(actor, next);
   expect(at(actor)).toBe('print');
 });
 
 test('執行結果不對時留在原地並標記，結果對了自動往下', () => {
   const actor = start('print');
-  actor.send(printed('8'));
+  go(actor, printed('8'));
   expect(at(actor)).toBe('print');
   expect(actor.getSnapshot().context.mismatch).toBe(true);
-  actor.send(typed);
+  go(actor, typed);
   expect(at(actor)).toBe('print');
-  actor.send(printed(' 7\n'));
+  go(actor, printed(' 7\n'));
   expect(at(actor)).toBe('end');
   expect(actor.getSnapshot().context.mismatch).toBe(false);
   expect(actor.getSnapshot().context.passed).toEqual(['print']);
@@ -102,19 +114,60 @@ test('執行結果不對時留在原地並標記，結果對了自動往下', ()
 test('已經通過的檢查，回來時不用再做一次', () => {
   const actor = start('type', ['type']);
   expect(actor.getSnapshot().value).toBe('ready');
-  actor.send(next);
+  go(actor, next);
   expect(at(actor)).toBe('print');
-  actor.send(back);
+  go(actor, back);
   expect(at(actor)).toBe('type');
   expect(actor.getSnapshot().value).toBe('ready');
 });
 
 test('等待中仍然可以往回，換拍後清掉錯誤標記', () => {
   const actor = start('print');
-  actor.send(printed('8'));
-  actor.send(back);
+  go(actor, printed('8'));
+  go(actor, back);
   expect(at(actor)).toBe('type');
   expect(actor.getSnapshot().context.mismatch).toBe(false);
+});
+
+test('文字還在出現時，按一下只是把整句顯示完', () => {
+  const actor = fresh('ask');
+  expect(actor.getSnapshot().value).toBe('revealing');
+  actor.send(next);
+  expect(at(actor)).toBe('ask');
+  expect(actor.getSnapshot().value).toBe('ready');
+  actor.send(next);
+  expect(at(actor)).toBe('no');
+  expect(actor.getSnapshot().value).toBe('revealing');
+});
+
+test('往回的那一句直接整句顯示', () => {
+  const actor = fresh('demo');
+  actor.send(back);
+  expect(at(actor)).toBe('no');
+  expect(actor.getSnapshot().value).toBe('ready');
+});
+
+test('文字還沒出完就完成檢查，也算通過', () => {
+  const actor = fresh('type');
+  actor.send(typed);
+  expect(actor.getSnapshot().value).toBe('ready');
+  expect(actor.getSnapshot().context.passed).toEqual(['type']);
+});
+
+test('已經通過的檢查不會被重複記錄', () => {
+  const actor = fresh('type');
+  actor.send(typed);
+  actor.send(back);
+  actor.send(next);
+  actor.send(typed);
+  expect(at(actor)).toBe('type');
+  expect(actor.getSnapshot().context.passed).toEqual(['type']);
+});
+
+test('文字出完後，需要檢查的拍子會停下來等', () => {
+  const actor = fresh('type');
+  actor.send({ type: 'REVEALED' });
+  expect(actor.getSnapshot().value).toBe('blocked');
 });
 
 test('不管怎麼操作，都不會越過還沒通過的檢查', () => {
@@ -128,6 +181,7 @@ test('不管怎麼操作，都不會越過還沒通過的檢查', () => {
     { full: true, type: 'BACK' },
     { full: false, type: 'AUTO' },
     { full: false, type: 'PLAYED' },
+    { type: 'REVEALED' },
   ];
   const paths = getShortestPaths(sceneMachine, {
     events,
