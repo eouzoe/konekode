@@ -1,12 +1,33 @@
-import { type CompileReply, type CompileRequest } from './protocol';
+import { type CompileMessage, type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
 import type { commands } from '@yowasp/clang';
 
 const flags = ['-std=c++17', '-O1', '-fno-exceptions', '-Iinclude', 'main.cpp', '-o', 'main.wasm'];
 
+let reported = -1;
+
+const complete = 100;
+
+const post = (message: CompileMessage): void => {
+  globalThis.postMessage(message);
+};
+
+const reportLoading = (done: number, total: number): void => {
+  const percent = Math.floor((done * complete) / total);
+  if (percent !== reported) {
+    reported = percent;
+    post({ kind: 'progress', percent });
+  }
+};
+
 const load = async (): Promise<typeof commands> => {
   const clang = await import('@yowasp/clang');
+  await clang.runLLVM(undefined, undefined, {
+    fetchProgress: ({ doneLength, totalLength }) => {
+      reportLoading(doneLength, totalLength);
+    },
+  });
   return clang.commands;
 };
 
@@ -50,7 +71,7 @@ const compile = async (source: string): Promise<CompileReply> => {
 };
 
 const answer = async (request: CompileRequest): Promise<void> => {
-  globalThis.postMessage(await compile(request.source));
+  post({ kind: 'done', reply: await compile(request.source) });
 };
 
 globalThis.addEventListener('message', (event: MessageEvent<CompileRequest>) => {

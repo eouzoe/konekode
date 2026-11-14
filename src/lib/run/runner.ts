@@ -1,23 +1,59 @@
-import { type CompileReply, type Outcome, type RunReply, type RunRequest } from './protocol';
+import {
+  type CompileMessage,
+  type CompileReply,
+  type Outcome,
+  type RunReply,
+  type RunRequest,
+} from './protocol';
+
+type Listener = (percent: number) => void;
 
 const timeLimit = 5000;
+const listeners = new Set<Listener>();
 
 let compiler: Worker | null = null;
+let loaded = 0;
 
 const getCompiler = (): Worker => {
   compiler ??= new Worker(new URL('compiler.worker.ts', import.meta.url), { type: 'module' });
   return compiler;
 };
 
-const once = <Reply>(worker: Worker, message: unknown): Promise<Reply> => {
+const watchLoading = (listener: Listener): void => {
+  listeners.add(listener);
+};
+
+const loadedPercent = (): number => loaded;
+
+const readCompile = ({ data: message }: MessageEvent<CompileMessage>): CompileReply | null => {
+  if (message.kind === 'done') {
+    return message.reply;
+  }
+  loaded = message.percent;
+  for (const listener of listeners) {
+    listener(loaded);
+  }
+  return null;
+};
+
+const readRun = ({ data }: MessageEvent<RunReply>): RunReply => data;
+
+const once = <Reply>(
+  worker: Worker,
+  message: unknown,
+  read: (event: MessageEvent) => Reply | null,
+): Promise<Reply> => {
   const { promise, reject, resolve } = Promise.withResolvers<Reply>();
   const controller = new AbortController();
   const { signal } = controller;
   worker.addEventListener(
     'message',
-    (event: MessageEvent<Reply>) => {
-      controller.abort();
-      resolve(event.data);
+    (event: MessageEvent) => {
+      const reply = read(event);
+      if (reply !== null) {
+        controller.abort();
+        resolve(reply);
+      }
     },
     { signal },
   );
@@ -34,7 +70,7 @@ const once = <Reply>(worker: Worker, message: unknown): Promise<Reply> => {
 };
 
 const finish = async (worker: Worker, request: RunRequest): Promise<Outcome> => {
-  const reply = await once<RunReply>(worker, request);
+  const reply = await once(worker, request, readRun);
   return { exitCode: reply.exitCode, kind: 'finished', output: reply.output };
 };
 
@@ -62,7 +98,7 @@ const compile = async (source: string): Promise<CompileReply> => {
   pending = promise;
   try {
     await previous;
-    return await once<CompileReply>(getCompiler(), { source });
+    return await once(getCompiler(), { source }, readCompile);
   } finally {
     resolve(null);
   }
@@ -85,4 +121,4 @@ const runProgram = async (source: string, input: string): Promise<Outcome> => {
   return execute({ input, wasm: compiled.wasm });
 };
 
-export { runProgram, warmUp };
+export { loadedPercent, runProgram, warmUp, watchLoading };

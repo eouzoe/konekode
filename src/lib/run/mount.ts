@@ -2,7 +2,7 @@ import { readDraft, writeDraft } from '@/lib/progress/store';
 
 import { createEditor, type Editor } from './editor';
 import { type Outcome } from './protocol';
-import { runProgram, warmUp } from './runner';
+import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 
 interface Parts {
   readonly button: HTMLButtonElement;
@@ -20,6 +20,14 @@ interface View {
 }
 
 const firstTouch = ['pointerdown', 'keydown'];
+const complete = 100;
+
+const busyStatus = (percent: number): string => {
+  if (percent < complete) {
+    return `正在下載編譯器（${String(percent)}%），只有第一次需要等`;
+  }
+  return '執行中';
+};
 
 const find = <Kind extends HTMLElement>(
   root: Element,
@@ -66,7 +74,7 @@ const execute = async (parts: Parts): Promise<void> => {
     return;
   }
   parts.button.disabled = true;
-  show(parts, { state: 'busy', status: '執行中', text: '' });
+  show(parts, { state: 'busy', status: busyStatus(loadedPercent()), text: '' });
   try {
     const outcome = await runProgram(parts.editor.getText(), parts.input.value);
     show(parts, describe(outcome));
@@ -125,6 +133,11 @@ const mountRunner = (root: HTMLElement): void => {
   const start = (): void => {
     void execute(parts);
   };
+  watchLoading((percent) => {
+    if (root.dataset.state === 'busy') {
+      parts.status.textContent = busyStatus(percent);
+    }
+  });
   parts.button.addEventListener('click', start);
   root.addEventListener('runner:run', start);
 };

@@ -6,6 +6,10 @@ type CompileReply =
   | { readonly ok: true; readonly wasm: Uint8Array }
   | { readonly message: string; readonly ok: false };
 
+type CompileMessage =
+  | { readonly kind: 'done'; readonly reply: CompileReply }
+  | { readonly kind: 'progress'; readonly percent: number };
+
 interface RunRequest {
   readonly input: string;
   readonly wasm: Uint8Array;
@@ -22,4 +26,4 @@ type Outcome =
   | { readonly kind: 'crashed'; readonly message: string }
   | { readonly kind: 'timeout' };
 
-export type { CompileReply, CompileRequest, Outcome, RunReply, RunRequest };
+export type { CompileMessage, CompileReply, CompileRequest, Outcome, RunReply, RunRequest };
