@@ -2,7 +2,7 @@
 
 從零開始的競技程式教學網站，由一隻黑貓小精靈帶著走。目前是概念驗證階段的原型，只有第一個單元。
 
-試玩：https://konekode.pappdatap.workers.dev/learn/start/
+試玩：https://cp.konekode.workers.dev/learn/start/
 
 ## 開發
 

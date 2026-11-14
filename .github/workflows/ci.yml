@@ -101,7 +101,7 @@ jobs:
         with:
           name: dist
           path: dist
-      - run: bun x wrangler deploy --name ${{ github.ref_name == 'main' && 'konekode' || 'konekode-dev' }}
+      - run: bun x wrangler deploy --name ${{ github.ref_name == 'main' && 'cp' || 'cp-dev' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
