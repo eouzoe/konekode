@@ -54,6 +54,25 @@ test('訂閱的人會收到之後寫入的每一筆', async () => {
   expect(seen).toEqual(['one', 'two']);
 });
 
+test('每一筆事件發生時就立刻交給儲存，不用等前一筆寫完', async () => {
+  const started: string[] = [];
+  const gate = Promise.withResolvers<null>();
+  const slow: Persistence = {
+    append: async (event) => {
+      started.push(event.kind);
+      await gate.promise;
+    },
+    load: () => Promise.resolve([]),
+  };
+  const log = await createLog(source(slow));
+  log.track('one');
+  log.track('two');
+  log.track('three');
+  expect(started).toEqual(['one', 'two', 'three']);
+  gate.resolve(null);
+  await log.flush();
+});
+
 test('儲存失敗不會讓寫入中斷', async () => {
   const broken: Persistence = {
     append: async () => {

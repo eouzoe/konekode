@@ -65,15 +65,20 @@ const build = ({ source, state }: Context, kind: string, entry: Entry): Learning
   };
 };
 
+const attempt = async (persistence: Persistence, event: LearningEvent): Promise<void> => {
+  try {
+    await persistence.append(event);
+  } catch {
+    await Promise.resolve();
+  }
+};
+
 const persist = ({ source, state }: Context, event: LearningEvent): void => {
   const previous = state.pending;
+  const written = attempt(source.persistence, event);
   state.pending = (async (): Promise<void> => {
     await previous;
-    try {
-      await source.persistence.append(event);
-    } catch {
-      await Promise.resolve();
-    }
+    await written;
   })();
 };
 

@@ -344,10 +344,10 @@ test.describe('起步單元', () => {
     expect(await unlockedNow()).toEqual(new Set());
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('demo-intro');
-    expect(await unlockedNow()).toEqual(wanted);
+    await expect.poll(unlockedNow).toEqual(wanted);
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('Space');
-    expect(await unlockedNow()).toEqual(wanted);
+    await expect.poll(unlockedNow).toEqual(wanted);
   });
 
   test('輪到學生時焦點自動進編輯器，只用鍵盤就能過第一關', async ({ page }) => {
