@@ -1,4 +1,3 @@
-import { installInflate } from './inflate';
 import { type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
@@ -7,9 +6,6 @@ import type { commands } from '@yowasp/clang';
 const flags = ['-std=c++17', '-O1', '-fno-exceptions', '-Iinclude', 'main.cpp', '-o', 'main.wasm'];
 
 const load = async (): Promise<typeof commands> => {
-  if (import.meta.env.PROD) {
-    installInflate();
-  }
   const clang = await import('@yowasp/clang');
   return clang.commands;
 };

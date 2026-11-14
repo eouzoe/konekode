@@ -20,6 +20,12 @@
       "extensions": [".astro"]
     }
   ],
-  "include": [".astro/types.d.ts", "src/**/*.ts", "src/**/*.astro", "*.config.ts"],
+  "include": [
+    ".astro/types.d.ts",
+    "src/**/*.ts",
+    "src/**/*.astro",
+    "worker/**/*.ts",
+    "*.config.ts"
+  ],
   "exclude": ["dist"]
 }
