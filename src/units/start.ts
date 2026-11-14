@@ -76,18 +76,22 @@ const editing: readonly Beat[] = [
   { id: 'editor', say: '上面這一塊，是我們寫程式的地方。', stage: 'run' },
   {
     id: 'vim-modes',
-    say: '它有兩種狀態。一種是用來打字的，另一種是用來移動和下指令的。',
+    say: '它有兩種模式。一種是用來打字的輸入模式，另一種是用來移動和下指令的一般模式。',
     stage: 'run',
   },
   {
     id: 'vim-normal',
-    say: '它現在是下指令的狀態，所以現在按鍵盤，字不會跑出來。',
+    say: '它現在是一般模式，所以現在按鍵盤，字不會跑出來。',
     stage: 'run',
   },
-  { id: 'vim-i', say: '按一下 i，左下角會出現 INSERT，這時候才能打字。', stage: 'run' },
+  {
+    id: 'vim-i',
+    say: '按一下 i，左下角會出現 INSERT，這就是輸入模式，這時候才能打字。',
+    stage: 'run',
+  },
   {
     id: 'vim-esc',
-    say: '打完之後，按一下鍵盤左上角的 Esc，就會回到下指令的狀態。',
+    say: '打完之後，按一下鍵盤左上角的 Esc，就會回到一般模式。',
     stage: 'run',
   },
   {
@@ -138,7 +142,7 @@ const editing: readonly Beat[] = [
   { id: 'arrows-out', say: '中間的 << 像兩個箭頭，把 7 送到 cout 那邊去。', stage: 'run' },
   {
     id: 'run-key',
-    say: '以後不用每次都用滑鼠按執行。在下指令的狀態按 Enter，也會執行。',
+    say: '以後不用每次都用滑鼠按執行。在一般模式按 Enter，也會執行。',
     stage: 'run',
   },
 ];

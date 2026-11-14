@@ -87,6 +87,10 @@ const describeNext = (char: string): string => {
   if (char === ' ') {
     return messages.pressSpace;
   }
+  const found = findKey(char);
+  if (found?.shift === true) {
+    return `${messages.typeChar}${char}（${messages.withShift}${found.key}）`;
+  }
   return `${messages.typeChar}${char}`;
 };
 
