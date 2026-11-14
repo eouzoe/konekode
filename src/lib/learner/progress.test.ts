@@ -1,19 +1,24 @@
 import { expect, test } from 'bun:test';
 
-import { isEvent, unitState, unlockedItems, type Kind, type LearningEvent } from './events';
+import { type LearningEvent } from '@/lib/record/event';
+
+import { unitState, unlockedItems } from './progress';
 
 let counter = 0;
 
-const make = (kind: Kind, ref: string, at: number): LearningEvent => {
+const make = (kind: string, ref: string, at: number): LearningEvent => {
   counter += 1;
   return {
+    actor: 'test',
     at,
-    device: 'test',
+    data: {},
     id: `event-${String(counter)}`,
     kind,
     ref,
+    seq: counter,
+    session: 'test',
     unit: 'start',
-    version: 1,
+    version: 2,
   };
 };
 
@@ -78,14 +83,9 @@ test('同一時間的事件用識別碼決定先後，結果仍然固定', () =>
   expect(unitState(events, 'start')).toEqual(unitState(events.toReversed(), 'start'));
 });
 
-test('形狀不對的資料不算事件', () => {
-  const good = make('beat.reached', 'intro', 1);
-  expect(isEvent(good)).toBe(true);
-  expect(isEvent(null)).toBe(false);
-  expect(isEvent({ ...good, at: 1.5 })).toBe(false);
-  expect(isEvent({ ...good, kind: 'something.else' })).toBe(false);
-  expect(isEvent({ ...good, version: 2 })).toBe(false);
-  expect(isEvent({ ...good, ref: 7 })).toBe(false);
+test('沒看過的事件種類不影響進度', () => {
+  const events = [make('beat.reached', 'intro', 1), make('drill.finished', '', 2)];
+  expect(unitState(events, 'start')).toEqual({ passed: new Set(), position: 'intro' });
 });
 
 test('解鎖的項目由紀錄算出來，重新開始單元會收回該單元給的', () => {

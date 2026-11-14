@@ -70,8 +70,16 @@ const open = async (
 ): Promise<void> => {
   await page.goto(path);
   await page.evaluate(
-    ({ ids, ref }) => {
+    async ({ ids, ref }) => {
       localStorage.clear();
+      await new Promise<null>((resolve) => {
+        const removal = indexedDB.deleteDatabase('konekode');
+        for (const name of ['success', 'error', 'blocked']) {
+          removal.addEventListener(name, () => {
+            resolve(null);
+          });
+        }
+      });
       const unit = document.querySelector<HTMLElement>('[data-scene]')?.dataset.unit ?? '';
       const make = (kind: string, target: string, at: number): object => ({
         at,
@@ -314,8 +322,21 @@ test.describe('起步單元', () => {
   test('走到示範開頭的那一句，成對符號的解鎖會寫進紀錄', async ({ page }) => {
     await open(page, 'lets-type');
     const unlockedNow = async (): Promise<Set<string>> => {
-      const raw = await page.evaluate(() => localStorage.getItem('cp:events:v1') ?? '[]');
-      const value: unknown = JSON.parse(raw);
+      const value: unknown = await page.evaluate(
+        async () =>
+          await new Promise<unknown>((resolve, reject) => {
+            const opening = indexedDB.open('konekode');
+            opening.addEventListener('error', () => {
+              reject(new Error('開不了資料庫'));
+            });
+            opening.addEventListener('success', () => {
+              const all = opening.result.transaction('events').objectStore('events').getAll();
+              all.addEventListener('success', () => {
+                resolve(all.result);
+              });
+            });
+          }),
+      );
       const events = parse(storedEvents, value).filter((event) => event.kind === 'item.unlocked');
       return new Set(events.map((event) => event.ref));
     };

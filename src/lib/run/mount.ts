@@ -1,5 +1,4 @@
-import { readDraft, writeDraft } from '@/lib/progress/store';
-
+import { readDraft, writeDraft } from './draft';
 import { createEditor, type Editor } from './editor';
 import { explain } from './explain';
 import { type Outcome } from './protocol';

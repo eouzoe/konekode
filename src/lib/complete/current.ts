@@ -1,4 +1,4 @@
-import { unlockedNow } from '@/lib/progress/store';
+import { unlockedNow } from '@/lib/learner/live';
 
 import { catalog } from './catalog';
 import { createEngine } from './engine';

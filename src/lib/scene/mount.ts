@@ -1,8 +1,5 @@
 import { createActor, type Actor, type SnapshotFrom } from 'xstate';
 
-import { unitState } from '@/lib/progress/events';
-import { clearDraft, readEvents, record } from '@/lib/progress/store';
-
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
 import { fitStage } from './fit';
@@ -10,6 +7,7 @@ import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { grantUnlocks, readMeta } from './meta';
 import { createReveal, type Reveal } from './reveal';
+import { noteCheck, noteReached, openSession, restartUnit, type ReadUnit } from './session';
 
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 
@@ -122,7 +120,7 @@ const show = (scene: Scene): void => {
 
 const notePassed = (scene: Scene, passed: readonly string[]): void => {
   for (const id of passed.slice(scene.passed)) {
-    record('check.passed', scene.unit, id);
+    noteCheck(scene.unit, id);
   }
   if (passed.length > scene.passed && document.activeElement instanceof HTMLElement) {
     document.activeElement.blur();
@@ -140,7 +138,7 @@ const enter = (scene: Scene, index: number): boolean => {
     return false;
   }
   scene.index = index;
-  record('beat.reached', scene.unit, scene.beats[index]?.dataset.id ?? '');
+  noteReached(scene.unit, scene.beats[index]?.dataset.id ?? '');
   show(scene);
   return true;
 };
@@ -183,12 +181,6 @@ const check = (scene: Scene, kind: Check, output: string): void => {
   scene.actor.send({ full: isFullScreen(), kind, output, type: 'CHECKED' });
 };
 
-const restart = (scene: Scene): void => {
-  record('unit.restarted', scene.unit, '');
-  clearDraft(scene.unit);
-  globalThis.location.reload();
-};
-
 const listen = (scene: Scene): void => {
   listenInput(scene.root, {
     back: () => {
@@ -207,7 +199,7 @@ const listen = (scene: Scene): void => {
       fitStage(scene.root);
     },
     restart: () => {
-      restart(scene);
+      void restartUnit(scene.unit);
     },
     screen: () => {
       step(scene, 'SCREEN');
@@ -216,10 +208,10 @@ const listen = (scene: Scene): void => {
   });
 };
 
-const build = (root: HTMLElement): Scene => {
+const build = (root: HTMLElement, read: ReadUnit): Scene => {
   const beats = [...root.querySelectorAll<HTMLElement>('[data-beat]')];
   const unit = root.dataset.unit ?? '';
-  const state = unitState(readEvents(), unit);
+  const state = read(unit);
   const metas = beats.map((beat) => readMeta(beat));
   const actor = createActor(sceneMachine, {
     input: { beats: metas, passed: [...state.passed], position: state.position },
@@ -243,8 +235,8 @@ const build = (root: HTMLElement): Scene => {
   };
 };
 
-const mountScene = (root: HTMLElement): void => {
-  const scene = build(root);
+const mountScene = (root: HTMLElement, read: ReadUnit): void => {
+  const scene = build(root, read);
   for (const beat of scene.beats.slice(0, scene.index)) {
     fillInput(scene, beat);
   }
@@ -258,9 +250,10 @@ const mountScene = (root: HTMLElement): void => {
   fitStage(scene.root);
 };
 
-const mountScenes = (): void => {
+const mountScenes = async (): Promise<void> => {
+  const read = await openSession();
   for (const root of document.querySelectorAll<HTMLElement>('[data-scene]')) {
-    mountScene(root);
+    mountScene(root, read);
   }
 };
 

@@ -1,6 +1,7 @@
 import { parse } from 'valibot';
 
-import { record, unlockedNow } from '@/lib/progress/store';
+import { unlockedNow } from '@/lib/learner/live';
+import { track } from '@/lib/record/current';
 
 import { beatSchema, type BeatMeta } from './machine';
 
@@ -13,7 +14,7 @@ const grantUnlocks = (unit: string, beat: HTMLElement): void => {
   const ids = (beat.dataset.unlock ?? '').split(',').filter((id) => id !== '');
   for (const id of ids) {
     if (!unlockedNow().has(id)) {
-      record('item.unlocked', unit, id);
+      track('item.unlocked', { ref: id, unit });
     }
   }
 };

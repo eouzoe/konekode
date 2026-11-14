@@ -115,6 +115,7 @@
       "files": ["e2e/**"],
       "rules": {
         "eslint/no-await-in-loop": "off",
+        "promise/avoid-new": "off",
         "unicorn/no-await-expression-member": "off",
         "typescript/return-await": "off"
       }
