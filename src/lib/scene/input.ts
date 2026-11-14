@@ -1,16 +1,31 @@
+import { object, optional, safeParse, string, type InferOutput } from 'valibot';
+
 import { watchFullScreen } from './conditions';
 import { readIntent, type Intent } from './keys';
 import { type Check } from './machine';
 
 interface Handlers {
   readonly back: () => void;
-  readonly checked: (kind: Check, output: string) => void;
+  readonly checked: (kind: Check, output: string, beat: string) => void;
   readonly next: () => void;
-  readonly played: () => void;
+  readonly played: (beat: string) => void;
   readonly resized: () => void;
   readonly restart: () => void;
   readonly screen: () => void;
 }
+
+const reportSchema = object({ beat: string(), output: optional(string(), '') });
+
+const readReport = (event: Event): InferOutput<typeof reportSchema> | null => {
+  if (!(event instanceof CustomEvent)) {
+    return null;
+  }
+  const parsed = safeParse(reportSchema, event.detail);
+  if (!parsed.success) {
+    return null;
+  }
+  return parsed.output;
+};
 
 const runProgram = (root: HTMLElement): boolean => {
   const runner = root.querySelector<HTMLElement>('[data-code-runner]');
@@ -58,13 +73,22 @@ const listenChecks = (root: HTMLElement, handlers: Handlers): void => {
       }
     }
   });
-  root.addEventListener('drill:played', handlers.played);
-  root.addEventListener('drill:done', () => {
-    handlers.checked('drill', '');
+  root.addEventListener('drill:played', (event) => {
+    const report = readReport(event);
+    if (report !== null) {
+      handlers.played(report.beat);
+    }
+  });
+  root.addEventListener('drill:done', (event) => {
+    const report = readReport(event);
+    if (report !== null) {
+      handlers.checked('drill', '', report.beat);
+    }
   });
   root.addEventListener('run:ok', (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'string') {
-      handlers.checked('run', event.detail);
+    const report = readReport(event);
+    if (report !== null) {
+      handlers.checked('run', report.output, report.beat);
     }
   });
 };

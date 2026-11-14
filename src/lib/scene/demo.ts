@@ -13,7 +13,7 @@ const direct = (root: HTMLElement, beats: readonly HTMLElement[], index: number)
     .slice(start, index)
     .map((earlier) => earlier.dataset.demo ?? '')
     .join(' ');
-  const detail = { before, now: beat.dataset.demo ?? '' };
+  const detail = { beat: beat.dataset.id ?? '', before, now: beat.dataset.demo ?? '' };
   root
     .querySelector('[data-typing-drill]')
     ?.dispatchEvent(new CustomEvent('drill:demo', { detail }));
@@ -30,6 +30,7 @@ const readKeys = (beat: HTMLElement | undefined): string[] | null => {
 
 interface Detail {
   readonly active: boolean;
+  readonly beat: string;
   readonly before: readonly string[];
   readonly focus: boolean;
   readonly now: readonly string[];
@@ -47,10 +48,11 @@ const keysBefore = (beats: readonly HTMLElement[], index: number): string[] => {
 
 const describeStage = (beats: readonly HTMLElement[], index: number, focus: boolean): Detail => {
   const now = readKeys(beats[index]);
+  const beat = beats[index]?.dataset.id ?? '';
   if (now === null) {
-    return { active: false, before: [], focus, now: [] };
+    return { active: false, beat, before: [], focus, now: [] };
   }
-  return { active: true, before: keysBefore(beats, index), focus: false, now };
+  return { active: true, beat, before: keysBefore(beats, index), focus: false, now };
 };
 
 const stageRun = (root: HTMLElement, beats: readonly HTMLElement[], focus: boolean): void => {

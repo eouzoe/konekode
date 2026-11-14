@@ -65,11 +65,14 @@ const show = (parts: Parts, view: View): void => {
   parts.output.textContent = view.text;
 };
 
-const announce = (parts: Parts, outcome: Outcome): void => {
+const announce = (parts: Parts, outcome: Outcome, beat: string): void => {
   if (outcome.kind === 'finished' && outcome.exitCode === 0) {
-    parts.root.dispatchEvent(new CustomEvent('run:ok', { bubbles: true, detail: outcome.output }));
+    const detail = { beat, output: outcome.output };
+    parts.root.dispatchEvent(new CustomEvent('run:ok', { bubbles: true, detail }));
   }
 };
+
+const attending = (parts: Parts): string => parts.root.dataset.beat ?? '';
 
 const isArmed = (parts: Parts): boolean => parts.root.dataset.armed === 'true';
 
@@ -79,18 +82,44 @@ const arm = (parts: Parts, armed: boolean): void => {
   parts.editor.setArmed(armed);
 };
 
+interface Finished {
+  readonly beat: string;
+  readonly forced: boolean;
+  readonly outcome: Outcome;
+}
+
+const finish = (parts: Parts, { beat, forced, outcome }: Finished): void => {
+  if (attending(parts) !== beat) {
+    return;
+  }
+  show(parts, describe(outcome));
+  if (!forced) {
+    announce(parts, outcome, beat);
+  }
+};
+
+const begin = (parts: Parts): void => {
+  parts.button.disabled = true;
+  show(parts, { state: 'busy', status: busyStatus(loadedPercent()), text: '' });
+};
+
+const fail = (parts: Parts, beat: string, error: unknown): void => {
+  if (attending(parts) === beat) {
+    show(parts, { state: 'error', status: '執行不了', text: String(error) });
+  }
+};
+
 const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   if (parts.root.dataset.state === 'busy' || (!forced && !isArmed(parts))) {
     return;
   }
-  parts.button.disabled = true;
-  show(parts, { state: 'busy', status: busyStatus(loadedPercent()), text: '' });
+  const beat = attending(parts);
+  begin(parts);
   try {
     const outcome = await runProgram(parts.editor.getText(), parts.input.value);
-    show(parts, describe(outcome));
-    announce(parts, outcome);
+    finish(parts, { beat, forced, outcome });
   } catch (error) {
-    show(parts, { state: 'error', status: '執行不了', text: String(error) });
+    fail(parts, beat, error);
   } finally {
     parts.button.disabled = !isArmed(parts);
   }
@@ -137,6 +166,9 @@ const guide = (parts: Parts): void => {
   const stage = createStage({
     arm: (armed) => {
       arm(parts, armed);
+    },
+    attend: (beat) => {
+      parts.root.dataset.beat = beat;
     },
     clear: () => {
       show(parts, { state: 'idle', status: '', text: '' });

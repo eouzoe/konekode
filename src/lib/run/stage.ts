@@ -16,6 +16,7 @@ interface State {
 
 interface Tools {
   readonly arm: (armed: boolean) => void;
+  readonly attend: (beat: string) => void;
   readonly clear: () => void;
   readonly editor: Editor;
   readonly keycap: HTMLElement;
@@ -24,6 +25,7 @@ interface Tools {
 
 const stageSchema = object({
   active: boolean(),
+  beat: string(),
   before: array(string()),
   focus: boolean(),
   now: array(string()),
@@ -125,6 +127,7 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
   return (detail) => {
     const stage = parse(stageSchema, detail);
     state.turn += 1;
+    tools.attend(stage.beat);
     tools.keycap.textContent = '';
     if (stage.active) {
       demonstrate(tools, state, stage);

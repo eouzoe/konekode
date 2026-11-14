@@ -172,7 +172,7 @@ const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
 const words = (script: string): string[] => script.split(' ').filter((word) => word !== '');
 
 const play = async (session: Session, parts: Parts, script: Script): Promise<void> => {
-  session.token += 1;
+  Object.assign(session, { beat: script.beat, token: session.token + 1 });
   const run: Run = { mine: session.token, parts, session };
   for (const step of words(script.before)) {
     runStep(session, parts, step);
@@ -181,15 +181,18 @@ const play = async (session: Session, parts: Parts, script: Script): Promise<voi
   paint(session, parts);
   await playFrom(run, words(script.now));
   if (isCurrent(run)) {
-    parts.root.dispatchEvent(new CustomEvent('drill:played', { bubbles: true }));
+    const options = { bubbles: true, detail: { beat: script.beat } };
+    parts.root.dispatchEvent(new CustomEvent('drill:played', options));
   }
 };
 
 const isScript = (value: unknown): value is Script =>
   typeof value === 'object' &&
   value !== null &&
+  'beat' in value &&
   'before' in value &&
   'now' in value &&
+  typeof value.beat === 'string' &&
   typeof value.before === 'string' &&
   typeof value.now === 'string';
 
@@ -201,7 +204,8 @@ const advance = (session: Session, parts: Parts, next: Drill): void => {
   session.live = next;
   paint(session, parts);
   if (!wasDone && isDone(session.live)) {
-    parts.root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
+    const detail = { beat: session.beat };
+    parts.root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true, detail }));
   }
 };
 
@@ -229,6 +233,7 @@ const mountDrill = (root: HTMLElement): void => {
   const parts = collectParts(root);
   const fresh = createDrill(root.dataset.target ?? '');
   const session: Session = {
+    beat: '',
     demo: false,
     guide: false,
     live: fresh,

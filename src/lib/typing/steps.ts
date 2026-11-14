@@ -3,6 +3,7 @@ import { messages } from './messages';
 import { type Parts } from './view';
 
 interface Session {
+  beat: string;
   demo: boolean;
   guide: boolean;
   live: Drill;
@@ -12,6 +13,7 @@ interface Session {
 }
 
 interface Script {
+  readonly beat: string;
   readonly before: string;
   readonly now: string;
 }

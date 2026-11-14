@@ -181,19 +181,26 @@ const check = (scene: Scene, kind: Check, output: string): void => {
   scene.actor.send({ full: isFullScreen(), kind, output, type: 'CHECKED' });
 };
 
+const isCurrent = (scene: Scene, beat: string): boolean =>
+  scene.beats[scene.index]?.dataset.id === beat;
+
 const listen = (scene: Scene): void => {
   listenInput(scene.root, {
     back: () => {
       step(scene, 'BACK');
     },
-    checked: (kind, output) => {
-      check(scene, kind, output);
+    checked: (kind, output, beat) => {
+      if (isCurrent(scene, beat)) {
+        check(scene, kind, output);
+      }
     },
     next: () => {
       step(scene, 'NEXT');
     },
-    played: () => {
-      step(scene, 'PLAYED');
+    played: (beat) => {
+      if (isCurrent(scene, beat)) {
+        step(scene, 'PLAYED');
+      }
     },
     resized: () => {
       fitStage(scene.root);

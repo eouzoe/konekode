@@ -423,6 +423,33 @@ test.describe('起步單元', () => {
     await expect(page.locator('[data-code-runner] [data-role="keycap"]')).toBeEmpty();
   });
 
+  test('小精靈示範的執行結果不會被算成學生過關', async ({ page }) => {
+    await open(page, 'what-run');
+    await expect(status(page)).not.toBeEmpty({ timeout: 30_000 });
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('run-cout');
+    await expect(page.locator('.cm-content')).toBeFocused();
+    await expect(page.locator('.cm-content')).not.toContainText('cout << 7;');
+    await page.keyboard.press('Enter');
+    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+    await expect(output(page)).toBeEmpty();
+    await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
+    expect(await currentId(page)).toBe('run-cout');
+  });
+
+  test('每一關沒有真的完成就不能往下', async ({ page }) => {
+    for (const gate of ['type-template', ...Object.keys(programs)]) {
+      await open(page, gate);
+      for (const key of ['Space', 'ArrowRight', 'ArrowDown', 'Enter', 'Space']) {
+        await page.keyboard.press(key);
+      }
+      if (gate !== 'type-template') {
+        await expect(status(page), gate).toHaveText('執行完成', { timeout: 150_000 });
+      }
+      expect(await currentId(page), gate).toBe(gate);
+    }
+  });
+
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {
     await open(page);
     const seen: string[] = [];
