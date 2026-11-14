@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { array, parse } from 'valibot';
+import { array, object, parse, string } from 'valibot';
 import { createActor } from 'xstate';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
@@ -12,6 +12,8 @@ interface Current {
 }
 
 const path = '/learn/start/';
+const storedEvent = object({ kind: string(), ref: string() });
+const storedEvents = array(storedEvent);
 const template = [
   '#include <bits/stdc++.h>',
   'using namespace std;',
@@ -61,24 +63,33 @@ const current = async (page: Page): Promise<Current> =>
 
 const currentId = async (page: Page): Promise<string> => (await current(page)).id;
 
-const open = async (page: Page, position: string | null = null): Promise<void> => {
+const open = async (
+  page: Page,
+  position: string | null = null,
+  unlocked: readonly string[] = [],
+): Promise<void> => {
   await page.goto(path);
-  await page.evaluate((ref) => {
-    localStorage.clear();
-    if (ref !== null) {
+  await page.evaluate(
+    ({ ids, ref }) => {
+      localStorage.clear();
       const unit = document.querySelector<HTMLElement>('[data-scene]')?.dataset.unit ?? '';
-      const event = {
-        at: 1,
+      const make = (kind: string, target: string, at: number): object => ({
+        at,
         device: 'e2e',
-        id: 'e2e-1',
-        kind: 'beat.reached',
-        ref,
+        id: `e2e-${String(at)}`,
+        kind,
+        ref: target,
         unit,
         version: 1,
-      };
-      localStorage.setItem('cp:events:v1', JSON.stringify([event]));
-    }
-  }, position);
+      });
+      const events = ids.map((id, index) => make('item.unlocked', id, index + 1));
+      if (ref !== null) {
+        events.push(make('beat.reached', ref, ids.length + 1));
+      }
+      localStorage.setItem('cp:events:v1', JSON.stringify(events));
+    },
+    { ids: [...unlocked], ref: position },
+  );
   await page.reload();
   await page.locator('[data-scene][data-ready="true"]').waitFor();
 };
@@ -226,22 +237,96 @@ test.describe('起步單元', () => {
     expect(await currentId(page)).toBe('run-cout');
   });
 
-  test('執行畫面裡，焦點不在編輯器時按 Enter 也會執行', async ({ page }) => {
-    await open(page, 'run-cout');
-    await writeProgram(page, programs['run-cout'] ?? '');
+  test('不是輪到學生時不能執行也不能改，Enter 就是下一句', async ({ page }) => {
+    await open(page, 'do-things');
+    const button = page.locator('[data-code-runner] [data-role="run"]');
+    const editor = page.locator('.cm-content');
+    await expect(button).toBeDisabled();
+    await expect(editor).toHaveAttribute('contenteditable', 'false');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-7');
-    await page.keyboard.press('Space');
-    expect(await currentId(page)).toBe('arrows-out');
+    expect(await currentId(page)).toBe('editor');
+    await expect(status(page)).toBeEmpty();
+  });
+
+  test('輪到學生時，焦點不在編輯器按 Enter 也會執行', async ({ page }) => {
+    await open(page, 'run-cout');
+    const button = page.locator('[data-code-runner] [data-role="run"]');
+    await expect(button).toBeEnabled();
+    await expect(page.locator('.cm-content')).toHaveAttribute('contenteditable', 'true');
     await page.evaluate(() => {
-      const box = document.querySelector('[data-code-runner] [data-role="output"]');
-      if (box !== null) {
-        box.textContent = '';
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
       }
     });
     await page.keyboard.press('Enter');
-    await expect(output(page)).toHaveText('7', { timeout: 60_000 });
-    expect(await currentId(page)).toBe('arrows-out');
+    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+    expect(await currentId(page)).toBe('run-cout');
+  });
+
+  test('示範的提示與按鍵高亮，只在講到的那一句出現', async ({ page }) => {
+    const hint = page.locator('[data-typing-drill] [data-role="hint"]');
+    const lit = page.locator('[data-typing-drill] .key[data-next="true"]');
+    const mode = page.locator('[data-typing-drill] [data-role="mode"]');
+    await open(page, 'normal-readonly');
+    await expect(hint).toBeEmpty();
+    await expect(lit).toHaveCount(0);
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('press-i');
+    await expect(hint).toHaveText('按 i 進入輸入模式');
+    await expect(lit).toHaveText(['I']);
+    await expect(mode).toHaveText('-- NORMAL --');
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('insert-is');
+    await expect(mode).toHaveText('-- INSERT --');
+    await expect(hint).toBeEmpty();
+    await expect(lit).toHaveCount(0);
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('shift-combo');
+    await expect(hint).toContainText('Shift');
+    await expect(lit).toHaveCount(3);
+  });
+
+  test('還沒解鎖的成對符號不會補，解鎖後才會', async ({ page }) => {
+    const auto = page.locator('[data-typing-drill] .is-auto');
+    const typing = page.locator('[data-typing-drill] [data-role="input"]');
+    const editor = page.locator('.cm-content');
+    await open(page, 'type-template');
+    await expect(typing).toBeFocused();
+    await page.keyboard.type('i#include <');
+    await expect(auto).toHaveCount(0);
+    await open(page, 'type-template', ['pair.include-angle', 'pair.paren', 'pair.brace']);
+    await expect(typing).toBeFocused();
+    await page.keyboard.type('i#include <');
+    await expect(auto).toHaveText(['>']);
+    await open(page, 'run-cout');
+    await expect(editor).toBeFocused();
+    await page.keyboard.press('o');
+    await page.keyboard.type('int a{');
+    await expect(editor).toContainText('int a{');
+    await expect(editor).not.toContainText('int a{}');
+    await open(page, 'run-cout', ['pair.brace']);
+    await expect(editor).toBeFocused();
+    await page.keyboard.press('o');
+    await page.keyboard.type('int a{');
+    await expect(editor).toContainText('int a{}');
+  });
+
+  test('走到示範開頭的那一句，成對符號的解鎖會寫進紀錄', async ({ page }) => {
+    await open(page, 'lets-type');
+    const unlockedNow = async (): Promise<Set<string>> => {
+      const raw = await page.evaluate(() => localStorage.getItem('cp:events:v1') ?? '[]');
+      const value: unknown = JSON.parse(raw);
+      const events = parse(storedEvents, value).filter((event) => event.kind === 'item.unlocked');
+      return new Set(events.map((event) => event.ref));
+    };
+    const wanted = new Set(['pair.brace', 'pair.include-angle', 'pair.paren']);
+    expect(await unlockedNow()).toEqual(new Set());
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('demo-intro');
+    expect(await unlockedNow()).toEqual(wanted);
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Space');
+    expect(await unlockedNow()).toEqual(wanted);
   });
 
   test('輪到學生時焦點自動進編輯器，只用鍵盤就能過第一關', async ({ page }) => {

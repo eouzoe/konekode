@@ -43,6 +43,7 @@ const codeLines = template.split('\n');
               data-keys={beat.keys === undefined ? undefined : JSON.stringify(beat.keys)}
               data-after={beat.after}
               data-when={beat.when}
+              data-unlock={beat.unlock?.join(',')}
             >
               {beat.say}
             </p>

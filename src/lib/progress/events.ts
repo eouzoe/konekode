@@ -1,4 +1,4 @@
-type Kind = 'beat.reached' | 'check.passed' | 'unit.restarted';
+type Kind = 'beat.reached' | 'check.passed' | 'item.unlocked' | 'unit.restarted';
 
 interface LearningEvent {
   readonly at: number;
@@ -16,7 +16,12 @@ interface UnitState {
 }
 
 const currentVersion = 1;
-const kinds: ReadonlySet<string> = new Set(['beat.reached', 'check.passed', 'unit.restarted']);
+const kinds: ReadonlySet<string> = new Set([
+  'beat.reached',
+  'check.passed',
+  'item.unlocked',
+  'unit.restarted',
+]);
 const textFields = ['device', 'id', 'kind', 'ref', 'unit'];
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -62,7 +67,9 @@ const apply = (draft: Draft, event: LearningEvent): void => {
     draft.position = event.ref;
     return;
   }
-  draft.passed.add(event.ref);
+  if (event.kind === 'check.passed') {
+    draft.passed.add(event.ref);
+  }
 };
 
 const unitState = (events: readonly LearningEvent[], unit: string): UnitState => {
@@ -75,4 +82,37 @@ const unitState = (events: readonly LearningEvent[], unit: string): UnitState =>
   return draft;
 };
 
-export { currentVersion, isEvent, unitState, type Kind, type LearningEvent, type UnitState };
+const noteUnlock = (byUnit: Map<string, Set<string>>, event: LearningEvent): void => {
+  if (event.kind === 'unit.restarted') {
+    byUnit.delete(event.unit);
+    return;
+  }
+  if (event.kind === 'item.unlocked') {
+    const items = byUnit.get(event.unit) ?? new Set<string>();
+    byUnit.set(event.unit, items.add(event.ref));
+  }
+};
+
+const unlockedItems = (events: readonly LearningEvent[]): Set<string> => {
+  const byUnit = new Map<string, Set<string>>();
+  for (const event of unique(events).toSorted(byTime)) {
+    noteUnlock(byUnit, event);
+  }
+  const all = new Set<string>();
+  for (const items of byUnit.values()) {
+    for (const item of items) {
+      all.add(item);
+    }
+  }
+  return all;
+};
+
+export {
+  currentVersion,
+  isEvent,
+  unitState,
+  unlockedItems,
+  type Kind,
+  type LearningEvent,
+  type UnitState,
+};

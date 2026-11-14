@@ -1,3 +1,6 @@
+import { engine } from '@/lib/complete/current';
+import { autoClosed } from '@/lib/complete/pairs';
+
 import { expectedChar, hasStarted, insertKey, isDone, isTyped, type Drill } from './drill';
 import {
   enterKey,
@@ -150,17 +153,40 @@ const highlight = (keyboard: HTMLElement, drill: Drill): void => {
   }
 };
 
+const autoSpan = (text: string): HTMLElement => {
+  const span = document.createElement('span');
+  span.className = 'is-auto';
+  span.textContent = text;
+  return span;
+};
+
+const renderRest = (parts: Parts, drill: Drill, from: number): void => {
+  const closed = autoClosed(drill.target, drill.position, engine.pairs());
+  const pieces: (HTMLElement | string)[] = [];
+  let plain = '';
+  for (let index = from; index < drill.target.length; index += 1) {
+    const char = drill.target.charAt(index);
+    if (closed.has(index)) {
+      pieces.push(plain, autoSpan(char));
+      plain = '';
+    } else {
+      plain += char;
+    }
+  }
+  parts.rest.replaceChildren(...pieces, plain);
+};
+
 const renderCode = (parts: Parts, drill: Drill): void => {
   const { position, target } = drill;
   const char = target.charAt(position);
   parts.done.textContent = target.slice(0, position);
   if (char === '\n') {
     parts.current.textContent = '⏎';
-    parts.rest.textContent = target.slice(position);
+    renderRest(parts, drill, position);
     return;
   }
   parts.current.textContent = char;
-  parts.rest.textContent = target.slice(position + 1);
+  renderRest(parts, drill, position + 1);
 };
 
 const modeLabel = (drill: Drill): string => {
@@ -168,6 +194,13 @@ const modeLabel = (drill: Drill): string => {
     return messages.modeInsert;
   }
   return messages.modeNormal;
+};
+
+const quiet = (parts: Parts): void => {
+  parts.hint.textContent = '';
+  for (const key of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
+    key.dataset.next = 'false';
+  }
 };
 
 const render = (parts: Parts, drill: Drill): void => {
@@ -183,4 +216,4 @@ const render = (parts: Parts, drill: Drill): void => {
   highlight(parts.keyboard, drill);
 };
 
-export { buildKeyboard, findPart, render, type Parts };
+export { buildKeyboard, findPart, quiet, render, type Parts };

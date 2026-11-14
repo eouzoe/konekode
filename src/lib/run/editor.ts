@@ -1,11 +1,12 @@
 import { indentWithTab } from '@codemirror/commands';
 import { cpp } from '@codemirror/lang-cpp';
 import { indentUnit } from '@codemirror/language';
-import { EditorState, Prec, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { getCM, vim } from '@replit/codemirror-vim';
 import { basicSetup } from 'codemirror';
 
+import { unlockedPairs } from './pairs';
 import { press, restore, snapshot, type Snapshot } from './puppet';
 import { tokyoNight } from './theme';
 
@@ -16,6 +17,7 @@ interface Editor {
   readonly onMode: (listener: (mode: string) => void) => void;
   readonly press: (token: string) => void;
   readonly restore: (saved: Snapshot) => void;
+  readonly setArmed: (armed: boolean) => void;
   readonly snapshot: () => Snapshot;
 }
 
@@ -65,7 +67,7 @@ const arrows = Prec.highest(
   ]),
 );
 
-const handle = (view: EditorView): Editor => ({
+const handle = (view: EditorView, editable: Compartment): Editor => ({
   blur: () => {
     view.contentDOM.blur();
   },
@@ -84,6 +86,9 @@ const handle = (view: EditorView): Editor => ({
   restore: (saved) => {
     restore(view, saved);
   },
+  setArmed: (armed) => {
+    view.dispatch({ effects: editable.reconfigure(EditorView.editable.of(armed)) });
+  },
   snapshot: () => snapshot(view),
 });
 
@@ -93,6 +98,7 @@ const createEditor = (options: Options): Editor => {
     return true;
   };
   const runInNormal = (target: EditorView): boolean => !isInserting(target) && run();
+  const editable = new Compartment();
   const view = new EditorView({
     doc: options.text,
     extensions: [
@@ -104,7 +110,9 @@ const createEditor = (options: Options): Editor => {
           { key: 'Enter', run: runInNormal },
         ]),
       ),
+      unlockedPairs,
       basicSetup,
+      editable.of(EditorView.editable.of(false)),
       keymap.of([indentWithTab]),
       cpp(),
       indentUnit.of(' '.repeat(tabWidth)),
@@ -118,7 +126,7 @@ const createEditor = (options: Options): Editor => {
     ],
     parent: options.parent,
   });
-  return handle(view);
+  return handle(view, editable);
 };
 
 export { createEditor, type Editor };

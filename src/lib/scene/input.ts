@@ -12,8 +12,13 @@ interface Handlers {
   readonly screen: () => void;
 }
 
-const runProgram = (root: HTMLElement): void => {
-  root.querySelector('[data-code-runner]')?.dispatchEvent(new CustomEvent('runner:run'));
+const runProgram = (root: HTMLElement): boolean => {
+  const runner = root.querySelector<HTMLElement>('[data-code-runner]');
+  if (runner?.dataset.armed !== 'true') {
+    return false;
+  }
+  runner.dispatchEvent(new CustomEvent('runner:run'));
+  return true;
 };
 
 const turn = (handlers: Handlers, intent: Intent): void => {
@@ -30,8 +35,7 @@ const onKey = (root: HTMLElement, handlers: Handlers, event: KeyboardEvent): voi
     return;
   }
   event.preventDefault();
-  if (event.key === 'Enter' && root.dataset.stage === 'run') {
-    runProgram(root);
+  if (event.key === 'Enter' && runProgram(root)) {
     return;
   }
   turn(handlers, intent);

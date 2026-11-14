@@ -1,5 +1,7 @@
 import { parse } from 'valibot';
 
+import { record, unlockedNow } from '@/lib/progress/store';
+
 import { beatSchema, type BeatMeta } from './machine';
 
 const readMeta = (beat: HTMLElement): BeatMeta => {
@@ -7,4 +9,13 @@ const readMeta = (beat: HTMLElement): BeatMeta => {
   return parse(beatSchema, { expect: expect ?? null, id, next: after === 'next', wait, when });
 };
 
-export { readMeta };
+const grantUnlocks = (unit: string, beat: HTMLElement): void => {
+  const ids = (beat.dataset.unlock ?? '').split(',').filter((id) => id !== '');
+  for (const id of ids) {
+    if (!unlockedNow().has(id)) {
+      record('item.unlocked', unit, id);
+    }
+  }
+};
+
+export { grantUnlocks, readMeta };

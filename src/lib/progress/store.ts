@@ -1,4 +1,4 @@
-import { currentVersion, isEvent, type Kind, type LearningEvent } from './events';
+import { currentVersion, isEvent, unlockedItems, type Kind, type LearningEvent } from './events';
 
 const eventsKey = 'cp:events:v1';
 const deviceKey = 'cp:device';
@@ -43,7 +43,15 @@ const deviceId = (): string => {
   return created;
 };
 
+let unlockedCache: ReadonlySet<string> | null = null;
+
+const unlockedNow = (): ReadonlySet<string> => {
+  unlockedCache ??= unlockedItems(readEvents());
+  return unlockedCache;
+};
+
 const record = (kind: Kind, unit: string, ref: string): boolean => {
+  unlockedCache = null;
   const event: LearningEvent = {
     at: Date.now(),
     device: deviceId(),
@@ -69,4 +77,4 @@ const clearDraft = (name: string): void => {
   }
 };
 
-export { clearDraft, readDraft, readEvents, record, writeDraft };
+export { clearDraft, readDraft, readEvents, record, unlockedNow, writeDraft };

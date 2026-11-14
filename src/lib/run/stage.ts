@@ -15,6 +15,7 @@ interface State {
 }
 
 interface Tools {
+  readonly arm: (armed: boolean) => void;
   readonly clear: () => void;
   readonly editor: Editor;
   readonly keycap: HTMLElement;
@@ -97,6 +98,7 @@ const settle = (tools: Tools, state: State, focus: boolean): void => {
     tools.clear();
     state.saved = null;
   }
+  tools.arm(focus);
   if (focus) {
     tools.editor.focus();
     return;
@@ -106,6 +108,7 @@ const settle = (tools: Tools, state: State, focus: boolean): void => {
 
 const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
   state.saved ??= tools.editor.snapshot();
+  tools.arm(false);
   tools.editor.restore(state.saved);
   tools.editor.blur();
   tools.clear();

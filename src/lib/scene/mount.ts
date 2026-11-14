@@ -8,7 +8,7 @@ import { direct, stageRun } from './demo';
 import { fitStage } from './fit';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
-import { readMeta } from './meta';
+import { grantUnlocks, readMeta } from './meta';
 import { createReveal, type Reveal } from './reveal';
 
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
@@ -95,6 +95,7 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
 };
 
 const focusTyping = (scene: Scene, beat: HTMLElement): void => {
+  grantUnlocks(scene.unit, beat);
   const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
   if (beat.dataset.wait === 'drill' && scene.waiting) {
     typing?.focus();

@@ -9,8 +9,17 @@ import {
   type Drill,
 } from './drill';
 import { escapeKey } from './keyboard';
-import { messages } from './messages';
-import { buildKeyboard, findPart, render, type Parts } from './view';
+import {
+  instant,
+  labels,
+  nextChunk,
+  setDown,
+  stepDelay,
+  steps,
+  type Script,
+  type Session,
+} from './steps';
+import { buildKeyboard, findPart, quiet, render, type Parts } from './view';
 
 const deleteKeys = new Set(['Backspace', 'Delete']);
 
@@ -72,69 +81,6 @@ const collectParts = (root: HTMLElement): Parts => {
   };
 };
 
-interface Session {
-  demo: boolean;
-  live: Drill;
-  pretend: string;
-  show: Drill;
-  token: number;
-}
-
-interface Script {
-  readonly before: string;
-  readonly now: string;
-}
-
-type Step = (session: Session, parts: Parts, value: string) => void;
-
-const stepDelay = 420;
-const fillDelay = 14;
-const flashFrames = [{ opacity: 1 }, { opacity: 0.15 }, { opacity: 1 }];
-const flashTiming = { duration: 380, iterations: 2 };
-const labels: Record<string, string> = {
-  insert: messages.modeInsert,
-  normal: messages.modeNormal,
-};
-
-const setDown = (parts: Parts, key: string, down: boolean): void => {
-  for (const element of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
-    if (key === '' || element.dataset.key === key) {
-      element.dataset.down = String(down);
-    }
-  }
-};
-
-const steps: Record<string, Step> = {
-  demo: (session) => {
-    session.demo = true;
-  },
-  down: (_session, parts, value) => {
-    setDown(parts, value, true);
-  },
-  esc: (session) => {
-    session.show = escape(session.show);
-  },
-  flash: (_session, parts) => {
-    parts.mode.animate(flashFrames, flashTiming);
-  },
-  key: (session, _parts, value) => {
-    session.show = press(session.show, value);
-  },
-  live: (session) => {
-    session.demo = false;
-  },
-  reset: (session, parts) => {
-    session.show = createDrill(session.show.target);
-    setDown(parts, '', false);
-  },
-  show: (session, _parts, value) => {
-    session.pretend = value;
-  },
-  up: (_session, parts, value) => {
-    setDown(parts, value, false);
-  },
-};
-
 const shown = (session: Session): Drill => {
   if (session.demo) {
     return session.show;
@@ -144,6 +90,10 @@ const shown = (session: Session): Drill => {
 
 const paint = (session: Session, parts: Parts): void => {
   render(parts, shown(session));
+  parts.root.dataset.demo = String(session.demo);
+  if (session.demo && !session.guide) {
+    quiet(parts);
+  }
   const label = labels[session.pretend];
   if (label !== undefined) {
     parts.mode.textContent = label;
@@ -191,9 +141,10 @@ const fillSlowly = async (run: Run): Promise<void> => {
   if (!isCurrent(run) || isTyped(session.show)) {
     return;
   }
-  session.show = press(session.show, expectedChar(session.show));
+  const chunk = nextChunk(session.show);
+  session.show = typeInto(session.show, chunk.text);
   paint(session, run.parts);
-  await pause(fillDelay);
+  await pause(chunk.pause);
   await fillSlowly(run);
 };
 
@@ -204,7 +155,9 @@ const playStep = async (run: Run, step: string): Promise<void> => {
   }
   runStep(run.session, run.parts, step);
   paint(run.session, run.parts);
-  await pause(stepDelay);
+  if (!instant.has(step)) {
+    await pause(stepDelay);
+  }
 };
 
 const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
@@ -275,7 +228,14 @@ const listen = (session: Session, parts: Parts): void => {
 const mountDrill = (root: HTMLElement): void => {
   const parts = collectParts(root);
   const fresh = createDrill(root.dataset.target ?? '');
-  const session: Session = { demo: false, live: fresh, pretend: '', show: fresh, token: 0 };
+  const session: Session = {
+    demo: false,
+    guide: false,
+    live: fresh,
+    pretend: '',
+    show: fresh,
+    token: 0,
+  };
   buildKeyboard(parts.keyboard);
   paint(session, parts);
   listen(session, parts);

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { isEvent, unitState, type Kind, type LearningEvent } from './events';
+import { isEvent, unitState, unlockedItems, type Kind, type LearningEvent } from './events';
 
 let counter = 0;
 
@@ -86,4 +86,24 @@ test('形狀不對的資料不算事件', () => {
   expect(isEvent({ ...good, kind: 'something.else' })).toBe(false);
   expect(isEvent({ ...good, version: 2 })).toBe(false);
   expect(isEvent({ ...good, ref: 7 })).toBe(false);
+});
+
+test('解鎖的項目由紀錄算出來，重新開始單元會收回該單元給的', () => {
+  const events = [
+    make('item.unlocked', 'pair.paren', 1),
+    make('item.unlocked', 'pair.brace', 2),
+    make('item.unlocked', 'pair.paren', 3),
+  ];
+  expect([...unlockedItems(events)].toSorted()).toEqual(['pair.brace', 'pair.paren']);
+  const restarted = [
+    ...events,
+    make('unit.restarted', '', 4),
+    make('item.unlocked', 'pair.quote', 5),
+  ];
+  expect([...unlockedItems(restarted)]).toEqual(['pair.quote']);
+});
+
+test('解鎖紀錄不會被當成通過檢查', () => {
+  const state = unitState([make('item.unlocked', 'pair.paren', 1)], 'start');
+  expect(state.passed.size).toBe(0);
 });

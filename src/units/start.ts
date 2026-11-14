@@ -11,6 +11,7 @@ interface Beat {
   readonly say: string;
   readonly snippet?: string;
   readonly stage: 'code' | 'drill' | 'empty' | 'run';
+  readonly unlock?: readonly string[];
   readonly wait?: 'drill' | 'run';
   readonly when?: 'fullscreen' | 'windowed';
 }
@@ -73,7 +74,13 @@ const opening: readonly Beat[] = [
   },
   { id: 'every-program', say: '接下來它們會不斷地以這個樣子出現，', stage: 'code' },
   { append: true, id: 'lets-type', say: '所以，來輸入一遍，熟悉一下吧！', stage: 'code' },
-  { demo: 'reset demo', id: 'demo-intro', say: '開始之前，先看一遍示範吧！', stage: 'drill' },
+  {
+    demo: 'reset demo',
+    id: 'demo-intro',
+    say: '開始之前，先看一遍示範吧！',
+    stage: 'drill',
+    unlock: ['pair.include-angle', 'pair.paren', 'pair.brace'],
+  },
   {
     id: 'vim-what',
     say: 'vim 是一種只靠鍵盤就能寫程式的方式，也是一種哲學。',
@@ -89,32 +96,38 @@ const opening: readonly Beat[] = [
   { id: 'normal-is', say: 'normal 是一般模式，用來看程式和下指令。', stage: 'drill' },
   {
     append: true,
-    demo: 'key:a key:b key:c',
+    demo: 'down:a key:a up:a down:b key:b up:b down:c key:c up:c',
     id: 'normal-readonly',
     say: '在這個模式下，內容是唯讀的，所以按鍵盤打不出字。',
     stage: 'drill',
   },
   {
-    demo: 'wait wait down:i key:i up:i',
+    demo: 'hint',
     id: 'press-i',
     say: '要輸入文字的話，需要按 i 切換成輸入模式。',
     stage: 'drill',
   },
-  { id: 'insert-is', say: '這就是輸入模式，現在可以打字了！', stage: 'drill' },
   {
+    demo: 'hush down:i key:i up:i',
+    id: 'insert-is',
+    say: '這就是輸入模式，現在可以打字了！',
+    stage: 'drill',
+  },
+  {
+    demo: 'hint',
     id: 'shift-combo',
     say: '有些符號要先按住 Shift，使用組合鍵來輸入，像是這個 # 就是 Shift + 3。',
     stage: 'drill',
   },
   {
     after: 'next',
-    demo: 'down:Shift wait down:3 key:# up:3 wait up:Shift wait fill wait',
+    demo: 'down:Shift wait down:3 hush key:# up:3 wait up:Shift wait fill wait',
     id: 'speed-run',
     say: '剩下的，就讓我們一口氣打完吧！',
     stage: 'drill',
   },
   {
-    demo: 'wait down:Escape esc up:Escape',
+    demo: 'hint wait down:Escape esc up:Escape',
     id: 'press-esc',
     say: '打完之後，按左上角的 Esc，就會回到一般模式。',
     stage: 'drill',
@@ -206,6 +219,7 @@ const printing: readonly Beat[] = [
     say: `換行要自己印出來，寫法是 ${newline}。`,
     snippet: printLines,
     stage: 'run',
+    unlock: ['pair.quote'],
   },
   {
     id: 'append-line',

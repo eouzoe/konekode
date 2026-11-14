@@ -71,6 +71,12 @@ const { target } = Astro.props;
   .is-rest {
     color: var(--faint);
   }
+  .is-rest :global(.is-auto) {
+    color: var(--soft);
+  }
+  .drill[data-demo='true'] .drill-tip {
+    visibility: hidden;
+  }
   .drill[data-wrong='true'] .is-current {
     background: var(--bad);
   }

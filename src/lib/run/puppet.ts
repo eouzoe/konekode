@@ -2,6 +2,8 @@ import { deleteCharBackward, insertNewlineAndIndent } from '@codemirror/commands
 import { type EditorView } from '@codemirror/view';
 import { Vim, getCM } from '@replit/codemirror-vim';
 
+import { typeChar } from './pairs';
+
 interface Snapshot {
   readonly cursor: number;
   readonly text: string;
@@ -58,7 +60,7 @@ const press = (view: EditorView, token: string): void => {
     return;
   }
   if (token.startsWith(charPrefix)) {
-    view.dispatch(view.state.replaceSelection(token.slice(charPrefix.length)));
+    typeChar(view, token.slice(charPrefix.length));
     return;
   }
   pressKey(view, token);

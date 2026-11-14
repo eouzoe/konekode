@@ -72,8 +72,16 @@ const announce = (parts: Parts, outcome: Outcome): void => {
   }
 };
 
-const execute = async (parts: Parts): Promise<void> => {
-  if (parts.button.disabled) {
+const isArmed = (parts: Parts): boolean => parts.root.dataset.armed === 'true';
+
+const arm = (parts: Parts, armed: boolean): void => {
+  parts.root.dataset.armed = String(armed);
+  parts.button.disabled = !armed;
+  parts.editor.setArmed(armed);
+};
+
+const execute = async (parts: Parts, forced: boolean): Promise<void> => {
+  if (parts.root.dataset.state === 'busy' || (!forced && !isArmed(parts))) {
     return;
   }
   parts.button.disabled = true;
@@ -85,7 +93,7 @@ const execute = async (parts: Parts): Promise<void> => {
   } catch (error) {
     show(parts, { state: 'error', status: '執行不了', text: String(error) });
   } finally {
-    parts.button.disabled = false;
+    parts.button.disabled = !isArmed(parts);
   }
 };
 
@@ -126,15 +134,21 @@ const hints: Record<string, string> = {
   normal: 'Enter 執行',
 };
 
-const guide = (parts: Parts, start: () => void): void => {
+const guide = (parts: Parts): void => {
   const stage = createStage({
+    arm: (armed) => {
+      arm(parts, armed);
+    },
     clear: () => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
     editor: parts.editor,
     keycap: find(parts.root, 'keycap', HTMLElement),
-    run: start,
+    run: () => {
+      void execute(parts, true);
+    },
   });
+  arm(parts, false);
   parts.hint.textContent = hints.normal ?? '';
   parts.editor.onMode((mode) => {
     parts.hint.textContent = hints[mode] ?? '';
@@ -160,7 +174,7 @@ const mountRunner = (root: HTMLElement): void => {
     status: find(root, 'status', HTMLElement),
   };
   const start = (): void => {
-    void execute(parts);
+    void execute(parts, false);
   };
   watchLoading((percent) => {
     if (root.dataset.state === 'busy') {
@@ -169,7 +183,7 @@ const mountRunner = (root: HTMLElement): void => {
   });
   parts.button.addEventListener('click', start);
   root.addEventListener('runner:run', start);
-  guide(parts, start);
+  guide(parts);
 };
 
 const mountRunners = (): void => {
