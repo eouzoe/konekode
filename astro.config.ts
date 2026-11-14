@@ -73,7 +73,7 @@ export default defineConfig({
       name: 'pack-large-assets',
     },
   ],
-  site: 'https://example.com',
+  site: 'https://konekode.pappdatap.workers.dev',
   vite: {
     optimizeDeps: {
       exclude: ['@yowasp/clang'],

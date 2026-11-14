@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cp-site",
+  "name": "konekode",
   "main": "worker/index.ts",
   "compatibility_date": "2026-11-01",
   "assets": {
