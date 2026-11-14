@@ -281,12 +281,40 @@ test.describe('起步單元', () => {
     await expect(editor).toBeFocused();
   });
 
-  test('示範時會顯示小精靈按的鍵', async ({ page }) => {
+  test('示範時會依序顯示小精靈按的每一個鍵', async ({ page }) => {
+    await page.addInitScript(() => {
+      const shown: string[] = [];
+      Object.assign(globalThis, { shownKeys: shown });
+      document.addEventListener('DOMContentLoaded', () => {
+        const keycap = document.querySelector('[data-code-runner] [data-role="keycap"]');
+        if (keycap === null) {
+          return;
+        }
+        const note = (): void => {
+          const text = keycap.textContent ?? '';
+          if (text !== '') {
+            shown.push(text);
+          }
+        };
+        note();
+        new MutationObserver(note).observe(keycap, {
+          characterData: true,
+          childList: true,
+          subtree: true,
+        });
+      });
+    });
     await open(page, 'move-jk');
-    const keycap = page.locator('[data-code-runner] [data-role="keycap"]');
-    await expect(keycap).toHaveText('j');
-    await expect(keycap).toHaveText('k', { timeout: 5000 });
-    await expect(keycap).toBeEmpty({ timeout: 10_000 });
+    const read = async (): Promise<string> =>
+      await page.evaluate(() => {
+        const keys: unknown = Reflect.get(globalThis, 'shownKeys');
+        if (!Array.isArray(keys)) {
+          return '';
+        }
+        return keys.join('');
+      });
+    await expect.poll(read, { timeout: 15_000 }).toBe('jjjkjjj');
+    await expect(page.locator('[data-code-runner] [data-role="keycap"]')).toBeEmpty();
   });
 
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {
