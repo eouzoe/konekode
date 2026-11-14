@@ -1,4 +1,5 @@
 interface Beat {
+  readonly after?: 'next';
   readonly append?: boolean;
   readonly demo?: string;
   readonly auto?: number;
@@ -10,6 +11,7 @@ interface Beat {
   readonly snippet?: string;
   readonly stage: 'code' | 'drill' | 'empty' | 'run';
   readonly wait?: 'drill' | 'run';
+  readonly when?: 'fullscreen' | 'windowed';
 }
 
 const template = `#include <bits/stdc++.h>
@@ -41,6 +43,19 @@ cout << a << '\n';`;
 const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
 
 const opening: readonly Beat[] = [
+  { id: 'fullscreen-ask', say: '開始之前，建議先按 F11，把畫面放到全螢幕喔！', stage: 'empty' },
+  {
+    id: 'fullscreen-yes',
+    say: '哇，已經是全螢幕了！真棒！',
+    stage: 'empty',
+    when: 'fullscreen',
+  },
+  {
+    id: 'fullscreen-no',
+    say: '好吧，那我們就這樣開始吧。',
+    stage: 'empty',
+    when: 'windowed',
+  },
   { id: 'intro', say: '好的，那就讓我們從第一步開始吧！', stage: 'empty' },
   { append: true, id: 'see-template', say: '看看這些東東。', stage: 'code' },
   { id: 'line-include', lines: '1', say: '一行 include 萬能標頭檔。', stage: 'code' },
@@ -64,10 +79,14 @@ const opening: readonly Beat[] = [
   { id: 'every-program', say: '接下來它們會不斷地以這個樣子出現，', stage: 'code' },
   { append: true, id: 'lets-type', say: '所以，來輸入一遍，熟悉一下吧！', stage: 'code' },
   { demo: 'reset demo', id: 'demo-intro', say: '開始之前，先看一遍示範吧！', stage: 'drill' },
-  { id: 'vim-what', say: 'vim 是一種只靠鍵盤就能寫程式的編輯方式。', stage: 'drill' },
+  {
+    id: 'vim-what',
+    say: 'vim 是一種只靠鍵盤就能寫程式的方式，也是一種哲學。',
+    stage: 'drill',
+  },
   {
     append: true,
-    demo: 'flash key:i wait wait esc',
+    demo: 'flash show:insert wait wait show:normal',
     id: 'vim-two-modes',
     say: 'vim 有兩種模式：normal 與 insert。',
     stage: 'drill',
@@ -81,16 +100,22 @@ const opening: readonly Beat[] = [
     stage: 'drill',
   },
   {
-    demo: 'reset demo wait wait down:i key:i up:i',
+    demo: 'wait wait down:i key:i up:i',
     id: 'press-i',
     say: '要輸入文字的話，需要按 i 切換成輸入模式。',
     stage: 'drill',
   },
   { id: 'insert-is', say: '這就是輸入模式，現在可以打字了！', stage: 'drill' },
   {
-    demo: 'wait down:Shift wait down:3 key:# up:3 wait up:Shift',
     id: 'shift-combo',
     say: '有些符號要先按住 Shift，使用組合鍵來輸入，像是這個 # 就是 Shift + 3。',
+    stage: 'drill',
+  },
+  {
+    after: 'next',
+    demo: 'down:Shift wait down:3 key:# up:3 wait up:Shift wait fill wait',
+    id: 'speed-run',
+    say: '剩下的，就讓我們一口氣打完吧！',
     stage: 'drill',
   },
   {
@@ -100,7 +125,7 @@ const opening: readonly Beat[] = [
     stage: 'drill',
   },
   {
-    demo: 'reset live',
+    demo: 'live',
     id: 'type-template',
     say: '就是這樣！換我們自己來試試看吧！',
     stage: 'drill',

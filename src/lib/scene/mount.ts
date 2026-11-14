@@ -1,6 +1,9 @@
 import { unitState } from '@/lib/progress/events';
 import { clearDraft, readEvents, record } from '@/lib/progress/store';
 
+import { applies } from './conditions';
+import { readIntent } from './keys';
+
 interface Scene {
   readonly beats: readonly HTMLElement[];
   readonly finished: Set<number>;
@@ -16,21 +19,6 @@ interface Scene {
 
 const forward = 1;
 const backward = -forward;
-const backwardKeys = new Set(['ArrowLeft', 'ArrowUp']);
-const silentKeys = new Set(['Alt', 'CapsLock', 'Control', 'Escape', 'Meta', 'Shift', 'Tab']);
-
-const isControl = (target: EventTarget | null): boolean =>
-  target instanceof HTMLTextAreaElement ||
-  target instanceof HTMLInputElement ||
-  target instanceof HTMLButtonElement ||
-  (target instanceof HTMLElement && target.closest('.cm-editor') !== null);
-
-const isDrillInput = (target: EventTarget | null): boolean =>
-  target instanceof HTMLTextAreaElement && target.dataset.role === 'input';
-
-const isShortcut = (event: KeyboardEvent): boolean =>
-  event.ctrlKey || event.metaKey || event.altKey || silentKeys.has(event.key);
-
 const beatId = (beat: HTMLElement | undefined): string => beat?.dataset.id ?? '';
 
 const isWaiting = (scene: Scene): boolean => {
@@ -97,13 +85,24 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
   }
 };
 
+const demoStart = (scene: Scene): number =>
+  scene.beats.findLastIndex(
+    (beat, at) => at <= scene.index && (beat.dataset.demo ?? '').startsWith('reset'),
+  );
+
 const direct = (scene: Scene, beat: HTMLElement): void => {
-  const { demo } = beat.dataset;
-  if (demo !== undefined) {
-    scene.root
-      .querySelector('[data-typing-drill]')
-      ?.dispatchEvent(new CustomEvent('drill:demo', { detail: demo }));
+  const start = demoStart(scene);
+  if (start < 0 || beat.dataset.stage !== 'drill') {
+    return;
   }
+  const before = scene.beats
+    .slice(start, scene.index)
+    .map((earlier) => earlier.dataset.demo ?? '')
+    .join(' ');
+  const detail = { before, now: beat.dataset.demo ?? '' };
+  scene.root
+    .querySelector('[data-typing-drill]')
+    ?.dispatchEvent(new CustomEvent('drill:demo', { detail }));
 };
 
 const refresh = (scene: Scene, beat: HTMLElement): void => {
@@ -131,8 +130,16 @@ const show = (scene: Scene): void => {
   }
 };
 
+const seek = (scene: Scene, step: number): number => {
+  let next = scene.index + step;
+  while (next >= 0 && next < scene.beats.length && !applies(scene.beats[next])) {
+    next += step;
+  }
+  return next;
+};
+
 const move = (scene: Scene, step: number): void => {
-  const next = scene.index + step;
+  const next = seek(scene, step);
   if (next < 0 || next >= scene.beats.length) {
     return;
   }
@@ -157,6 +164,14 @@ const settle = (scene: Scene, beat: HTMLElement): void => {
   }
 };
 
+const proceed = (scene: Scene, kind: string): void => {
+  if (kind === 'drill') {
+    scene.root.dataset.waiting = 'false';
+    return;
+  }
+  move(scene, forward);
+};
+
 const complete = (scene: Scene, kind: string, output: string): void => {
   const beat = scene.beats[scene.index];
   if (beat?.dataset.wait !== kind || scene.finished.has(scene.index)) {
@@ -167,7 +182,7 @@ const complete = (scene: Scene, kind: string, output: string): void => {
     return;
   }
   settle(scene, beat);
-  move(scene, forward);
+  proceed(scene, kind);
 };
 
 const restore = (scene: Scene): void => {
@@ -190,19 +205,13 @@ const restart = (scene: Scene): void => {
   globalThis.location.reload();
 };
 
-const isIgnored = (event: KeyboardEvent): boolean => {
-  if (isDrillInput(event.target)) {
-    return !backwardKeys.has(event.key);
-  }
-  return isControl(event.target) || isShortcut(event);
-};
-
 const onKey = (scene: Scene, event: KeyboardEvent): void => {
-  if (isIgnored(event)) {
+  const intent = readIntent(event);
+  if (intent === 'none') {
     return;
   }
   event.preventDefault();
-  if (backwardKeys.has(event.key)) {
+  if (intent === 'backward') {
     move(scene, backward);
     return;
   }
@@ -223,6 +232,11 @@ const listenChecks = (scene: Scene): void => {
   scene.root.addEventListener('scene:step', (event) => {
     if (event instanceof CustomEvent && typeof event.detail === 'number') {
       move(scene, event.detail);
+    }
+  });
+  scene.root.addEventListener('drill:played', () => {
+    if (scene.beats[scene.index]?.dataset.after === 'next') {
+      move(scene, forward);
     }
   });
   scene.root.addEventListener('drill:done', () => {

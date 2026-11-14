@@ -1,5 +1,15 @@
-import { createDrill, escape, isDone, press, remind, type Drill } from './drill';
+import {
+  createDrill,
+  escape,
+  expectedChar,
+  isDone,
+  isTyped,
+  press,
+  remind,
+  type Drill,
+} from './drill';
 import { escapeKey } from './keyboard';
+import { messages } from './messages';
 import { buildKeyboard, findPart, render, type Parts } from './view';
 
 const deleteKeys = new Set(['Backspace', 'Delete']);
@@ -64,19 +74,31 @@ const collectParts = (root: HTMLElement): Parts => {
 
 interface Session {
   demo: boolean;
-  drill: Drill;
+  live: Drill;
+  pretend: string;
+  show: Drill;
   token: number;
+}
+
+interface Script {
+  readonly before: string;
+  readonly now: string;
 }
 
 type Step = (session: Session, parts: Parts, value: string) => void;
 
-const stepDelay = 450;
+const stepDelay = 420;
+const fillDelay = 14;
 const flashFrames = [{ opacity: 1 }, { opacity: 0.15 }, { opacity: 1 }];
 const flashTiming = { duration: 380, iterations: 2 };
+const labels: Record<string, string> = {
+  insert: messages.modeInsert,
+  normal: messages.modeNormal,
+};
 
 const setDown = (parts: Parts, key: string, down: boolean): void => {
   for (const element of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
-    if (element.dataset.key === key) {
+    if (key === '' || element.dataset.key === key) {
       element.dataset.down = String(down);
     }
   }
@@ -90,33 +112,69 @@ const steps: Record<string, Step> = {
     setDown(parts, value, true);
   },
   esc: (session) => {
-    session.drill = escape(session.drill);
+    session.show = escape(session.show);
   },
   flash: (_session, parts) => {
     parts.mode.animate(flashFrames, flashTiming);
   },
   key: (session, _parts, value) => {
-    session.drill = press(session.drill, value);
+    session.show = press(session.show, value);
   },
   live: (session) => {
     session.demo = false;
   },
   reset: (session, parts) => {
-    session.drill = createDrill(session.drill.target);
-    for (const element of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
-      element.dataset.down = 'false';
-    }
+    session.show = createDrill(session.show.target);
+    setDown(parts, '', false);
+  },
+  show: (session, _parts, value) => {
+    session.pretend = value;
   },
   up: (_session, parts, value) => {
     setDown(parts, value, false);
   },
 };
 
-const pause = async (): Promise<void> => {
+const shown = (session: Session): Drill => {
+  if (session.demo) {
+    return session.show;
+  }
+  return session.live;
+};
+
+const paint = (session: Session, parts: Parts): void => {
+  render(parts, shown(session));
+  const label = labels[session.pretend];
+  if (label !== undefined) {
+    parts.mode.textContent = label;
+  }
+};
+
+const fillAll = (drill: Drill): Drill => {
+  let next = drill;
+  while (!isTyped(next)) {
+    next = press(next, expectedChar(next));
+  }
+  return next;
+};
+
+const runStep = (session: Session, parts: Parts, step: string): void => {
+  const [name = '', value = ''] = step.split(':');
+  if (name !== 'show') {
+    session.pretend = '';
+  }
+  if (name === 'fill') {
+    session.show = fillAll(session.show);
+    return;
+  }
+  steps[name]?.(session, parts, value);
+};
+
+const pause = async (delay: number): Promise<void> => {
   const { promise, resolve } = Promise.withResolvers<null>();
   setTimeout(() => {
     resolve(null);
-  }, stepDelay);
+  }, delay);
   await promise;
 };
 
@@ -126,41 +184,80 @@ interface Run {
   readonly session: Session;
 }
 
-const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
-  const [step, ...rest] = queue;
-  if (step === undefined || run.session.token !== run.mine) {
+const isCurrent = (run: Run): boolean => run.session.token === run.mine;
+
+const fillSlowly = async (run: Run): Promise<void> => {
+  const { session } = run;
+  if (!isCurrent(run) || isTyped(session.show)) {
     return;
   }
-  const [name = '', value = ''] = step.split(':');
-  steps[name]?.(run.session, run.parts, value);
-  render(run.parts, run.session.drill);
-  await pause();
+  session.show = press(session.show, expectedChar(session.show));
+  paint(session, run.parts);
+  await pause(fillDelay);
+  await fillSlowly(run);
+};
+
+const playStep = async (run: Run, step: string): Promise<void> => {
+  if (step === 'fill') {
+    await fillSlowly(run);
+    return;
+  }
+  runStep(run.session, run.parts, step);
+  paint(run.session, run.parts);
+  await pause(stepDelay);
+};
+
+const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
+  const [step, ...rest] = queue;
+  if (step === undefined || !isCurrent(run)) {
+    return;
+  }
+  await playStep(run, step);
   await playFrom(run, rest);
 };
 
-const play = async (session: Session, parts: Parts, script: string): Promise<void> => {
+const words = (script: string): string[] => script.split(' ').filter((word) => word !== '');
+
+const play = async (session: Session, parts: Parts, script: Script): Promise<void> => {
   session.token += 1;
-  await playFrom({ mine: session.token, parts, session }, script.split(' '));
+  const run: Run = { mine: session.token, parts, session };
+  for (const step of words(script.before)) {
+    runStep(session, parts, step);
+  }
+  setDown(parts, '', false);
+  paint(session, parts);
+  await playFrom(run, words(script.now));
+  if (isCurrent(run)) {
+    parts.root.dispatchEvent(new CustomEvent('drill:played', { bubbles: true }));
+  }
 };
+
+const isScript = (value: unknown): value is Script =>
+  typeof value === 'object' &&
+  value !== null &&
+  'before' in value &&
+  'now' in value &&
+  typeof value.before === 'string' &&
+  typeof value.now === 'string';
 
 const advance = (session: Session, parts: Parts, next: Drill): void => {
   if (session.demo) {
     return;
   }
-  const wasDone = isDone(session.drill);
-  session.drill = next;
-  render(parts, session.drill);
-  if (!wasDone && isDone(session.drill)) {
+  const wasDone = isDone(session.live);
+  session.live = next;
+  paint(session, parts);
+  if (!wasDone && isDone(session.live)) {
     parts.root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
   }
 };
 
 const listen = (session: Session, parts: Parts): void => {
   parts.input.addEventListener('beforeinput', (event) => {
-    advance(session, parts, onInput(session.drill, event));
+    advance(session, parts, onInput(session.live, event));
   });
   parts.input.addEventListener('keydown', (event) => {
-    advance(session, parts, onKeyDown(session.drill, event));
+    advance(session, parts, onKeyDown(session.live, event));
   });
   parts.input.addEventListener('compositionend', () => {
     parts.input.value = '';
@@ -169,7 +266,7 @@ const listen = (session: Session, parts: Parts): void => {
     parts.input.focus();
   });
   parts.root.addEventListener('drill:demo', (event) => {
-    if (event instanceof CustomEvent && typeof event.detail === 'string') {
+    if (event instanceof CustomEvent && isScript(event.detail)) {
       void play(session, parts, event.detail);
     }
   });
@@ -177,13 +274,10 @@ const listen = (session: Session, parts: Parts): void => {
 
 const mountDrill = (root: HTMLElement): void => {
   const parts = collectParts(root);
-  const session: Session = {
-    demo: false,
-    drill: createDrill(root.dataset.target ?? ''),
-    token: 0,
-  };
+  const fresh = createDrill(root.dataset.target ?? '');
+  const session: Session = { demo: false, live: fresh, pretend: '', show: fresh, token: 0 };
   buildKeyboard(parts.keyboard);
-  render(parts, session.drill);
+  paint(session, parts);
   listen(session, parts);
 };
 
