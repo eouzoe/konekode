@@ -28,6 +28,8 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   <div class="bar">
     <button type="button" data-role="run">執行</button>
     <span data-role="status" class="status" aria-live="polite"></span>
+    <kbd data-role="keycap" class="keycap" aria-hidden="true"></kbd>
+    <span data-role="hint" class="hint"></span>
   </div>
   <pre data-role="output" class="output"></pre>
 </section>
@@ -97,6 +99,29 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .status {
     color: var(--soft);
     font-size: 0.9375rem;
+  }
+  .keycap {
+    min-width: 2.4rem;
+    padding: 0.2rem 0.6rem;
+    border: 1px solid var(--accent);
+    border-radius: 0.4rem;
+    background: var(--accent);
+    color: var(--page);
+    font-family: var(--mono);
+    font-size: 1rem;
+    text-align: center;
+  }
+  .keycap:empty {
+    display: none;
+  }
+  .hint {
+    margin-left: auto;
+    color: var(--faint);
+    font-size: 0.875rem;
+    user-select: none;
+  }
+  .runner:not(:focus-within) .hint {
+    visibility: hidden;
   }
   .runner[data-state='error'] .status {
     color: var(--bad);

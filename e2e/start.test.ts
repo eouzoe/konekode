@@ -232,8 +232,7 @@ test.describe('起步單元', () => {
     await page.keyboard.press('Enter');
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-7');
     await page.keyboard.press('Space');
-    await page.keyboard.press('Space');
-    expect(await currentId(page)).toBe('run-key');
+    expect(await currentId(page)).toBe('arrows-out');
     await page.evaluate(() => {
       const box = document.querySelector('[data-code-runner] [data-role="output"]');
       if (box !== null) {
@@ -242,7 +241,52 @@ test.describe('起步單元', () => {
     });
     await page.keyboard.press('Enter');
     await expect(output(page)).toHaveText('7', { timeout: 60_000 });
-    expect(await currentId(page)).toBe('run-key');
+    expect(await currentId(page)).toBe('arrows-out');
+  });
+
+  test('輪到學生時焦點自動進編輯器，只用鍵盤就能過第一關', async ({ page }) => {
+    await open(page, 'run-cout');
+    await expect(page.locator('.cm-content')).toBeFocused();
+    for (const key of ['j', 'j', 'j', 'j', 'j', 'o']) {
+      await page.keyboard.press(key);
+    }
+    await page.keyboard.type('cout << 7;');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-7');
+    await expect(page.locator('.cm-content')).not.toBeFocused();
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('arrows-out');
+  });
+
+  test('小精靈的示範會操作編輯器，輪到學生時還原', async ({ page }) => {
+    await open(page, 'semicolon');
+    const editor = page.locator('.cm-content');
+    await expect(editor).toContainText('cout << 7;', { timeout: 15_000 });
+    await expect(editor).not.toBeFocused();
+    const indented = await page.evaluate(() =>
+      [...document.querySelectorAll('.cm-line')].some((line) =>
+        (line.textContent ?? '').startsWith('    cout << 7;'),
+      ),
+    );
+    expect(indented).toBe(true);
+    await page.keyboard.press('ArrowLeft');
+    expect(await currentId(page)).toBe('indent');
+    await expect(editor).not.toContainText('cout << 7;');
+    for (let step = 0; step < 6 && (await currentId(page)) !== 'run-cout'; step += 1) {
+      await page.keyboard.press('Space');
+    }
+    expect(await currentId(page)).toBe('run-cout');
+    await expect(editor).not.toContainText('cout << 7;');
+    await expect(editor).toBeFocused();
+  });
+
+  test('示範時會顯示小精靈按的鍵', async ({ page }) => {
+    await open(page, 'move-jk');
+    const keycap = page.locator('[data-code-runner] [data-role="keycap"]');
+    await expect(keycap).toHaveText('j');
+    await expect(keycap).toHaveText('k', { timeout: 5000 });
+    await expect(keycap).toBeEmpty({ timeout: 10_000 });
   });
 
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {

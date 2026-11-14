@@ -40,6 +40,7 @@ const codeLines = template.split('\n');
               data-auto={beat.auto}
               data-append={beat.append}
               data-demo={beat.demo}
+              data-keys={beat.keys === undefined ? undefined : JSON.stringify(beat.keys)}
               data-after={beat.after}
               data-when={beat.when}
             >

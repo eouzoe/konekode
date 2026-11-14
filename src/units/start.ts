@@ -6,6 +6,7 @@ interface Beat {
   readonly expect?: string;
   readonly id: string;
   readonly input?: string;
+  readonly keys?: readonly string[];
   readonly lines?: string;
   readonly say: string;
   readonly snippet?: string;
@@ -22,14 +23,7 @@ int main()
     cin.tie(nullptr)->sync_with_stdio(false);
 }`;
 
-const starter = `#include <bits/stdc++.h>
-using namespace std;
-
-int main()
-{
-    cin.tie(nullptr)->sync_with_stdio(false);
-
-}`;
+const starter = template;
 
 const newline = String.raw`'\n'`;
 const print7 = 'cout << 7;';
@@ -135,63 +129,60 @@ const opening: readonly Beat[] = [
 ];
 
 const editing: readonly Beat[] = [
-  { id: 'do-things', say: '現在開始讓程式做事。', stage: 'run' },
+  { id: 'do-things', say: '接下來，讓程式開始做事吧！', stage: 'run' },
+  { id: 'editor', say: '這裡是我們寫程式的地方，用法和剛才一樣喔！', stage: 'run' },
   {
-    id: 'editor',
-    say: '上面這一塊，是我們寫程式的地方。用法和剛才一樣：按 i 打字，按 Esc 回到一般模式。',
+    id: 'add-cout',
+    say: '等一下，我們要把這一行加進大括號裡面。',
+    snippet: print7,
+    stage: 'run',
+  },
+  { id: 'watch-edit', keys: ['reset'], say: '一樣先看一次示範吧！', snippet: print7, stage: 'run' },
+  {
+    id: 'move-jk',
+    keys: ['j', 'j', 'j', 'k', 'j', 'j', 'j'],
+    say: '在一般模式下，按 j 會往下一行，按 k 會往上一行。',
+    snippet: print7,
     stage: 'run',
   },
   {
-    id: 'add-cout',
-    say: '等一下，我們要在大括號裡面那一行空白，打上這一行。',
+    id: 'open-line',
+    keys: ['o'],
+    say: '到了要加東西的地方，按 o，下面就會多出新的一行，而且直接變成輸入模式。',
     snippet: print7,
     stage: 'run',
   },
   {
     id: 'indent',
-    say: '寫在大括號裡面的每一行，都要往右縮進去四格。',
-    snippet: print7,
-    stage: 'run',
-  },
-  {
-    id: 'indent-why',
-    say: '這樣一眼就看得出來，哪幾行是屬於這個大括號的。',
-    snippet: print7,
-    stage: 'run',
-  },
-  {
-    id: 'tab',
-    say: '我們不用自己按四次空白鍵。按一下鍵盤左邊的 Tab，就會一次空四格。',
+    keys: [],
+    say: '新的一行會自動往右縮四格。寫在大括號裡面的每一行都要這樣，一眼就看得出它們屬於這個大括號。',
     snippet: print7,
     stage: 'run',
   },
   {
     id: 'semicolon',
-    say: '最後面的分號，是在告訴電腦這一句講完了。少了它，電腦會看不懂。',
+    keys: ['type:cout << 7;'],
+    say: '然後打上這一行。最後面的分號，是在告訴電腦這一句講完了。',
     snippet: print7,
     stage: 'run',
   },
   {
     id: 'what-run',
-    say: '打好之後要按執行。執行的意思，是叫電腦照我們寫的程式做一遍。',
+    keys: ['Esc', 'run'],
+    say: '打完之後按 Esc 回到一般模式，再按 Enter，電腦就會照我們寫的程式做一遍。',
     snippet: print7,
     stage: 'run',
   },
   {
     expect: '7',
     id: 'run-cout',
-    say: '請用滑鼠點一下那一行空白，按 i，按 Tab，打上這一行，再按 Esc，然後按執行。',
+    say: '換我們了！把這一行加進去，然後按 Enter 執行吧！',
     snippet: print7,
     stage: 'run',
     wait: 'run',
   },
   { id: 'saw-7', say: '有看到 7 嗎？cout 的工作就是把東西印出來。', stage: 'run' },
   { id: 'arrows-out', say: '中間的 << 像兩個箭頭，把 7 送到 cout 那邊去。', stage: 'run' },
-  {
-    id: 'run-key',
-    say: '以後不用每次都用滑鼠按執行。在一般模式按 Enter，也會執行。',
-    stage: 'run',
-  },
 ];
 
 const printing: readonly Beat[] = [
@@ -199,7 +190,7 @@ const printing: readonly Beat[] = [
   {
     expect: '78',
     id: 'run-78',
-    say: '請在下面再加一行，然後執行。',
+    say: '移到 cout 那一行，按 o 在下面再加一行，然後執行吧！',
     snippet: print78,
     stage: 'run',
     wait: 'run',
@@ -217,9 +208,23 @@ const printing: readonly Beat[] = [
     stage: 'run',
   },
   {
+    id: 'append-line',
+    keys: ['reset', 'find:cout << 7', 'A'],
+    say: '要改已經寫好的一行，先移到那一行，按 A，就會跳到這一行的最後面開始打字。',
+    snippet: printLines,
+    stage: 'run',
+  },
+  {
+    id: 'backspace',
+    keys: ['BS', `type: << ${newline};`, 'Esc'],
+    say: `按 Backspace 把分號刪掉，接著打上 << ${newline}，最後把分號補回來。`,
+    snippet: printLines,
+    stage: 'run',
+  },
+  {
     expect: '7\n8',
     id: 'run-newline',
-    say: '請把兩行都改成這樣，再執行一次。',
+    say: '換我們了！把兩行都改成這樣，再執行一次吧！',
     snippet: printLines,
     stage: 'run',
     wait: 'run',
@@ -240,9 +245,23 @@ const storing: readonly Beat[] = [
     stage: 'run',
   },
   {
+    id: 'delete-line',
+    keys: ['reset', 'find:cout << 7', 'dd', 'dd'],
+    say: '不要的那一行，移過去之後連按兩次 d，就會整行刪掉。',
+    snippet: remember,
+    stage: 'run',
+  },
+  {
+    id: 'retype',
+    keys: ['k', 'o', 'type:int a{7};', 'Enter', `type:cout << a << ${newline};`, 'Esc'],
+    say: '接著按 k 回到上一行，按 o 把新的兩行打上去。在輸入模式按 Enter，可以換到下一行繼續打。',
+    snippet: remember,
+    stage: 'run',
+  },
+  {
     expect: '7',
     id: 'run-int',
-    say: '請把剛才那兩行換成這兩行，再執行。',
+    say: '換我們了！把剛才那兩行換成這兩行，再執行吧！',
     snippet: remember,
     stage: 'run',
     wait: 'run',
@@ -279,7 +298,7 @@ const storing: readonly Beat[] = [
   },
   {
     id: 'echo',
-    say: '我們輸入什麼，它就印出什麼。把輸入改成別的數字再執行一次，結果也會跟著變。',
+    say: '我們輸入什麼，它就印出什麼。',
     stage: 'run',
   },
 ];

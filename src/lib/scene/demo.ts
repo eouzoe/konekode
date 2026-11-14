@@ -1,3 +1,5 @@
+import { array, parse, string } from 'valibot';
+
 const demoStart = (beats: readonly HTMLElement[], index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && (beat.dataset.demo ?? '').startsWith('reset'));
 
@@ -17,4 +19,49 @@ const direct = (root: HTMLElement, beats: readonly HTMLElement[], index: number)
     ?.dispatchEvent(new CustomEvent('drill:demo', { detail }));
 };
 
-export { direct };
+const readKeys = (beat: HTMLElement | undefined): string[] | null => {
+  const raw = beat?.dataset.keys;
+  if (raw === undefined) {
+    return null;
+  }
+  const value: unknown = JSON.parse(raw);
+  return parse(array(string()), value);
+};
+
+interface Detail {
+  readonly active: boolean;
+  readonly before: readonly string[];
+  readonly focus: boolean;
+  readonly now: readonly string[];
+}
+
+const startsSequence = (beat: HTMLElement): boolean => {
+  const keys = readKeys(beat);
+  return keys !== null && keys[0] === 'reset';
+};
+
+const keysBefore = (beats: readonly HTMLElement[], index: number): string[] => {
+  const start = beats.findLastIndex((beat, at) => at <= index && startsSequence(beat));
+  return beats.slice(Math.max(start, 0), index).flatMap((beat) => readKeys(beat) ?? []);
+};
+
+const describeStage = (beats: readonly HTMLElement[], index: number, focus: boolean): Detail => {
+  const now = readKeys(beats[index]);
+  if (now === null) {
+    return { active: false, before: [], focus, now: [] };
+  }
+  return { active: true, before: keysBefore(beats, index), focus: false, now };
+};
+
+const stageRun = (root: HTMLElement, beats: readonly HTMLElement[], focus: boolean): void => {
+  const index = beats.findLastIndex((beat) => beat.hidden === false);
+  if (beats[index]?.dataset.stage !== 'run') {
+    return;
+  }
+  const detail = describeStage(beats, index, focus);
+  root
+    .querySelector('[data-code-runner]')
+    ?.dispatchEvent(new CustomEvent('runner:stage', { detail }));
+};
+
+export { direct, stageRun };

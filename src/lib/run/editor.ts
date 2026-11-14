@@ -6,10 +6,17 @@ import { EditorView, keymap } from '@codemirror/view';
 import { getCM, vim } from '@replit/codemirror-vim';
 import { basicSetup } from 'codemirror';
 
+import { press, restore, snapshot, type Snapshot } from './puppet';
 import { tokyoNight } from './theme';
 
 interface Editor {
+  readonly blur: () => void;
+  readonly focus: () => void;
   readonly getText: () => string;
+  readonly onMode: (listener: (mode: string) => void) => void;
+  readonly press: (token: string) => void;
+  readonly restore: (saved: Snapshot) => void;
+  readonly snapshot: () => Snapshot;
 }
 
 interface Options {
@@ -58,6 +65,28 @@ const arrows = Prec.highest(
   ]),
 );
 
+const handle = (view: EditorView): Editor => ({
+  blur: () => {
+    view.contentDOM.blur();
+  },
+  focus: () => {
+    view.focus();
+  },
+  getText: () => view.state.doc.toString(),
+  onMode: (listener) => {
+    getCM(view)?.on('vim-mode-change', (change: { mode: string }) => {
+      listener(change.mode);
+    });
+  },
+  press: (token) => {
+    press(view, token);
+  },
+  restore: (saved) => {
+    restore(view, saved);
+  },
+  snapshot: () => snapshot(view),
+});
+
 const createEditor = (options: Options): Editor => {
   const run = (): boolean => {
     options.onRun();
@@ -89,7 +118,7 @@ const createEditor = (options: Options): Editor => {
     ],
     parent: options.parent,
   });
-  return { getText: () => view.state.doc.toString() };
+  return handle(view);
 };
 
 export { createEditor, type Editor };

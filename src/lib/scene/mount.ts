@@ -4,7 +4,7 @@ import { unitState } from '@/lib/progress/events';
 import { clearDraft, readEvents, record } from '@/lib/progress/store';
 
 import { isFullScreen } from './conditions';
-import { direct } from './demo';
+import { direct, stageRun } from './demo';
 import { fitStage } from './fit';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
@@ -101,6 +101,7 @@ const focusTyping = (scene: Scene, beat: HTMLElement): void => {
   } else {
     typing?.blur();
   }
+  stageRun(scene.root, scene.beats, beat.dataset.wait === 'run' && scene.waiting);
 };
 
 const show = (scene: Scene): void => {

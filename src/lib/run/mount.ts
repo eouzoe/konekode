@@ -4,10 +4,12 @@ import { createEditor, type Editor } from './editor';
 import { explain } from './explain';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
+import { createStage } from './stage';
 
 interface Parts {
   readonly button: HTMLButtonElement;
   readonly editor: Editor;
+  readonly hint: HTMLElement;
   readonly input: HTMLTextAreaElement;
   readonly output: HTMLElement;
   readonly root: HTMLElement;
@@ -119,6 +121,31 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
   });
 };
 
+const hints: Record<string, string> = {
+  insert: 'Esc 回到一般模式',
+  normal: 'Enter 執行',
+};
+
+const guide = (parts: Parts, start: () => void): void => {
+  const stage = createStage({
+    clear: () => {
+      show(parts, { state: 'idle', status: '', text: '' });
+    },
+    editor: parts.editor,
+    keycap: find(parts.root, 'keycap', HTMLElement),
+    run: start,
+  });
+  parts.hint.textContent = hints.normal ?? '';
+  parts.editor.onMode((mode) => {
+    parts.hint.textContent = hints[mode] ?? '';
+  });
+  parts.root.addEventListener('runner:stage', (event) => {
+    if (event instanceof CustomEvent) {
+      stage(event.detail);
+    }
+  });
+};
+
 const mountRunner = (root: HTMLElement): void => {
   const run = (): void => {
     root.dispatchEvent(new CustomEvent('runner:run'));
@@ -126,6 +153,7 @@ const mountRunner = (root: HTMLElement): void => {
   const parts: Parts = {
     button: find(root, 'run', HTMLButtonElement),
     editor: makeEditor(root, run),
+    hint: find(root, 'hint', HTMLElement),
     input: find(root, 'stdin', HTMLTextAreaElement),
     output: find(root, 'output', HTMLElement),
     root,
@@ -141,6 +169,7 @@ const mountRunner = (root: HTMLElement): void => {
   });
   parts.button.addEventListener('click', start);
   root.addEventListener('runner:run', start);
+  guide(parts, start);
 };
 
 const mountRunners = (): void => {
