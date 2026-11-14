@@ -1,37 +1,47 @@
-import { createMachine, types, type EventFromLogic } from 'xstate';
+import {
+  array,
+  boolean,
+  nullable,
+  number,
+  object,
+  picklist,
+  string,
+  type InferOutput,
+} from 'valibot';
+import { createMachine, type EventFromLogic } from 'xstate';
 
-type Check = '' | 'drill' | 'run';
-type When = '' | 'fullscreen' | 'windowed';
+const checkSchema = picklist(['', 'drill', 'run']);
+const whenSchema = picklist(['', 'fullscreen', 'windowed']);
 
-interface BeatMeta {
-  readonly expect: string | null;
-  readonly id: string;
-  readonly next: boolean;
-  readonly wait: Check;
-  readonly when: When;
-}
+const beatSchema = object({
+  expect: nullable(string()),
+  id: string(),
+  next: boolean(),
+  wait: checkSchema,
+  when: whenSchema,
+});
 
-interface Context {
-  readonly beats: readonly BeatMeta[];
-  readonly index: number;
-  readonly mismatch: boolean;
-  readonly passed: readonly string[];
-}
+const contextSchema = object({
+  beats: array(beatSchema),
+  index: number(),
+  mismatch: boolean(),
+  passed: array(string()),
+});
 
-interface Input {
-  readonly beats: readonly BeatMeta[];
-  readonly passed: readonly string[];
-  readonly position: string | null;
-}
+const inputSchema = object({
+  beats: array(beatSchema),
+  passed: array(string()),
+  position: nullable(string()),
+});
 
-interface Move {
-  readonly full: boolean;
-}
+const moveSchema = object({ full: boolean() });
+const checkedSchema = object({ full: boolean(), kind: checkSchema, output: string() });
 
-interface Checked extends Move {
-  readonly kind: Check;
-  readonly output: string;
-}
+type Check = InferOutput<typeof checkSchema>;
+type BeatMeta = InferOutput<typeof beatSchema>;
+type Context = InferOutput<typeof contextSchema>;
+type Move = InferOutput<typeof moveSchema>;
+type Checked = InferOutput<typeof checkedSchema>;
 
 interface Arrival {
   readonly context: Context;
@@ -126,15 +136,15 @@ const sceneMachine = createMachine({
   id: 'scene',
   initial: 'entering',
   schemas: {
-    context: types<Context>(),
+    context: contextSchema,
     events: {
-      AUTO: types<Move>(),
-      BACK: types<Move>(),
-      CHECKED: types<Checked>(),
-      NEXT: types<Move>(),
-      PLAYED: types<Move>(),
+      AUTO: moveSchema,
+      BACK: moveSchema,
+      CHECKED: checkedSchema,
+      NEXT: moveSchema,
+      PLAYED: moveSchema,
     },
-    input: types<Input>(),
+    input: inputSchema,
   },
   states: {
     blocked: {
@@ -165,4 +175,4 @@ const sceneMachine = createMachine({
 
 type SceneEvent = EventFromLogic<typeof sceneMachine>;
 
-export { sceneMachine, type BeatMeta, type Check, type SceneEvent, type When };
+export { beatSchema, sceneMachine, type BeatMeta, type Check, type SceneEvent };

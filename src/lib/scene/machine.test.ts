@@ -7,7 +7,7 @@ import { sceneMachine, type BeatMeta, type SceneEvent } from './machine';
 
 const plain = (id: string): BeatMeta => ({ expect: null, id, next: false, wait: '', when: '' });
 
-const beats: readonly BeatMeta[] = [
+const beats: BeatMeta[] = [
   plain('ask'),
   { ...plain('yes'), when: 'fullscreen' },
   { ...plain('no'), when: 'windowed' },
@@ -17,7 +17,7 @@ const beats: readonly BeatMeta[] = [
   plain('end'),
 ];
 
-const start = (position: string | null = null, passed: readonly string[] = []) => {
+const start = (position: string | null = null, passed: string[] = []) => {
   const actor = createActor(sceneMachine, { input: { beats, passed, position } });
   actor.start();
   return actor;
