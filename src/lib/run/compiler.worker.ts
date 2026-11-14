@@ -1,13 +1,26 @@
-import { commands } from '@yowasp/clang';
-
+import { installInflate } from './inflate';
 import { type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
+import type { commands } from '@yowasp/clang';
+
 const flags = ['-std=c++17', '-O1', '-fno-exceptions', '-Iinclude', 'main.cpp', '-o', 'main.wasm'];
+
+const load = async (): Promise<typeof commands> => {
+  if (import.meta.env.PROD) {
+    installInflate();
+  }
+  const clang = await import('@yowasp/clang');
+  return clang.commands;
+};
+
+let loading: ReturnType<typeof load> | null = null;
 
 const build = async (source: string, report: (text: string) => void): Promise<CompileReply> => {
   const decoder = new TextDecoder();
-  const files = await commands['clang++'](
+  loading ??= load();
+  const tools = await loading;
+  const files = await tools['clang++'](
     flags,
     { include: { bits: { 'stdc++.h': umbrella } }, 'main.cpp': source },
     {

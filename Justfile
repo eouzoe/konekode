@@ -22,5 +22,8 @@ test:
 check: typecheck lint test build
     bun x oxfmt --check .
 
+deploy: check
+    bun x wrangler deploy
+
 clean:
     rm -rf .astro dist
