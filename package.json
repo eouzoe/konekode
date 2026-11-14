@@ -22,7 +22,8 @@
     "@replit/codemirror-vim": "^6.4.0",
     "@yowasp/clang": "^22.0.0-git20542-10",
     "astro": "^7.4.11",
-    "codemirror": "^6.0.2"
+    "codemirror": "^6.0.2",
+    "xstate": "^6.0.0-beta.2"
   },
   "devDependencies": {
     "@astrojs/ts-content-mapper": "^0.2.0",

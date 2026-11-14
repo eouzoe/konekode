@@ -1,31 +1,32 @@
+import { createActor, type Actor, type SnapshotFrom } from 'xstate';
+
 import { unitState } from '@/lib/progress/events';
 import { clearDraft, readEvents, record } from '@/lib/progress/store';
 
-import { applies } from './conditions';
+import { isFullScreen } from './conditions';
 import { readIntent } from './keys';
+import { sceneMachine, type Check } from './machine';
+import { readMeta } from './meta';
+
+type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED';
 
 interface Scene {
+  readonly actor: Actor<typeof sceneMachine>;
   readonly beats: readonly HTMLElement[];
-  readonly finished: Set<number>;
   index: number;
   readonly lines: readonly HTMLElement[];
   readonly note: HTMLElement | null;
+  passed: number;
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
   readonly stdin: HTMLTextAreaElement | null;
   timer: ReturnType<typeof setTimeout> | null;
   readonly unit: string;
+  waiting: boolean;
 }
 
 const forward = 1;
-const backward = -forward;
-const beatId = (beat: HTMLElement | undefined): string => beat?.dataset.id ?? '';
-
-const isWaiting = (scene: Scene): boolean => {
-  const wait = scene.beats[scene.index]?.dataset.wait ?? '';
-  return wait !== '' && !scene.finished.has(scene.index);
-};
-
+const mismatchNote = '印出來的東西和要的不一樣，請再檢查一次。';
 const markLines = (scene: Scene, beat: HTMLElement): void => {
   const marked = new Set((beat.dataset.lines ?? '').split(','));
   for (const line of scene.lines) {
@@ -41,7 +42,7 @@ const showStage = (scene: Scene, beat: HTMLElement): void => {
   Object.assign(scene.root.dataset, {
     last: String(scene.index === scene.beats.length - forward),
     stage: beat.dataset.stage ?? 'empty',
-    waiting: String(isWaiting(scene)),
+    waiting: String(scene.waiting),
   });
 };
 
@@ -72,6 +73,10 @@ const isShown = (scene: Scene, at: number): boolean => {
     .every((beat) => beat.dataset.append === 'true');
 };
 
+const step = (scene: Scene, type: Move): void => {
+  scene.actor.send({ full: isFullScreen(), type });
+};
+
 const schedule = (scene: Scene, beat: HTMLElement): void => {
   if (scene.timer !== null) {
     clearTimeout(scene.timer);
@@ -80,7 +85,7 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
   const delay = Number(beat.dataset.auto ?? '');
   if (delay > 0) {
     scene.timer = setTimeout(() => {
-      scene.root.dispatchEvent(new CustomEvent('scene:auto'));
+      step(scene, 'AUTO');
     }, delay);
   }
 };
@@ -105,12 +110,13 @@ const direct = (scene: Scene, beat: HTMLElement): void => {
     ?.dispatchEvent(new CustomEvent('drill:demo', { detail }));
 };
 
-const refresh = (scene: Scene, beat: HTMLElement): void => {
-  direct(scene, beat);
-  schedule(scene, beat);
-  showStage(scene, beat);
-  fillInput(scene, beat);
-  setNote(scene, '');
+const focusTyping = (scene: Scene, beat: HTMLElement): void => {
+  const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
+  if (beat.dataset.wait === 'drill' && scene.waiting) {
+    typing?.focus();
+  } else {
+    typing?.blur();
+  }
 };
 
 const show = (scene: Scene): void => {
@@ -121,82 +127,47 @@ const show = (scene: Scene): void => {
   for (const [at, other] of scene.beats.entries()) {
     other.hidden = !isShown(scene, at);
   }
-  refresh(scene, beat);
-  const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
-  if (beat.dataset.wait === 'drill' && isWaiting(scene)) {
-    typing?.focus();
-  } else {
-    typing?.blur();
-  }
+  direct(scene, beat);
+  schedule(scene, beat);
+  showStage(scene, beat);
+  fillInput(scene, beat);
+  focusTyping(scene, beat);
 };
 
-const seek = (scene: Scene, step: number): number => {
-  let next = scene.index + step;
-  while (next >= 0 && next < scene.beats.length && !applies(scene.beats[next])) {
-    next += step;
+const notePassed = (scene: Scene, passed: readonly string[]): void => {
+  for (const id of passed.slice(scene.passed)) {
+    record('check.passed', scene.unit, id);
   }
-  return next;
+  if (passed.length > scene.passed && document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+  scene.passed = passed.length;
 };
 
-const move = (scene: Scene, step: number): void => {
-  const next = seek(scene, step);
-  if (next < 0 || next >= scene.beats.length) {
+const enter = (scene: Scene, index: number): void => {
+  if (index === scene.index) {
+    scene.root.dataset.waiting = String(scene.waiting);
     return;
   }
-  if (step > 0 && isWaiting(scene)) {
-    return;
-  }
-  scene.index = next;
-  record('beat.reached', scene.unit, beatId(scene.beats[next]));
+  scene.index = index;
+  record('beat.reached', scene.unit, scene.beats[index]?.dataset.id ?? '');
   show(scene);
 };
 
-const matches = (beat: HTMLElement, output: string): boolean => {
-  const { expect } = beat.dataset;
-  return expect === undefined || output.trim() === expect;
-};
-
-const settle = (scene: Scene, beat: HTMLElement): void => {
-  scene.finished.add(scene.index);
-  record('check.passed', scene.unit, beatId(beat));
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
-};
-
-const proceed = (scene: Scene, kind: string): void => {
-  if (kind === 'drill') {
-    scene.root.dataset.waiting = 'false';
+const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void => {
+  const { index, mismatch, passed } = snapshot.context;
+  notePassed(scene, passed);
+  scene.waiting = snapshot.matches('blocked');
+  enter(scene, index);
+  if (mismatch) {
+    setNote(scene, mismatchNote);
     return;
   }
-  move(scene, forward);
+  setNote(scene, '');
 };
 
-const complete = (scene: Scene, kind: string, output: string): void => {
-  const beat = scene.beats[scene.index];
-  if (beat?.dataset.wait !== kind || scene.finished.has(scene.index)) {
-    return;
-  }
-  if (!matches(beat, output)) {
-    setNote(scene, '印出來的東西和要的不一樣，請再檢查一次。');
-    return;
-  }
-  settle(scene, beat);
-  proceed(scene, kind);
-};
-
-const restore = (scene: Scene): void => {
-  const state = unitState(readEvents(), scene.unit);
-  for (const [at, beat] of scene.beats.entries()) {
-    if (state.passed.has(beatId(beat))) {
-      scene.finished.add(at);
-    }
-  }
-  const found = scene.beats.findIndex((beat) => beatId(beat) === state.position);
-  scene.index = Math.max(found, 0);
-  for (const beat of scene.beats.slice(0, scene.index)) {
-    fillInput(scene, beat);
-  }
+const check = (scene: Scene, kind: Check, output: string): void => {
+  scene.actor.send({ full: isFullScreen(), kind, output, type: 'CHECKED' });
 };
 
 const restart = (scene: Scene): void => {
@@ -212,10 +183,10 @@ const onKey = (scene: Scene, event: KeyboardEvent): void => {
   }
   event.preventDefault();
   if (intent === 'backward') {
-    move(scene, backward);
+    step(scene, 'BACK');
     return;
   }
-  move(scene, forward);
+  step(scene, 'NEXT');
 };
 
 const release = (event: Event): void => {
@@ -226,25 +197,24 @@ const release = (event: Event): void => {
 };
 
 const listenChecks = (scene: Scene): void => {
-  scene.root.addEventListener('scene:auto', () => {
-    move(scene, forward);
-  });
   scene.root.addEventListener('scene:step', (event) => {
     if (event instanceof CustomEvent && typeof event.detail === 'number') {
-      move(scene, event.detail);
+      if (event.detail > 0) {
+        step(scene, 'NEXT');
+      } else {
+        step(scene, 'BACK');
+      }
     }
   });
   scene.root.addEventListener('drill:played', () => {
-    if (scene.beats[scene.index]?.dataset.after === 'next') {
-      move(scene, forward);
-    }
+    step(scene, 'PLAYED');
   });
   scene.root.addEventListener('drill:done', () => {
-    complete(scene, 'drill', '');
+    check(scene, 'drill', '');
   });
   scene.root.addEventListener('run:ok', (event) => {
     if (event instanceof CustomEvent && typeof event.detail === 'string') {
-      complete(scene, 'run', event.detail);
+      check(scene, 'run', event.detail);
     }
   });
 };
@@ -253,12 +223,12 @@ const listen = (scene: Scene): void => {
   const { root } = scene;
   root.querySelector('[data-role="dialogue"]')?.addEventListener('click', () => {
     if (globalThis.getSelection()?.isCollapsed ?? true) {
-      move(scene, forward);
+      step(scene, 'NEXT');
     }
   });
   root.querySelector('[data-role="back"]')?.addEventListener('click', (event) => {
     release(event);
-    move(scene, backward);
+    step(scene, 'BACK');
   });
   root.querySelector('[data-role="restart"]')?.addEventListener('click', (event) => {
     release(event);
@@ -270,20 +240,40 @@ const listen = (scene: Scene): void => {
   listenChecks(scene);
 };
 
-const mountScene = (root: HTMLElement): void => {
-  const scene: Scene = {
-    beats: [...root.querySelectorAll<HTMLElement>('[data-beat]')],
-    finished: new Set<number>(),
-    index: 0,
+const build = (root: HTMLElement): Scene => {
+  const beats = [...root.querySelectorAll<HTMLElement>('[data-beat]')];
+  const unit = root.dataset.unit ?? '';
+  const state = unitState(readEvents(), unit);
+  const metas = beats.map((beat) => readMeta(beat));
+  const actor = createActor(sceneMachine, {
+    input: { beats: metas, passed: [...state.passed], position: state.position },
+  });
+  actor.start();
+  const first = actor.getSnapshot();
+  return {
+    actor,
+    beats,
+    index: first.context.index,
     lines: [...root.querySelectorAll<HTMLElement>('[data-line]')],
     note: root.querySelector<HTMLElement>('[data-role="note"]'),
+    passed: first.context.passed.length,
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
     stdin: root.querySelector<HTMLTextAreaElement>('[data-role="stdin"]'),
     timer: null,
-    unit: root.dataset.unit ?? '',
+    unit,
+    waiting: first.matches('blocked'),
   };
-  restore(scene);
+};
+
+const mountScene = (root: HTMLElement): void => {
+  const scene = build(root);
+  for (const beat of scene.beats.slice(0, scene.index)) {
+    fillInput(scene, beat);
+  }
+  scene.actor.subscribe((snapshot) => {
+    sync(scene, snapshot);
+  });
   listen(scene);
   root.dataset.ready = 'true';
   show(scene);
