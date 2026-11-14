@@ -214,6 +214,7 @@ test.describe('起步單元', () => {
     await writeProgram(page, wrap('    cout << 7'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('編譯沒有過', { timeout: 150_000 });
+    await expect(output(page)).toContainText('行的最後面少了分號');
     expect(await currentId(page)).toBe('run-cout');
     await writeProgram(page, wrap('    while (true) {\n    }'));
     await page.keyboard.press('Enter');

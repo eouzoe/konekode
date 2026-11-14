@@ -1,6 +1,7 @@
 import { readDraft, writeDraft } from '@/lib/progress/store';
 
 import { createEditor, type Editor } from './editor';
+import { explain } from './explain';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 
@@ -43,7 +44,7 @@ const find = <Kind extends HTMLElement>(
 
 const describe = (outcome: Outcome): View => {
   if (outcome.kind === 'compile-error') {
-    return { state: 'error', status: '編譯沒有過', text: outcome.message };
+    return { state: 'error', status: '編譯沒有過', text: explain(outcome.message) };
   }
   if (outcome.kind === 'timeout') {
     return { state: 'error', status: '跑太久，已經停下來', text: '' };

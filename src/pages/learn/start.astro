@@ -8,6 +8,7 @@ const codeLines = template.split('\n');
 ---
 
 <Base title="起步" full>
+  <p class="needs-keyboard">這個單元會用到實體鍵盤，請改用電腦開啟喔！</p>
   <section class="scene" data-scene data-unit="start">
     <div class="stage">
       <div class="code" data-show="code">
@@ -68,6 +69,20 @@ const codeLines = template.split('\n');
 </script>
 
 <style>
+  .needs-keyboard {
+    display: none;
+    margin: 0;
+    padding: 0.6rem 1rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+    text-align: center;
+  }
+  @media (pointer: coarse) and (hover: none) {
+    .needs-keyboard {
+      display: block;
+    }
+  }
   .scene {
     display: grid;
     grid-template-rows: 1fr auto;
