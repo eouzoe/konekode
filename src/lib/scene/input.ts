@@ -1,3 +1,4 @@
+import { watchFullScreen } from './conditions';
 import { readIntent, type Intent } from './keys';
 import { type Check } from './machine';
 
@@ -6,6 +7,7 @@ interface Handlers {
   readonly checked: (kind: Check, output: string) => void;
   readonly next: () => void;
   readonly played: () => void;
+  readonly resized: () => void;
   readonly restart: () => void;
   readonly screen: () => void;
 }
@@ -85,8 +87,8 @@ const listenInput = (root: HTMLElement, handlers: Handlers): void => {
   document.addEventListener('keydown', (event) => {
     onKey(root, handlers, event);
   });
-  globalThis.addEventListener('resize', handlers.screen);
-  document.addEventListener('fullscreenchange', handlers.screen);
+  globalThis.addEventListener('resize', handlers.resized);
+  watchFullScreen(handlers.screen);
 };
 
 export { listenInput };

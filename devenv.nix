@@ -10,6 +10,12 @@
     wrangler
   ];
 
+  env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+  env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+  env.PLAYWRIGHT_DRIVER_VERSION = pkgs.playwright-driver.version;
+  env.E2E_MESA = "${pkgs.mesa}";
+  env.E2E_GLVND = "${pkgs.libglvnd}";
+
   cachix.pull = [ "devenv" ];
 
   git-hooks.enable = false;

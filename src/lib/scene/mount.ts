@@ -201,6 +201,9 @@ const listen = (scene: Scene): void => {
     played: () => {
       step(scene, 'PLAYED');
     },
+    resized: () => {
+      fitStage(scene.root);
+    },
     restart: () => {
       restart(scene);
     },

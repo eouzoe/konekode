@@ -1,7 +1,11 @@
-const screenSlack = 8;
+const fullScreenQuery = '(display-mode: fullscreen)';
 
 const isFullScreen = (): boolean =>
-  document.fullscreenElement !== null ||
-  globalThis.innerHeight >= globalThis.screen.height - screenSlack;
+  document.fullscreenElement !== null || globalThis.matchMedia(fullScreenQuery).matches;
 
-export { isFullScreen };
+const watchFullScreen = (listener: () => void): void => {
+  globalThis.matchMedia(fullScreenQuery).addEventListener('change', listener);
+  document.addEventListener('fullscreenchange', listener);
+};
+
+export { isFullScreen, watchFullScreen };

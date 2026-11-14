@@ -7,3 +7,5 @@ devenv.local.nix
 .env
 .dev.vars
 *.tsbuildinfo
+test-results/
+playwright-report/
