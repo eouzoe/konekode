@@ -1,5 +1,6 @@
 interface Beat {
   readonly append?: boolean;
+  readonly demo?: string;
   readonly auto?: number;
   readonly expect?: string;
   readonly id: string;
@@ -61,10 +62,47 @@ const opening: readonly Beat[] = [
     stage: 'code',
   },
   { id: 'every-program', say: '接下來它們會不斷地以這個樣子出現，', stage: 'code' },
+  { append: true, id: 'lets-type', say: '所以，來輸入一遍，熟悉一下吧！', stage: 'code' },
+  { demo: 'reset demo', id: 'demo-intro', say: '開始之前，先看一遍示範吧！', stage: 'drill' },
+  { id: 'vim-what', say: 'vim 是一種只靠鍵盤就能寫程式的編輯方式。', stage: 'drill' },
   {
     append: true,
+    demo: 'flash key:i wait wait esc',
+    id: 'vim-two-modes',
+    say: 'vim 有兩種模式：normal 與 insert。',
+    stage: 'drill',
+  },
+  { id: 'normal-is', say: 'normal 是一般模式，用來看程式和下指令。', stage: 'drill' },
+  {
+    append: true,
+    demo: 'key:a key:b key:c',
+    id: 'normal-readonly',
+    say: '在這個模式下，內容是唯讀的，所以按鍵盤打不出字。',
+    stage: 'drill',
+  },
+  {
+    demo: 'reset demo wait wait down:i key:i up:i',
+    id: 'press-i',
+    say: '要輸入文字的話，需要按 i 切換成輸入模式。',
+    stage: 'drill',
+  },
+  { id: 'insert-is', say: '這就是輸入模式，現在可以打字了！', stage: 'drill' },
+  {
+    demo: 'wait down:Shift wait down:3 key:# up:3 wait up:Shift',
+    id: 'shift-combo',
+    say: '有些符號要先按住 Shift，使用組合鍵來輸入，像是這個 # 就是 Shift + 3。',
+    stage: 'drill',
+  },
+  {
+    demo: 'wait down:Escape esc up:Escape',
+    id: 'press-esc',
+    say: '打完之後，按左上角的 Esc，就會回到一般模式。',
+    stage: 'drill',
+  },
+  {
+    demo: 'reset live',
     id: 'type-template',
-    say: '所以，來輸入一遍，熟悉一下吧！',
+    say: '就是這樣！換我們自己來試試看吧！',
     stage: 'drill',
     wait: 'drill',
   },

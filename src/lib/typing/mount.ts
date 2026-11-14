@@ -1,201 +1,8 @@
-import {
-  createDrill,
-  escape,
-  expectedChar,
-  hasStarted,
-  insertKey,
-  isDone,
-  isTyped,
-  press,
-  remind,
-  type Drill,
-} from './drill';
-import {
-  enterKey,
-  escapeKey,
-  findKey,
-  rows,
-  shiftKey,
-  spaceKey,
-  type KeyCap,
-  type KeyPress,
-} from './keyboard';
-import { messages } from './messages';
-
-interface Parts {
-  readonly current: HTMLElement;
-  readonly done: HTMLElement;
-  readonly hint: HTMLElement;
-  readonly input: HTMLTextAreaElement;
-  readonly keyboard: HTMLElement;
-  readonly mode: HTMLElement;
-  readonly rest: HTMLElement;
-  readonly root: HTMLElement;
-}
+import { createDrill, escape, isDone, press, remind, type Drill } from './drill';
+import { escapeKey } from './keyboard';
+import { buildKeyboard, findPart, render, type Parts } from './view';
 
 const deleteKeys = new Set(['Backspace', 'Delete']);
-
-const findPart = (root: Element, role: string): HTMLElement => {
-  const found = root.querySelector(`[data-role="${role}"]`);
-  if (!(found instanceof HTMLElement)) {
-    throw new TypeError(`找不到 ${role}`);
-  }
-  return found;
-};
-
-const makeKey = (key: string, label: string, wide: boolean): HTMLElement => {
-  const element = document.createElement('span');
-  element.className = 'key';
-  element.dataset.key = key;
-  element.dataset.wide = String(wide);
-  element.textContent = label;
-  return element;
-};
-
-const capLabel = (cap: KeyCap): string => {
-  if (cap.base.toUpperCase() === cap.shift) {
-    return cap.shift;
-  }
-  return `${cap.shift} ${cap.base}`;
-};
-
-const makeRow = (keys: readonly HTMLElement[]): HTMLElement => {
-  const row = document.createElement('div');
-  row.className = 'key-row';
-  row.append(...keys);
-  return row;
-};
-
-const buildKeyboard = (keyboard: HTMLElement): void => {
-  const [digits = [], upper = [], home = [], lower = []] = rows.map((row) =>
-    row.map((cap) => makeKey(cap.base, capLabel(cap), false)),
-  );
-  keyboard.replaceChildren(
-    makeRow([makeKey(escapeKey, 'Esc', true)]),
-    makeRow(digits),
-    makeRow(upper),
-    makeRow([...home, makeKey(enterKey, 'Enter', true)]),
-    makeRow([makeKey(shiftKey, 'Shift', true), ...lower, makeKey(shiftKey, 'Shift', true)]),
-    makeRow([makeKey(spaceKey, '空白鍵', true)]),
-  );
-};
-
-const describeNext = (char: string): string => {
-  if (char === '\n') {
-    return messages.pressEnter;
-  }
-  if (char === ' ') {
-    return messages.pressSpace;
-  }
-  const found = findKey(char);
-  if (found?.shift === true) {
-    return `${messages.typeChar}${char}（${messages.withShift}${found.key}）`;
-  }
-  return `${messages.typeChar}${char}`;
-};
-
-const describeNormal = (drill: Drill): string => {
-  if (drill.feedback === 'ime') {
-    return messages.ime;
-  }
-  if (drill.feedback === 'need-insert') {
-    return messages.needInsert;
-  }
-  if (hasStarted(drill)) {
-    return messages.resume;
-  }
-  return messages.begin;
-};
-
-const describeTyped = (drill: Drill): string => {
-  if (drill.feedback === 'none') {
-    return messages.pressEscape;
-  }
-  return messages.extraKey;
-};
-
-const describeInsert = (drill: Drill): string => {
-  const next = describeNext(expectedChar(drill));
-  if (drill.feedback === 'ime') {
-    return messages.ime;
-  }
-  if (drill.feedback === 'no-delete') {
-    return `${messages.noDelete}${next}`;
-  }
-  if (drill.feedback === 'wrong-key') {
-    return `${messages.wrong}${next}`;
-  }
-  return next;
-};
-
-const describe = (drill: Drill): string => {
-  if (isDone(drill)) {
-    return messages.done;
-  }
-  if (drill.mode === 'normal') {
-    return describeNormal(drill);
-  }
-  if (isTyped(drill)) {
-    return describeTyped(drill);
-  }
-  return describeInsert(drill);
-};
-
-const nextKey = (drill: Drill): KeyPress | null => {
-  if (isDone(drill)) {
-    return null;
-  }
-  if (drill.mode === 'normal') {
-    return findKey(insertKey);
-  }
-  if (isTyped(drill)) {
-    return { key: escapeKey, shift: false };
-  }
-  return findKey(expectedChar(drill));
-};
-
-const highlight = (keyboard: HTMLElement, drill: Drill): void => {
-  const found = nextKey(drill);
-  for (const key of keyboard.querySelectorAll<HTMLElement>('.key')) {
-    const name = key.dataset.key;
-    const isTarget = found !== null && name === found.key;
-    const isShift = found !== null && found.shift && name === shiftKey;
-    key.dataset.next = String(isTarget || isShift);
-  }
-};
-
-const renderCode = (parts: Parts, drill: Drill): void => {
-  const { position, target } = drill;
-  const char = target.charAt(position);
-  parts.done.textContent = target.slice(0, position);
-  if (char === '\n') {
-    parts.current.textContent = '⏎';
-    parts.rest.textContent = target.slice(position);
-    return;
-  }
-  parts.current.textContent = char;
-  parts.rest.textContent = target.slice(position + 1);
-};
-
-const modeLabel = (drill: Drill): string => {
-  if (drill.mode === 'insert') {
-    return messages.modeInsert;
-  }
-  return messages.modeNormal;
-};
-
-const render = (parts: Parts, drill: Drill): void => {
-  renderCode(parts, drill);
-  parts.hint.textContent = describe(drill);
-  parts.mode.textContent = modeLabel(drill);
-  Object.assign(parts.root.dataset, {
-    done: String(isDone(drill)),
-    mode: drill.mode,
-    started: String(hasStarted(drill)),
-    wrong: String(drill.feedback === 'wrong-key'),
-  });
-  highlight(parts.keyboard, drill);
-};
 
 const readInput = (event: InputEvent): string => {
   if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
@@ -255,31 +62,129 @@ const collectParts = (root: HTMLElement): Parts => {
   };
 };
 
-const mountDrill = (root: HTMLElement): void => {
-  const parts = collectParts(root);
-  let drill = createDrill(root.dataset.target ?? '');
-  const update = (next: Drill): void => {
-    const wasDone = isDone(drill);
-    drill = next;
-    render(parts, drill);
-    if (!wasDone && isDone(drill)) {
-      root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
+interface Session {
+  demo: boolean;
+  drill: Drill;
+  token: number;
+}
+
+type Step = (session: Session, parts: Parts, value: string) => void;
+
+const stepDelay = 450;
+const flashFrames = [{ opacity: 1 }, { opacity: 0.15 }, { opacity: 1 }];
+const flashTiming = { duration: 380, iterations: 2 };
+
+const setDown = (parts: Parts, key: string, down: boolean): void => {
+  for (const element of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
+    if (element.dataset.key === key) {
+      element.dataset.down = String(down);
     }
-  };
-  buildKeyboard(parts.keyboard);
-  render(parts, drill);
+  }
+};
+
+const steps: Record<string, Step> = {
+  demo: (session) => {
+    session.demo = true;
+  },
+  down: (_session, parts, value) => {
+    setDown(parts, value, true);
+  },
+  esc: (session) => {
+    session.drill = escape(session.drill);
+  },
+  flash: (_session, parts) => {
+    parts.mode.animate(flashFrames, flashTiming);
+  },
+  key: (session, _parts, value) => {
+    session.drill = press(session.drill, value);
+  },
+  live: (session) => {
+    session.demo = false;
+  },
+  reset: (session, parts) => {
+    session.drill = createDrill(session.drill.target);
+    for (const element of parts.keyboard.querySelectorAll<HTMLElement>('.key')) {
+      element.dataset.down = 'false';
+    }
+  },
+  up: (_session, parts, value) => {
+    setDown(parts, value, false);
+  },
+};
+
+const pause = async (): Promise<void> => {
+  const { promise, resolve } = Promise.withResolvers<null>();
+  setTimeout(() => {
+    resolve(null);
+  }, stepDelay);
+  await promise;
+};
+
+interface Run {
+  readonly mine: number;
+  readonly parts: Parts;
+  readonly session: Session;
+}
+
+const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
+  const [step, ...rest] = queue;
+  if (step === undefined || run.session.token !== run.mine) {
+    return;
+  }
+  const [name = '', value = ''] = step.split(':');
+  steps[name]?.(run.session, run.parts, value);
+  render(run.parts, run.session.drill);
+  await pause();
+  await playFrom(run, rest);
+};
+
+const play = async (session: Session, parts: Parts, script: string): Promise<void> => {
+  session.token += 1;
+  await playFrom({ mine: session.token, parts, session }, script.split(' '));
+};
+
+const advance = (session: Session, parts: Parts, next: Drill): void => {
+  if (session.demo) {
+    return;
+  }
+  const wasDone = isDone(session.drill);
+  session.drill = next;
+  render(parts, session.drill);
+  if (!wasDone && isDone(session.drill)) {
+    parts.root.dispatchEvent(new CustomEvent('drill:done', { bubbles: true }));
+  }
+};
+
+const listen = (session: Session, parts: Parts): void => {
   parts.input.addEventListener('beforeinput', (event) => {
-    update(onInput(drill, event));
+    advance(session, parts, onInput(session.drill, event));
   });
   parts.input.addEventListener('keydown', (event) => {
-    update(onKeyDown(drill, event));
+    advance(session, parts, onKeyDown(session.drill, event));
   });
   parts.input.addEventListener('compositionend', () => {
     parts.input.value = '';
   });
-  root.addEventListener('click', () => {
+  parts.root.addEventListener('click', () => {
     parts.input.focus();
   });
+  parts.root.addEventListener('drill:demo', (event) => {
+    if (event instanceof CustomEvent && typeof event.detail === 'string') {
+      void play(session, parts, event.detail);
+    }
+  });
+};
+
+const mountDrill = (root: HTMLElement): void => {
+  const parts = collectParts(root);
+  const session: Session = {
+    demo: false,
+    drill: createDrill(root.dataset.target ?? ''),
+    token: 0,
+  };
+  buildKeyboard(parts.keyboard);
+  render(parts, session.drill);
+  listen(session, parts);
 };
 
 const mountAll = (): void => {

@@ -104,6 +104,12 @@
       "rules": {
         "import/no-nodejs-modules": "off"
       }
+    },
+    {
+      "files": ["src/units/**"],
+      "rules": {
+        "eslint/max-lines": "off"
+      }
     }
   ]
 }

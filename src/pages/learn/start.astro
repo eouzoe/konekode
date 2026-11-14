@@ -38,6 +38,7 @@ const codeLines = template.split('\n');
               data-input={beat.input}
               data-auto={beat.auto}
               data-append={beat.append}
+              data-demo={beat.demo}
             >
               {beat.say}
             </p>
@@ -108,6 +109,18 @@ const codeLines = template.split('\n');
   }
   .scene[data-ready='true'] [data-show] {
     display: none;
+    animation: appear 0.45s ease both;
+  }
+  @keyframes appear {
+    from {
+      opacity: 0;
+      translate: 0 0.75rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scene[data-ready='true'] [data-show] {
+      animation: none;
+    }
   }
   .scene[data-stage='code'] .code[data-show] {
     display: block;

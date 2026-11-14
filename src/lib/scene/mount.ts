@@ -97,7 +97,17 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
   }
 };
 
+const direct = (scene: Scene, beat: HTMLElement): void => {
+  const { demo } = beat.dataset;
+  if (demo !== undefined) {
+    scene.root
+      .querySelector('[data-typing-drill]')
+      ?.dispatchEvent(new CustomEvent('drill:demo', { detail: demo }));
+  }
+};
+
 const refresh = (scene: Scene, beat: HTMLElement): void => {
+  direct(scene, beat);
   schedule(scene, beat);
   showStage(scene, beat);
   fillInput(scene, beat);
