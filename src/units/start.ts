@@ -132,7 +132,6 @@ const opening: readonly Beat[] = [
     stage: 'drill',
     wait: 'drill',
   },
-  { id: 'typed', say: '好，就是這樣。', stage: 'code' },
 ];
 
 const editing: readonly Beat[] = [
@@ -273,7 +272,7 @@ const storing: readonly Beat[] = [
     expect: '42',
     id: 'run-cin',
     input: '42',
-    say: '上面多了一格「輸入」，裡面已經填好 42 了。請把程式改好，然後執行。',
+    say: '編輯器下面多了一格「輸入」，裡面已經填好 42 了。請把程式改好，然後執行。',
     snippet: listen,
     stage: 'run',
     wait: 'run',

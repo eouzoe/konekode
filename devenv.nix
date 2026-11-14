@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{ pkgs, lib, ... }: {
   stdenv = pkgs.stdenvNoCC;
 
   languages.javascript.bun.enable = true;
@@ -13,8 +13,8 @@
   env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
   env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
   env.PLAYWRIGHT_DRIVER_VERSION = pkgs.playwright-driver.version;
-  env.E2E_MESA = "${pkgs.mesa}";
-  env.E2E_GLVND = "${pkgs.libglvnd}";
+  env.E2E_MESA = lib.optionalString pkgs.stdenv.isLinux "${pkgs.mesa}";
+  env.E2E_GLVND = lib.optionalString pkgs.stdenv.isLinux "${pkgs.libglvnd}";
 
   cachix.pull = [ "devenv" ];
 
