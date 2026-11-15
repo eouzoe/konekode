@@ -13,6 +13,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   <div class="editor" data-role="editor" data-source={source}>
     <pre set:text={source} />
   </div>
+  <div class="editor" data-role="sprite-editor" hidden></div>
   <label class="field" hidden={!withInput}>
     <span>輸入</span>
     <textarea

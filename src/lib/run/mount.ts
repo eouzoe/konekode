@@ -1,9 +1,9 @@
 import { readDraft, writeDraft } from './draft';
-import { createEditor, type Editor } from './editor';
+import { createEditor, forgetVimMemory, type Editor } from './editor';
 import { explain } from './explain';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
-import { createStage } from './stage';
+import { createStage, type Actor } from './stage';
 
 interface Parts {
   readonly button: HTMLButtonElement;
@@ -12,6 +12,7 @@ interface Parts {
   readonly input: HTMLTextAreaElement;
   readonly output: HTMLElement;
   readonly root: HTMLElement;
+  readonly sprite: Editor;
   readonly status: HTMLElement;
 }
 
@@ -109,6 +110,13 @@ const fail = (parts: Parts, beat: string, error: unknown): void => {
   }
 };
 
+const sourceOf = (parts: Parts, forced: boolean): string => {
+  if (forced) {
+    return parts.sprite.getText();
+  }
+  return parts.editor.getText();
+};
+
 const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   if (parts.root.dataset.state === 'busy' || (!forced && !isArmed(parts))) {
     return;
@@ -116,7 +124,7 @@ const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   const beat = attending(parts);
   begin(parts);
   try {
-    const outcome = await runProgram(parts.editor.getText(), parts.input.value);
+    const outcome = await runProgram(sourceOf(parts, forced), parts.input.value);
     finish(parts, { beat, forced, outcome });
   } catch (error) {
     fail(parts, beat, error);
@@ -148,7 +156,7 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
   return createEditor({
     cursor: saved.cursor,
     onChange: (next) => {
-      if (name !== '' && root.dataset.armed === 'true') {
+      if (name !== '') {
         writeDraft(name, next);
       }
     },
@@ -156,6 +164,15 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
     parent,
     text: saved.text,
   });
+};
+
+const makeSprite = (root: HTMLElement): Editor =>
+  createEditor({ cursor: 0, parent: find(root, 'sprite-editor', HTMLElement), text: '' });
+
+const showActor = (root: HTMLElement, actor: Actor): void => {
+  root.dataset.actor = actor;
+  find(root, 'editor', HTMLElement).hidden = actor !== 'student';
+  find(root, 'sprite-editor', HTMLElement).hidden = actor !== 'sprite';
 };
 
 const hints: Record<string, string> = {
@@ -174,11 +191,16 @@ const guide = (parts: Parts): void => {
     clear: () => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
-    editor: parts.editor,
+    forget: forgetVimMemory,
     keycap: find(parts.root, 'keycap', HTMLElement),
     run: () => {
       void execute(parts, true);
     },
+    show: (actor) => {
+      showActor(parts.root, actor);
+    },
+    sprite: parts.sprite,
+    student: parts.editor,
   });
   arm(parts, false);
   parts.hint.textContent = hints.normal ?? '';
@@ -203,6 +225,7 @@ const mountRunner = (root: HTMLElement): void => {
     input: find(root, 'stdin', HTMLTextAreaElement),
     output: find(root, 'output', HTMLElement),
     root,
+    sprite: makeSprite(root),
     status: find(root, 'status', HTMLElement),
   };
   const start = (): void => {

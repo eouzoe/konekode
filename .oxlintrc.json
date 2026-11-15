@@ -68,7 +68,7 @@
     "no-underscore-dangle": [
       "error",
       {
-        "allow": ["_start"]
+        "allow": ["_start", "resetVimGlobalState_"]
       }
     ]
   },

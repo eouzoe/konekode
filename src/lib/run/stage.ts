@@ -3,7 +3,7 @@ import { array, boolean, object, parse, string, type InferOutput } from 'valibot
 import { chunks } from '@/lib/perform/rhythm';
 
 import { type Editor } from './editor';
-import { textPrefix, type Snapshot } from './puppet';
+import { textPrefix } from './puppet';
 
 interface Step {
   readonly label: string;
@@ -11,8 +11,10 @@ interface Step {
   readonly wait: number;
 }
 
+type Actor = 'sprite' | 'student';
+
 interface State {
-  saved: Snapshot | null;
+  acting: boolean;
   turn: number;
 }
 
@@ -20,9 +22,12 @@ interface Tools {
   readonly arm: (armed: boolean) => void;
   readonly attend: (beat: string) => void;
   readonly clear: () => void;
-  readonly editor: Editor;
+  readonly forget: () => void;
   readonly keycap: HTMLElement;
   readonly run: () => void;
+  readonly show: (actor: Actor) => void;
+  readonly sprite: Editor;
+  readonly student: Editor;
 }
 
 const stageSchema = object({
@@ -74,7 +79,7 @@ const perform = (tools: Tools, step: Step): void => {
     tools.run();
     return;
   }
-  tools.editor.press(step.token);
+  tools.sprite.press(step.token);
 };
 
 const play = async (tools: Tools, state: State, steps: readonly Step[]): Promise<void> => {
@@ -94,35 +99,37 @@ const play = async (tools: Tools, state: State, steps: readonly Step[]): Promise
 };
 
 const settle = (tools: Tools, state: State, focus: boolean): void => {
-  if (state.saved !== null) {
-    tools.editor.restore(state.saved);
+  if (state.acting) {
+    state.acting = false;
     tools.clear();
-    state.saved = null;
+    tools.forget();
   }
+  tools.show('student');
   tools.arm(focus);
   if (focus) {
-    tools.editor.focus();
+    tools.student.focus();
     return;
   }
-  tools.editor.blur();
+  tools.student.blur();
 };
 
 const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
-  state.saved ??= tools.editor.snapshot();
+  state.acting = true;
   tools.arm(false);
-  tools.editor.restore(state.saved);
-  tools.editor.blur();
+  tools.student.blur();
+  tools.sprite.restore(tools.student.snapshot());
+  tools.show('sprite');
   tools.clear();
   for (const step of expand(stage.before)) {
     if (step.token !== 'run') {
-      tools.editor.press(step.token);
+      tools.sprite.press(step.token);
     }
   }
   void play(tools, state, expand(stage.now));
 };
 
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
-  const state: State = { saved: null, turn: 0 };
+  const state: State = { acting: false, turn: 0 };
   return (detail) => {
     const stage = parse(stageSchema, detail);
     state.turn += 1;
@@ -136,4 +143,4 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
   };
 };
 
-export { createStage };
+export { createStage, type Actor };

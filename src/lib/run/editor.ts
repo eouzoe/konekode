@@ -3,7 +3,7 @@ import { cpp } from '@codemirror/lang-cpp';
 import { indentUnit } from '@codemirror/language';
 import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { getCM, vim } from '@replit/codemirror-vim';
+import { Vim, getCM, vim } from '@replit/codemirror-vim';
 import { basicSetup } from 'codemirror';
 
 import { unlockedPairs } from './pairs';
@@ -23,8 +23,8 @@ interface Editor {
 
 interface Options {
   readonly cursor: number;
-  readonly onChange: (draft: { cursor: number; text: string }) => void;
-  readonly onRun: () => void;
+  readonly onChange?: (draft: { cursor: number; text: string }) => void;
+  readonly onRun?: () => void;
   readonly parent: HTMLElement;
   readonly text: string;
 }
@@ -95,7 +95,7 @@ const handle = (view: EditorView, editable: Compartment): Editor => ({
 
 const createEditor = (options: Options): Editor => {
   const run = (): boolean => {
-    options.onRun();
+    options.onRun?.();
     return true;
   };
   const runInNormal = (target: EditorView): boolean => !isInserting(target) && run();
@@ -121,7 +121,7 @@ const createEditor = (options: Options): Editor => {
       tokyoNight,
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.selectionSet) {
-          options.onChange({
+          options.onChange?.({
             cursor: update.state.selection.main.head,
             text: update.state.doc.toString(),
           });
@@ -134,4 +134,8 @@ const createEditor = (options: Options): Editor => {
   return handle(view, editable);
 };
 
-export { createEditor, type Editor };
+const forgetVimMemory = (): void => {
+  Vim.resetVimGlobalState_();
+};
+
+export { createEditor, forgetVimMemory, type Editor };
