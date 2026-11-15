@@ -9,17 +9,9 @@ interface Snapshot {
   readonly text: string;
 }
 
-const findPrefix = 'find:';
-const charPrefix = 'char:';
-const vimKeys = new Map<string, readonly string[]>([
-  ['A', ['A']],
-  ['Esc', ['<Esc>']],
-  ['dd', ['d', 'd']],
-  ['i', ['i']],
-  ['j', ['j']],
-  ['k', ['k']],
-  ['o', ['o']],
-]);
+const textPrefix = 'text:';
+const escapeKey = '<Esc>';
+const segmenter = new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' });
 
 const pressVim = (view: EditorView, keys: readonly string[]): void => {
   const adapter = getCM(view);
@@ -31,39 +23,36 @@ const pressVim = (view: EditorView, keys: readonly string[]): void => {
   }
 };
 
-const findLine = (view: EditorView, text: string): void => {
-  const { doc } = view.state;
-  for (let number = 1; number <= doc.lines; number += 1) {
-    const line = doc.line(number);
-    if (line.text.includes(text)) {
-      view.dispatch({ selection: { anchor: line.from } });
-      return;
-    }
+const typeText = (view: EditorView, text: string): void => {
+  for (const part of segmenter.segment(text)) {
+    typeChar(view, part.segment);
   }
 };
 
-const pressKey = (view: EditorView, token: string): void => {
+const pressNamed = (view: EditorView, token: string): boolean => {
+  if (token === 'Esc') {
+    pressVim(view, [escapeKey]);
+    return true;
+  }
   if (token === 'Enter') {
     insertNewlineAndIndent(view);
-    return;
+    return true;
   }
   if (token === 'BS') {
     deleteCharBackward(view);
-    return;
+    return true;
   }
-  pressVim(view, vimKeys.get(token) ?? []);
+  return false;
 };
 
 const press = (view: EditorView, token: string): void => {
-  if (token.startsWith(findPrefix)) {
-    findLine(view, token.slice(findPrefix.length));
+  if (token.startsWith(textPrefix)) {
+    typeText(view, token.slice(textPrefix.length));
     return;
   }
-  if (token.startsWith(charPrefix)) {
-    typeChar(view, token.slice(charPrefix.length));
-    return;
+  if (!pressNamed(view, token)) {
+    pressVim(view, token.split(''));
   }
-  pressKey(view, token);
 };
 
 const snapshot = (view: EditorView): Snapshot => ({
@@ -72,11 +61,11 @@ const snapshot = (view: EditorView): Snapshot => ({
 });
 
 const restore = (view: EditorView, saved: Snapshot): void => {
-  pressVim(view, ['<Esc>']);
+  pressVim(view, [escapeKey]);
   view.dispatch({
     changes: { from: 0, insert: saved.text, to: view.state.doc.length },
     selection: { anchor: Math.min(saved.cursor, saved.text.length) },
   });
 };
 
-export { charPrefix, findPrefix, press, restore, snapshot, type Snapshot };
+export { press, restore, snapshot, textPrefix, type Snapshot };

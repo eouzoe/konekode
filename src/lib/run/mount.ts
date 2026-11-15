@@ -143,9 +143,10 @@ const preload = (): void => {
 const makeEditor = (root: HTMLElement, run: () => void): Editor => {
   const parent = find(root, 'editor', HTMLElement);
   const name = root.dataset.draft ?? '';
-  const text = readDraft(name) ?? parent.dataset.source ?? '';
+  const saved = readDraft(name) ?? { cursor: 0, text: parent.dataset.source ?? '' };
   parent.replaceChildren();
   return createEditor({
+    cursor: saved.cursor,
     onChange: (next) => {
       if (name !== '') {
         writeDraft(name, next);
@@ -153,7 +154,7 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
     },
     onRun: run,
     parent,
-    text,
+    text: saved.text,
   });
 };
 

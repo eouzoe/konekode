@@ -22,7 +22,8 @@ interface Editor {
 }
 
 interface Options {
-  readonly onChange: (text: string) => void;
+  readonly cursor: number;
+  readonly onChange: (draft: { cursor: number; text: string }) => void;
   readonly onRun: () => void;
   readonly parent: HTMLElement;
   readonly text: string;
@@ -119,12 +120,16 @@ const createEditor = (options: Options): Editor => {
       EditorState.tabSize.of(tabWidth),
       tokyoNight,
       EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          options.onChange(update.state.doc.toString());
+        if (update.docChanged || update.selectionSet) {
+          options.onChange({
+            cursor: update.state.selection.main.head,
+            text: update.state.doc.toString(),
+          });
         }
       }),
     ],
     parent: options.parent,
+    selection: { anchor: Math.min(options.cursor, options.text.length) },
   });
   return handle(view, editable);
 };

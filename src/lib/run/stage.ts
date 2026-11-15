@@ -1,7 +1,9 @@
 import { array, boolean, object, parse, string, type InferOutput } from 'valibot';
 
+import { chunks } from '@/lib/perform/rhythm';
+
 import { type Editor } from './editor';
-import { charPrefix, findPrefix, type Snapshot } from './puppet';
+import { textPrefix, type Snapshot } from './puppet';
 
 interface Step {
   readonly label: string;
@@ -35,24 +37,21 @@ type Stage = InferOutput<typeof stageSchema>;
 
 const typePrefix = 'type:';
 const keyPause = 450;
-const charPause = 55;
 const labels: Record<string, string> = { BS: 'Backspace', run: 'Enter' };
-const segmenter = new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' });
+
+const typing = (text: string): Step[] =>
+  chunks(text).map((chunk) => ({
+    label: '',
+    token: `${textPrefix}${chunk.text}`,
+    wait: chunk.pause,
+  }));
 
 const expandOne = (token: string): Step[] => {
   if (token === 'reset') {
     return [];
   }
   if (token.startsWith(typePrefix)) {
-    const text = token.slice(typePrefix.length);
-    return Array.from(segmenter.segment(text), (part) => ({
-      label: '',
-      token: `${charPrefix}${part.segment}`,
-      wait: charPause,
-    }));
-  }
-  if (token.startsWith(findPrefix)) {
-    return [{ label: '', token, wait: 0 }];
+    return typing(token.slice(typePrefix.length));
   }
   return [{ label: labels[token] ?? token, token, wait: keyPause }];
 };

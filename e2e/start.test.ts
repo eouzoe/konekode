@@ -37,14 +37,46 @@ const wrap = (body: string): string =>
   ].join('\n');
 
 const programs: Record<string, string> = {
-  'run-78': wrap('    cout << 7;\n    cout << 8;'),
   'run-cin': wrap("    int a{};\n    cin >> a;\n    cout << a << '\\n';"),
-  'run-cout': wrap('    cout << 7;'),
-  'run-int': wrap("    int a{7};\n    cout << a << '\\n';"),
-  'run-newline': wrap("    cout << 7 << '\\n';\n    cout << 8 << '\\n';"),
+  'run-cout': wrap('    cout << 11;'),
+  'run-int': wrap("    int a{11};\n    cout << a << '\\n';"),
+  'run-newline': wrap("    cout << 11 << '\\n';\n    cout << 22 << '\\n';"),
+  'run-two': wrap('    cout << 11;\n    cout << 22;'),
   task: wrap(
     "    int a{};\n    int b{};\n    cin >> a >> b;\n    cout << b << '\\n';\n    cout << a << '\\n';",
   ),
+};
+
+type Act = readonly [kind: 'keys' | 'type', value: string];
+
+const lessons: Record<string, readonly Act[]> = {
+  'run-cin': [
+    ['keys', 'k 0 f 1 x x o'],
+    ['type', 'cin >> a;'],
+    ['keys', 'Escape Enter'],
+  ],
+  'run-cout': [
+    ['keys', 'G O'],
+    ['type', 'cout << 11;'],
+    ['keys', 'Escape Enter'],
+  ],
+  'run-int': [
+    ['keys', 'd j O'],
+    ['type', 'int a{11};'],
+    ['keys', 'Enter'],
+    ['type', String.raw`cout << a << '\n';`],
+    ['keys', 'Escape Enter'],
+  ],
+  'run-newline': [
+    ['keys', '$ i'],
+    ['type', String.raw` << '\n'`],
+    ['keys', 'Escape k $ . Enter'],
+  ],
+  'run-two': [
+    ['keys', 'o'],
+    ['type', 'cout << 22;'],
+    ['keys', 'Escape Enter'],
+  ],
 };
 
 const current = async (page: Page): Promise<Current> =>
@@ -63,15 +95,30 @@ const current = async (page: Page): Promise<Current> =>
 
 const currentId = async (page: Page): Promise<string> => (await current(page)).id;
 
+interface Saved {
+  readonly cursor: number;
+  readonly text: string;
+}
+
+interface Setup {
+  readonly draft?: Saved;
+  readonly unlocked?: readonly string[];
+}
+
+const draftAt = (text: string, needle: string): Saved => ({ cursor: text.indexOf(needle), text });
+
 const open = async (
   page: Page,
   position: string | null = null,
-  unlocked: readonly string[] = [],
+  setup: Setup = {},
 ): Promise<void> => {
   await page.goto(path);
   await page.evaluate(
-    async ({ ids, ref }) => {
+    async ({ ids, ref, saved }) => {
       localStorage.clear();
+      if (saved !== null) {
+        localStorage.setItem('cp:draft:start', JSON.stringify(saved));
+      }
       await new Promise<null>((resolve) => {
         const removal = indexedDB.deleteDatabase('konekode');
         for (const name of ['success', 'error', 'blocked']) {
@@ -96,7 +143,7 @@ const open = async (
       }
       localStorage.setItem('cp:events:v1', JSON.stringify(events));
     },
-    { ids: [...unlocked], ref: position },
+    { ids: [...(setup.unlocked ?? [])], ref: position, saved: setup.draft ?? null },
   );
   await page.reload();
   await page.locator('[data-scene][data-ready="true"]').waitFor();
@@ -119,14 +166,41 @@ const typeTemplate = async (page: Page): Promise<void> => {
   await page.keyboard.press('Escape');
 };
 
+const follow = async (page: Page, acts: readonly Act[]): Promise<void> => {
+  for (const [kind, value] of acts) {
+    if (kind === 'type') {
+      await page.keyboard.type(value);
+    } else {
+      for (const key of value.split(' ')) {
+        await page.keyboard.press(key);
+      }
+    }
+  }
+};
+
+const solve = async (page: Page, gate: string): Promise<void> => {
+  const acts = lessons[gate];
+  if (acts === undefined) {
+    await writeProgram(page, programs[gate] ?? '');
+    await page.keyboard.press('Enter');
+    return;
+  }
+  await expect(page.locator('.cm-content')).toBeFocused();
+  await follow(page, acts);
+};
+
+const editorText = async (page: Page): Promise<string> =>
+  await page.evaluate(() =>
+    [...document.querySelectorAll('.cm-line')].map((line) => line.textContent ?? '').join('\n'),
+  );
+
 const advance = async (page: Page, state: Current): Promise<void> => {
   if (state.waiting && state.wait === 'drill') {
     await typeTemplate(page);
     return;
   }
   if (state.waiting && state.wait === 'run') {
-    await writeProgram(page, programs[state.id] ?? '');
-    await page.keyboard.press('Enter');
+    await solve(page, state.id);
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).not.toBe(state.id);
     return;
   }
@@ -230,7 +304,7 @@ test.describe('起步單元', () => {
 
   test('寫錯會顯示編譯沒有過，無窮迴圈會被停下來', async ({ page }) => {
     await open(page, 'run-cout');
-    await writeProgram(page, wrap('    cout << 7'));
+    await writeProgram(page, wrap('    cout << 11'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('編譯沒有過', { timeout: 150_000 });
     await expect(output(page)).toContainText('行的最後面少了分號');
@@ -238,7 +312,7 @@ test.describe('起步單元', () => {
     await writeProgram(page, wrap('    while (true) {\n    }'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('跑太久，已經停下來', { timeout: 60_000 });
-    await writeProgram(page, wrap('    cout << 8;'));
+    await writeProgram(page, wrap('    cout << 33;'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('執行完成', { timeout: 60_000 });
     await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
@@ -302,7 +376,9 @@ test.describe('起步單元', () => {
     await expect(typing).toBeFocused();
     await page.keyboard.type('i#include <');
     await expect(auto).toHaveCount(0);
-    await open(page, 'type-template', ['pair.include-angle', 'pair.paren', 'pair.brace']);
+    await open(page, 'type-template', {
+      unlocked: ['pair.include-angle', 'pair.paren', 'pair.brace'],
+    });
     await expect(typing).toBeFocused();
     await page.keyboard.type('i#include <');
     await expect(auto).toHaveText(['>']);
@@ -312,7 +388,7 @@ test.describe('起步單元', () => {
     await page.keyboard.type('int a{');
     await expect(editor).toContainText('int a{');
     await expect(editor).not.toContainText('int a{}');
-    await open(page, 'run-cout', ['pair.brace']);
+    await open(page, 'run-cout', { unlocked: ['pair.brace'] });
     await expect(editor).toBeFocused();
     await page.keyboard.press('o');
     await page.keyboard.type('int a{');
@@ -353,13 +429,13 @@ test.describe('起步單元', () => {
   test('輪到學生時焦點自動進編輯器，只用鍵盤就能過第一關', async ({ page }) => {
     await open(page, 'run-cout');
     await expect(page.locator('.cm-content')).toBeFocused();
-    for (const key of ['j', 'j', 'j', 'j', 'j', 'o']) {
+    for (const key of ['G', 'O']) {
       await page.keyboard.press(key);
     }
-    await page.keyboard.type('cout << 7;');
+    await page.keyboard.type('cout << 11;');
     await page.keyboard.press('Escape');
     await page.keyboard.press('Enter');
-    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-7');
+    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
     await expect(page.locator('.cm-content')).not.toBeFocused();
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('arrows-out');
@@ -368,22 +444,22 @@ test.describe('起步單元', () => {
   test('小精靈的示範會操作編輯器，輪到學生時還原', async ({ page }) => {
     await open(page, 'semicolon');
     const editor = page.locator('.cm-content');
-    await expect(editor).toContainText('cout << 7;', { timeout: 15_000 });
+    await expect(editor).toContainText('cout << 11;', { timeout: 15_000 });
     await expect(editor).not.toBeFocused();
     const indented = await page.evaluate(() =>
       [...document.querySelectorAll('.cm-line')].some((line) =>
-        (line.textContent ?? '').startsWith('    cout << 7;'),
+        (line.textContent ?? '').startsWith('    cout << 11;'),
       ),
     );
     expect(indented).toBe(true);
     await page.keyboard.press('ArrowLeft');
     expect(await currentId(page)).toBe('indent');
-    await expect(editor).not.toContainText('cout << 7;');
+    await expect(editor).not.toContainText('cout << 11;');
     for (let step = 0; step < 6 && (await currentId(page)) !== 'run-cout'; step += 1) {
       await page.keyboard.press('Space');
     }
     expect(await currentId(page)).toBe('run-cout');
-    await expect(editor).not.toContainText('cout << 7;');
+    await expect(editor).not.toContainText('cout << 11;');
     await expect(editor).toBeFocused();
   });
 
@@ -410,7 +486,7 @@ test.describe('起步單元', () => {
         });
       });
     });
-    await open(page, 'move-jk');
+    await open(page, 'go-end');
     const read = async (): Promise<string> =>
       await page.evaluate(() => {
         const keys: unknown = Reflect.get(globalThis, 'shownKeys');
@@ -419,7 +495,7 @@ test.describe('起步單元', () => {
         }
         return keys.join('');
       });
-    await expect.poll(read, { timeout: 15_000 }).toBe('jjjkjjj');
+    await expect.poll(read, { timeout: 15_000 }).toBe('G');
     await expect(page.locator('[data-code-runner] [data-role="keycap"]')).toBeEmpty();
   });
 
@@ -429,7 +505,7 @@ test.describe('起步單元', () => {
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('run-cout');
     await expect(page.locator('.cm-content')).toBeFocused();
-    await expect(page.locator('.cm-content')).not.toContainText('cout << 7;');
+    await expect(page.locator('.cm-content')).not.toContainText('cout << 11;');
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
     await expect(output(page)).toBeEmpty();
@@ -447,6 +523,47 @@ test.describe('起步單元', () => {
         await expect(status(page), gate).toHaveText('執行完成', { timeout: 150_000 });
       }
       expect(await currentId(page), gate).toBe(gate);
+    }
+  });
+
+  test('小精靈的示範打完時，不會出現稱讚學生的話', async ({ page }) => {
+    const hint = page.locator('[data-typing-drill] [data-role="hint"]');
+    await open(page, 'type-template');
+    await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    expect(await currentId(page)).toBe('press-esc');
+    await expect(page.locator('[data-typing-drill] [data-role="mode"]')).toHaveText(
+      '-- NORMAL --',
+      {
+        timeout: 15_000,
+      },
+    );
+    await expect(hint).toBeEmpty();
+    await page.keyboard.press('ArrowRight');
+    expect(await currentId(page)).toBe('type-template');
+    await expect(hint).toHaveText('按 i 進入輸入模式');
+  });
+
+  test('小精靈每一段示範做出來的程式，和要學生做的一模一樣', async ({ page }) => {
+    const first = programs['run-cout'] ?? '';
+    const second = programs['run-two'] ?? '';
+    const third = programs['run-newline'] ?? '';
+    const fourth = programs['run-int'] ?? '';
+    const cases: readonly [
+      beat: string,
+      draft: { cursor: number; text: string },
+      wanted: string,
+    ][] = [
+      ['type-second', draftAt(first, 'cout << 11;'), second],
+      ['repeat', draftAt(second, 'cout << 22;'), third],
+      ['retype', draftAt(third, 'cout << 11'), fourth],
+      ['add-cin', draftAt(fourth, 'cout << a'), programs['run-cin'] ?? ''],
+    ];
+    for (const [beat, draft, wanted] of cases) {
+      await open(page, beat, { draft, unlocked: ['pair.paren', 'pair.brace'] });
+      await expect
+        .poll(async () => await editorText(page), { message: beat, timeout: 30_000 })
+        .toBe(wanted);
     }
   });
 

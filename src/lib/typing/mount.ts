@@ -91,7 +91,7 @@ const shown = (session: Session): Drill => {
 const paint = (session: Session, parts: Parts): void => {
   render(parts, shown(session));
   parts.root.dataset.demo = String(session.demo);
-  if (session.demo && !session.guide) {
+  if (session.demo && (!session.guide || isDone(session.show))) {
     quiet(parts);
   }
   const label = labels[session.pretend];

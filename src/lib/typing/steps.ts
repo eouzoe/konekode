@@ -1,3 +1,5 @@
+import { firstChunk, type Chunk } from '@/lib/perform/rhythm';
+
 import { createDrill, escape, press, remind, type Drill } from './drill';
 import { messages } from './messages';
 import { type Parts } from './view';
@@ -75,27 +77,7 @@ const steps: Record<string, Step> = {
   },
 };
 
-const wordPattern = /^[A-Za-z0-9_]+/u;
-const wordPause = 95;
-const symbolPause = 55;
-const spacePause = 70;
-const linePause = 300;
-
-const nextChunk = (drill: Drill): { pause: number; text: string } => {
-  const rest = drill.target.slice(drill.position);
-  const word = wordPattern.exec(rest)?.[0];
-  if (word !== undefined) {
-    return { pause: wordPause, text: word };
-  }
-  const char = rest.charAt(0);
-  if (char === '\n') {
-    return { pause: linePause, text: char };
-  }
-  if (char === ' ') {
-    return { pause: spacePause, text: char };
-  }
-  return { pause: symbolPause, text: char };
-};
+const nextChunk = (drill: Drill): Chunk => firstChunk(drill.target.slice(drill.position));
 
 const instant = new Set(['hint', 'hush']);
 
