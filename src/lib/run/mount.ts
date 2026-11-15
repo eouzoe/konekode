@@ -148,7 +148,7 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
   return createEditor({
     cursor: saved.cursor,
     onChange: (next) => {
-      if (name !== '') {
+      if (name !== '' && root.dataset.armed === 'true') {
         writeDraft(name, next);
       }
     },

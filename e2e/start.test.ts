@@ -12,6 +12,8 @@ interface Current {
 }
 
 const path = '/learn/start/';
+const seedPath = '/favicon.ico';
+const unitName = 'start';
 const storedEvent = object({ kind: string(), ref: string() });
 const storedEvents = array(storedEvent);
 const template = [
@@ -112,9 +114,9 @@ const open = async (
   position: string | null = null,
   setup: Setup = {},
 ): Promise<void> => {
-  await page.goto(path);
+  await page.goto(seedPath);
   await page.evaluate(
-    async ({ ids, ref, saved }) => {
+    async ({ ids, ref, saved, unit }) => {
       localStorage.clear();
       if (saved !== null) {
         localStorage.setItem('cp:draft:start', JSON.stringify(saved));
@@ -127,7 +129,6 @@ const open = async (
           });
         }
       });
-      const unit = document.querySelector<HTMLElement>('[data-scene]')?.dataset.unit ?? '';
       const make = (kind: string, target: string, at: number): object => ({
         at,
         device: 'e2e',
@@ -143,9 +144,9 @@ const open = async (
       }
       localStorage.setItem('cp:events:v1', JSON.stringify(events));
     },
-    { ids: [...(setup.unlocked ?? [])], ref: position, saved: setup.draft ?? null },
+    { ids: [...(setup.unlocked ?? [])], ref: position, saved: setup.draft ?? null, unit: unitName },
   );
-  await page.reload();
+  await page.goto(path);
   await page.locator('[data-scene][data-ready="true"]').waitFor();
 };
 
@@ -565,6 +566,21 @@ test.describe('起步單元', () => {
         .poll(async () => await editorText(page), { message: beat, timeout: 30_000 })
         .toBe(wanted);
     }
+  });
+
+  test('示範播到一半重新整理，學生自己的程式不會被示範的內容蓋掉', async ({ page }) => {
+    const mine = programs['run-two'] ?? '';
+    await open(page, 'semicolon', { draft: draftAt(mine, 'cout << 22;') });
+    await expect
+      .poll(async () => (await editorText(page)).split('cout << 11;').length, { timeout: 20_000 })
+      .toBeGreaterThan(2);
+    await page.reload();
+    await page.locator('[data-scene][data-ready="true"]').waitFor();
+    for (let step = 0; step < 4 && (await currentId(page)) !== 'run-cout'; step += 1) {
+      await page.keyboard.press('Space');
+    }
+    expect(await currentId(page)).toBe('run-cout');
+    await expect.poll(async () => await editorText(page)).toBe(mine);
   });
 
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {
