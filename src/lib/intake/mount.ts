@@ -6,7 +6,7 @@ import { environment, siteVersion } from './environment';
 import { noteFingerprint } from './fingerprint';
 import { acknowledge, pendingBatches, type Acked, type Batch } from './pending';
 import { startReplay } from './replay';
-import { upload, uploadLast, type Ticket } from './send';
+import { keepaliveLimit, upload, uploadLast, type Ticket } from './send';
 import { watchPage } from './watch';
 
 interface State {
@@ -19,7 +19,6 @@ interface State {
 const ackedKey = 'cp:intake:acked';
 const ackedSchema = record(string(), number());
 const batchSize = 200;
-const beaconLimit = 60_000;
 const firstDelay = 2000;
 const period = 20_000;
 
@@ -93,7 +92,7 @@ const lastCall = (state: State): void => {
     return;
   }
   const text = JSON.stringify(batch.events);
-  if (text.length <= beaconLimit) {
+  if (text.length <= keepaliveLimit) {
     uploadLast(ticketOf(state, batch), text);
   }
 };
@@ -113,11 +112,8 @@ const startIntake = async (): Promise<void> => {
   }, period);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      void drain(state);
+      lastCall(state);
     }
-  });
-  globalThis.addEventListener('pagehide', () => {
-    lastCall(state);
   });
 };
 

@@ -14,6 +14,7 @@ interface Packed {
 const endpoint = '/api/intake';
 const stored = 204;
 const bodyLimit = 1_000_000;
+const keepaliveLimit = 60_000;
 
 const address = (ticket: Ticket, encoding: string): string => {
   const query = new URLSearchParams({
@@ -40,6 +41,7 @@ const post = async (ticket: Ticket, packed: Packed): Promise<boolean> => {
   try {
     const response = await fetch(address(ticket, packed.encoding), {
       body: packed.body,
+      keepalive: packed.body.size <= keepaliveLimit,
       method: 'POST',
     });
     return response.status === stored;
@@ -56,4 +58,4 @@ const uploadLast = (ticket: Ticket, text: string): boolean => {
   return navigator.sendBeacon(address(ticket, 'identity'), body);
 };
 
-export { bodyLimit, pack, post, upload, uploadLast, type Packed, type Ticket };
+export { bodyLimit, keepaliveLimit, pack, post, upload, uploadLast, type Packed, type Ticket };

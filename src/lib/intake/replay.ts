@@ -1,7 +1,15 @@
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
-import { bodyLimit, pack, post, type Packed, type Ticket } from './send';
+import {
+  bodyLimit,
+  keepaliveLimit,
+  pack,
+  post,
+  uploadLast,
+  type Packed,
+  type Ticket,
+} from './send';
 
 interface Tape {
   busy: boolean;
@@ -73,6 +81,17 @@ const flush = async (tape: Tape): Promise<void> => {
   }
 };
 
+const lastFrames = (tape: Tape): void => {
+  if (tape.busy || tape.frames.length === 0) {
+    return;
+  }
+  const text = JSON.stringify(tape.frames);
+  if (text.length <= keepaliveLimit && uploadLast(ticketFor(tape), text)) {
+    tape.frames = [];
+    tape.chunk += 1;
+  }
+};
+
 const startReplay = async (site: string): Promise<void> => {
   const { record } = await import('@rrweb/record');
   const tape: Tape = { busy: false, chunk: 0, frames: [], site };
@@ -87,7 +106,7 @@ const startReplay = async (site: string): Promise<void> => {
   }, period);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      void flush(tape);
+      lastFrames(tape);
     }
   });
 };
