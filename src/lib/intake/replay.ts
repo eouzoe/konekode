@@ -1,7 +1,7 @@
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
-import { bodyLimit, post, squeeze, type Ticket } from './send';
+import { bodyLimit, pack, post, type Packed, type Ticket } from './send';
 
 interface Tape {
   busy: boolean;
@@ -25,9 +25,9 @@ const ticketFor = (tape: Tape): Ticket => ({
 const sendWhole = async (
   tape: Tape,
   frames: readonly unknown[],
-  body: Blob,
+  packed: Packed,
 ): Promise<readonly unknown[]> => {
-  if (await post(ticketFor(tape), body)) {
+  if (await post(ticketFor(tape), packed)) {
     tape.chunk += 1;
     return [];
   }
@@ -46,12 +46,12 @@ const sendHalves: Sender = async (tape, frames) => {
 };
 
 const sendFrames = async (tape: Tape, frames: readonly unknown[]): Promise<readonly unknown[]> => {
-  const body = await squeeze(JSON.stringify(frames));
-  if (body.size <= bodyLimit) {
-    return sendWhole(tape, frames, body);
+  const packed = await pack(JSON.stringify(frames));
+  if (packed.body.size <= bodyLimit) {
+    return sendWhole(tape, frames, packed);
   }
   if (frames.length === 1) {
-    track('replay.dropped', { data: { bytes: body.size } });
+    track('replay.dropped', { data: { bytes: packed.body.size } });
     return [];
   }
   return sendHalves(tape, frames);
