@@ -1,3 +1,5 @@
+import { noteAttempt, noteEntry } from '@/lib/run/note';
+
 import {
   createDrill,
   escape,
@@ -9,6 +11,7 @@ import {
   type Drill,
 } from './drill';
 import { escapeKey } from './keyboard';
+import { attemptOf } from './note';
 import {
   instant,
   labels,
@@ -181,6 +184,25 @@ const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
   await playFrom(run, rest);
 };
 
+const placeOf = (session: Session, parts: Parts): { beat: string; unit: string } => ({
+  beat: session.beat,
+  unit: parts.root.closest<HTMLElement>('[data-unit]')?.dataset.unit ?? '',
+});
+
+const finishPlay = (session: Session, parts: Parts): void => {
+  const options = { bubbles: true, detail: { beat: session.beat } };
+  parts.root.dispatchEvent(new CustomEvent('drill:played', options));
+  if (!session.demo) {
+    noteEntry(placeOf(session, parts), 'guided', '');
+  }
+};
+
+const record = (session: Session, parts: Parts, attempt: ReturnType<typeof attemptOf>): void => {
+  if (!session.demo && attempt !== null) {
+    noteAttempt(placeOf(session, parts), attempt);
+  }
+};
+
 const words = (script: string): string[] => script.split(' ').filter((word) => word !== '');
 
 const play = async (session: Session, parts: Parts, script: Script): Promise<void> => {
@@ -193,8 +215,7 @@ const play = async (session: Session, parts: Parts, script: Script): Promise<voi
   paint(session, parts);
   await playFrom(run, words(script.now));
   if (isCurrent(run)) {
-    const options = { bubbles: true, detail: { beat: script.beat } };
-    parts.root.dispatchEvent(new CustomEvent('drill:played', options));
+    finishPlay(session, parts);
   }
 };
 
@@ -223,10 +244,14 @@ const advance = (session: Session, parts: Parts, next: Drill): void => {
 
 const listen = (session: Session, parts: Parts): void => {
   parts.input.addEventListener('beforeinput', (event) => {
-    advance(session, parts, onInput(session.live, event));
+    const next = onInput(session.live, event);
+    record(session, parts, attemptOf(session.live, next, event.data ?? event.inputType));
+    advance(session, parts, next);
   });
   parts.input.addEventListener('keydown', (event) => {
-    advance(session, parts, onKeyDown(session.live, event));
+    const next = onKeyDown(session.live, event);
+    record(session, parts, attemptOf(session.live, next, event.key));
+    advance(session, parts, next);
   });
   parts.input.addEventListener('compositionend', () => {
     parts.input.value = '';

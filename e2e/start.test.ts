@@ -481,6 +481,18 @@ test.describe('起步單元', () => {
     await expect.poll(async () => await recordedAs(page, 'task.entered start run-cout')).toBe(1);
   });
 
+  test('the typing drill records its entry and every judged press', async ({ page }) => {
+    await open(page, 'type-template');
+    await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
+    await page.keyboard.press('x');
+    await page.keyboard.press('i');
+    await page.keyboard.press('#');
+    await expect.poll(async () => await recordedAs(page, 'step.tried start type-template')).toBe(3);
+    await expect
+      .poll(async () => await recordedAs(page, 'task.entered start type-template'))
+      .toBe(1);
+  });
+
   test('a gate starts from its own declared text, not from a stray draft', async ({ page }) => {
     await open(page, 'run-two', { draft: { cursor: 0, text: wrap('    something else;') } });
     await expect(page.locator(studentEditor)).toBeFocused();

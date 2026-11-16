@@ -61,18 +61,27 @@ const noteRun = ({ forced, input, outcome, place, source, took }: Run): void => 
   });
 };
 
+interface Attempt {
+  readonly at: number;
+  readonly cause: string;
+  readonly expected: string;
+  readonly key: string;
+  readonly kind: string;
+  readonly verdict: string;
+}
+
+const noteAttempt = (place: Place, attempt: Attempt): void => {
+  track('step.tried', { data: { ...attempt }, ref: place.beat, unit: place.unit });
+};
+
 const noteStep = (place: Place, step: Step): void => {
-  track('step.tried', {
-    data: {
-      at: step.at,
-      cause: step.cause,
-      expected: step.expected?.key ?? '',
-      key: step.key,
-      kind: step.expected?.kind ?? '',
-      verdict: step.verdict,
-    },
-    ref: place.beat,
-    unit: place.unit,
+  noteAttempt(place, {
+    at: step.at,
+    cause: step.cause,
+    expected: step.expected?.key ?? '',
+    key: step.key,
+    kind: step.expected?.kind ?? '',
+    verdict: step.verdict,
   });
 };
 
@@ -84,4 +93,4 @@ const noteEntry = (place: Place, mode: string, source: string): void => {
   });
 };
 
-export { noteEntry, noteRun, noteStep, type Place };
+export { noteAttempt, noteEntry, noteRun, noteStep, type Attempt, type Place };

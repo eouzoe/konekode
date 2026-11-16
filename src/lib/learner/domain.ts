@@ -1,5 +1,6 @@
 import { keys } from '@/lib/complete/catalog';
 import { expand } from '@/lib/run/guide';
+import { insertKey } from '@/lib/typing/drill';
 import { pathOf, type Beat, type Task } from '@/lib/unit/format';
 
 interface UnitDomain {
@@ -30,9 +31,14 @@ const shownBy = (beat: Beat): string[] => {
   return [...new Set([...labelled, ...used(beat.keys ?? []).flat()])];
 };
 
+const drillUses = used([insertKey]);
+
 const unitDomain = ({ beats, tasks }: Content): UnitDomain => ({
   shows: new Map(beats.map((beat) => [beat.id, shownBy(beat)])),
-  uses: new Map(tasks.map((task) => [task.id, used(pathOf(task))])),
+  uses: new Map([
+    ...beats.filter((beat) => beat.wait === 'drill').map((beat) => [beat.id, drillUses] as const),
+    ...tasks.map((task) => [task.id, used(pathOf(task))] as const),
+  ]),
 });
 
 export { components, unitDomain, type UnitDomain };

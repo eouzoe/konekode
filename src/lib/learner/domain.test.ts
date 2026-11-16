@@ -34,3 +34,7 @@ test('a beat shows the keys it is labelled with and the keys the sprite presses'
 test('the gate without a path uses nothing', () => {
   expect(start?.uses.get('task')).toEqual([]);
 });
+
+test('a typing drill uses the key that opens insert mode, as its first step', () => {
+  expect(start?.uses.get('type-template')).toEqual([['key.i']]);
+});
