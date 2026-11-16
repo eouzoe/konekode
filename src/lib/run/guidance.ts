@@ -1,6 +1,6 @@
 import { type Editor } from './editor';
 import { describeExpected, describeStep, type Step } from './guided';
-import { noteEntry, noteStep, type Place } from './note';
+import { noteEntry, noteRefusal, noteStep, type Place } from './note';
 
 interface Panel {
   readonly button: HTMLButtonElement;
@@ -21,6 +21,12 @@ const placeOf = (root: HTMLElement): Place => ({
 
 const enterTask = (panel: Panel, mode: string): void => {
   noteEntry(placeOf(panel.root), mode, panel.editor.getText());
+};
+
+const noteCommand = (root: HTMLElement, refused: boolean, key: string): void => {
+  if (refused) {
+    noteRefusal(placeOf(root), key);
+  }
 };
 
 const holdRun = (panel: Panel): void => {
@@ -53,4 +59,4 @@ const mayRun = (panel: Panel): boolean => {
   return false;
 };
 
-export { enterTask, isGuided, mayRun, showGuided, showStep, unitOf };
+export { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf };

@@ -27,7 +27,7 @@ interface Editor {
 interface Options {
   readonly cursor: number;
   readonly onChange?: (draft: { cursor: number; text: string }) => void;
-  readonly onCommand?: (refused: boolean) => void;
+  readonly onCommand?: (refused: boolean, key: string) => void;
   readonly onRun?: () => void;
   readonly onStep?: (step: Step) => void;
   readonly parent: HTMLElement;
@@ -74,7 +74,7 @@ const commandOf = (event: KeyboardEvent): string | null => {
   return null;
 };
 
-const taughtOnly = (report: (refused: boolean) => void): Extension =>
+const taughtOnly = (report: (refused: boolean, key: string) => void): Extension =>
   Prec.highest(
     EditorView.domEventHandlers({
       keydown: (event, view) => {
@@ -83,7 +83,7 @@ const taughtOnly = (report: (refused: boolean) => void): Extension =>
           return false;
         }
         const refused = !engine.keys().has(command);
-        report(refused);
+        report(refused, command);
         if (refused) {
           event.preventDefault();
         }
@@ -179,8 +179,8 @@ const createEditor = (options: Options): Editor => {
     doc: options.text,
     extensions: [
       guidedLayer(holder, isInserting),
-      taughtOnly((refused) => {
-        options.onCommand?.(refused);
+      taughtOnly((refused, key) => {
+        options.onCommand?.(refused, key);
       }),
       arrows,
       ...vimLayer(),

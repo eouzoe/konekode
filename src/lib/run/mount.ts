@@ -2,7 +2,7 @@ import { planOf, starterOf } from '@/units/index';
 
 import { readDraft, writeDraft } from './draft';
 import { createEditor, forgetVimMemory, type Editor } from './editor';
-import { enterTask, isGuided, mayRun, showGuided, showStep, unitOf } from './guidance';
+import { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf } from './guidance';
 import { type Step } from './guided';
 import { noteRun } from './note';
 import { describe, type View } from './outcome';
@@ -168,9 +168,10 @@ const makeEditor = (root: HTMLElement, { run, step }: Hooks): Editor => {
         writeDraft(name, next);
       }
     },
-    onCommand: (refused) => {
+    onCommand: (refused, key) => {
       if (!isGuided(root)) {
         find(root, 'hint', HTMLElement).textContent = commandHint(refused);
+        noteCommand(root, refused, key);
       }
     },
     onRun: run,

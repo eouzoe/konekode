@@ -93,4 +93,8 @@ const noteEntry = (place: Place, mode: string, source: string): void => {
   });
 };
 
-export { noteAttempt, noteEntry, noteRun, noteStep, type Attempt, type Place };
+const noteRefusal = (place: Place, key: string): void => {
+  track('key.refused', { data: { key }, ref: place.beat, unit: place.unit });
+};
+
+export { noteAttempt, noteEntry, noteRefusal, noteRun, noteStep, type Attempt, type Place };
