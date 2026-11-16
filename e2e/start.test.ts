@@ -591,8 +591,8 @@ test.describe('起步單元', () => {
     expect(await currentId(page)).toBe('run-cout');
   });
 
-  test('每一關沒有真的完成就不能往下', async ({ page }) => {
-    for (const gate of ['type-template', ...Object.keys(programs)]) {
+  for (const gate of ['type-template', ...Object.keys(programs)]) {
+    test(`${gate} cannot be passed without finishing it`, async ({ page }) => {
       await open(page, gate);
       for (const key of ['Space', 'ArrowRight', 'ArrowDown', 'Enter', 'Space']) {
         await page.keyboard.press(key);
@@ -602,13 +602,13 @@ test.describe('起步單元', () => {
           .poll(
             async () =>
               `${(await status(page).textContent()) ?? ''}｜${(await output(page).textContent()) ?? ''}`,
-            { message: gate, timeout: 150_000 },
+            { timeout: 150_000 },
           )
           .toBe('執行完成｜');
       }
-      expect(await currentId(page), gate).toBe(gate);
-    }
-  });
+      expect(await currentId(page)).toBe(gate);
+    });
+  }
 
   test('clicking the drill during a demonstration does not trap the keyboard', async ({ page }) => {
     const input = page.locator('[data-typing-drill] [data-role="input"]');
