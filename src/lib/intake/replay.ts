@@ -1,6 +1,7 @@
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
+import { isOverfull } from './backlog';
 import {
   bodyLimit,
   keepaliveLimit,
@@ -59,7 +60,7 @@ const sendFrames = async (tape: Tape, frames: readonly unknown[]): Promise<reado
     return sendWhole(tape, frames, packed);
   }
   if (frames.length === 1) {
-    track('replay.dropped', { data: { bytes: packed.body.size } });
+    track('replay.dropped', { data: { bytes: packed.body.size, reason: 'oversize' } });
     return [];
   }
   return sendHalves(tape, frames);
@@ -92,12 +93,23 @@ const lastFrames = (tape: Tape): void => {
   }
 };
 
+const keep = (tape: Tape, frame: unknown, startOver: () => void): void => {
+  tape.frames.push(frame);
+  if (isOverfull(tape.frames.length, tape.busy)) {
+    track('replay.dropped', { data: { frames: tape.frames.length, reason: 'backlog' } });
+    tape.frames = [];
+    startOver();
+  }
+};
+
 const startReplay = async (site: string): Promise<void> => {
   const { record } = await import('@rrweb/record');
   const tape: Tape = { busy: false, chunk: 0, frames: [], site };
   record({
     emit: (frame) => {
-      tape.frames.push(frame);
+      keep(tape, frame, () => {
+        record.takeFullSnapshot(true);
+      });
     },
     sampling,
   });
