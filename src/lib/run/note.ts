@@ -1,5 +1,6 @@
 import { track } from '@/lib/record/current';
 
+import { type Step } from './guided';
 import { type Outcome } from './protocol';
 
 interface Run {
@@ -54,4 +55,17 @@ const noteRun = ({ beat, forced, input, outcome, source, took }: Run): void => {
   });
 };
 
-export { noteRun };
+const noteStep = (beat: string, step: Step): void => {
+  track('step.tried', {
+    data: {
+      at: step.at,
+      expected: step.expected?.key ?? '',
+      key: step.key,
+      kind: step.expected?.kind ?? '',
+      verdict: step.verdict,
+    },
+    ref: beat,
+  });
+};
+
+export { noteRun, noteStep };

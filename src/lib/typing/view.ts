@@ -10,6 +10,7 @@ import {
   type Drill,
   type Feedback,
 } from './drill';
+import { describeNext } from './hint';
 import {
   enterKey,
   escapeKey,
@@ -75,20 +76,6 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
     makeRow([makeKey(shiftKey, 'Shift', true), ...lower, makeKey(shiftKey, 'Shift', true)]),
     makeRow([makeKey(spaceKey, '空白鍵', true)]),
   );
-};
-
-const describeNext = (char: string): string => {
-  if (char === '\n') {
-    return messages.pressEnter;
-  }
-  if (char === ' ') {
-    return messages.pressSpace;
-  }
-  const found = findKey(char);
-  if (found?.shift === true) {
-    return `${messages.typeChar}${char}（${messages.withShift}${found.key}）`;
-  }
-  return `${messages.typeChar}${char}`;
 };
 
 const warnings: Partial<Record<Feedback, string>> = {

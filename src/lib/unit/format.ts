@@ -104,14 +104,37 @@ const pathOf = (task: Task): string[] => {
   return [...keys, runToken];
 };
 
+interface Plan {
+  readonly history: readonly string[];
+  readonly path: readonly string[];
+}
+
+const holds = (task: Task, beat: string): boolean =>
+  task.id === beat || task.demo.some((shown) => shown.id === beat);
+
+const planFor = (tasks: readonly Task[], beat: string): Plan | null => {
+  const at = tasks.findIndex((task) => holds(task, beat));
+  const task = tasks[at];
+  if (task === undefined) {
+    return null;
+  }
+  const history = tasks
+    .slice(0, at)
+    .flatMap((earlier) => pathOf(earlier))
+    .filter((token) => token !== runToken);
+  return { history, path: pathOf(task) };
+};
+
 export {
   flatten,
   pathOf,
+  planFor,
   resetToken,
   runToken,
   tasksOf,
   type Beat,
   type Part,
+  type Plan,
   type Shown,
   type Task,
 };

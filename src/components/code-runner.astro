@@ -124,6 +124,19 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .runner:not(:focus-within) .hint {
     visibility: hidden;
   }
+  .runner[data-guided='true'] .bar {
+    flex-wrap: wrap;
+  }
+  .runner[data-guided='true'] .hint {
+    order: -1;
+    flex-basis: 100%;
+    margin-left: 0;
+    color: var(--ink);
+    font-size: 1.1875rem;
+  }
+  .runner[data-guided='true'][data-wrong='true'] .hint {
+    color: var(--bad);
+  }
   .runner[data-state='error'] .status {
     color: var(--bad);
   }

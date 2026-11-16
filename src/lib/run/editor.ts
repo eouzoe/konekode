@@ -5,6 +5,8 @@ import { basicSetup } from 'codemirror';
 
 import { engine } from '@/lib/complete/current';
 
+import { createGuide, expectedNow, type Expected } from './guide';
+import { guidedLayer, type Holder, type Step } from './guided';
 import { language } from './language';
 import { unlockedPairs } from './pairs';
 import { press, restore, snapshot, type Snapshot } from './puppet';
@@ -13,6 +15,8 @@ interface Editor {
   readonly blur: () => void;
   readonly focus: () => void;
   readonly getText: () => string;
+  readonly guide: (path: readonly string[] | null) => void;
+  readonly nextStep: () => Expected | null;
   readonly onMode: (listener: (mode: string) => void) => void;
   readonly press: (token: string) => void;
   readonly restore: (saved: Snapshot) => void;
@@ -25,6 +29,7 @@ interface Options {
   readonly onChange?: (draft: { cursor: number; text: string }) => void;
   readonly onCommand?: (refused: boolean) => void;
   readonly onRun?: () => void;
+  readonly onStep?: (step: Step) => void;
   readonly parent: HTMLElement;
   readonly text: string;
 }
@@ -106,7 +111,28 @@ const arrows = Prec.highest(
   ]),
 );
 
-const handle = (view: EditorView, editable: Compartment): Editor => ({
+const follow = (holder: Holder, path: readonly string[] | null): void => {
+  if (path === null) {
+    holder.guide = null;
+    return;
+  }
+  holder.guide = createGuide(path);
+};
+
+const nextOf = (holder: Holder): Expected | null => {
+  if (holder.guide === null) {
+    return null;
+  }
+  return expectedNow(holder.guide);
+};
+
+interface Inner {
+  readonly editable: Compartment;
+  readonly holder: Holder;
+  readonly view: EditorView;
+}
+
+const handle = ({ editable, holder, view }: Inner): Editor => ({
   blur: () => {
     view.contentDOM.blur();
   },
@@ -114,6 +140,10 @@ const handle = (view: EditorView, editable: Compartment): Editor => ({
     view.focus();
   },
   getText: () => view.state.doc.toString(),
+  guide: (path) => {
+    follow(holder, path);
+  },
+  nextStep: () => nextOf(holder),
   onMode: (listener) => {
     getCM(view)?.on('vim-mode-change', (change: { mode: string }) => {
       listener(change.mode);
@@ -138,9 +168,16 @@ const createEditor = (options: Options): Editor => {
   };
   const runInNormal = (target: EditorView): boolean => !isInserting(target) && run();
   const editable = new Compartment();
+  const holder: Holder = {
+    guide: null,
+    report: (step) => {
+      options.onStep?.(step);
+    },
+  };
   const view = new EditorView({
     doc: options.text,
     extensions: [
+      guidedLayer(holder, isInserting),
       taughtOnly((refused) => {
         options.onCommand?.(refused);
       }),
@@ -168,7 +205,7 @@ const createEditor = (options: Options): Editor => {
     parent: options.parent,
     selection: { anchor: Math.min(options.cursor, options.text.length) },
   });
-  return handle(view, editable);
+  return handle({ editable, holder, view });
 };
 
 const forgetVimMemory = (): void => {

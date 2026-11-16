@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { flatten, pathOf, tasksOf, type Part, type Task } from './format';
+import { flatten, pathOf, planFor, tasksOf, type Part, type Task } from './format';
 
 const task: Task = {
   ask: 'your turn',
@@ -63,4 +63,17 @@ test('the path a learner follows is the demonstration plus a run', () => {
 
 test('tasks are listed in the order they appear', () => {
   expect(tasksOf(parts)).toEqual([task]);
+});
+
+test('a plan replays every earlier task without its runs', () => {
+  const later: Task = { ...task, demo: [{ id: 'third', keys: ['o'], say: '' }], id: 'next' };
+  expect(planFor([task, later], 'third')).toEqual({
+    history: ['G', 'O', 'type:x;', 'Esc'],
+    path: ['o', 'run'],
+  });
+  expect(planFor([task, later], 'gate')).toEqual({
+    history: [],
+    path: ['G', 'O', 'type:x;', 'Esc', 'run'],
+  });
+  expect(planFor([task, later], 'elsewhere')).toBeNull();
 });

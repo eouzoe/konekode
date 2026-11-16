@@ -1,9 +1,10 @@
 import { array, boolean, object, string, type infer as Infer } from 'zod';
 
 import { chunks } from '@/lib/perform/rhythm';
+import { type Plan } from '@/lib/unit/format';
 
 import { type Editor } from './editor';
-import { textPrefix } from './puppet';
+import { textPrefix, type Snapshot } from './puppet';
 
 interface Step {
   readonly label: string;
@@ -15,7 +16,10 @@ type Actor = 'sprite' | 'student';
 
 interface State {
   acting: boolean;
+  guided: string;
+  readonly starts: Map<string, Snapshot>;
   turn: number;
+  turnBeat: string;
 }
 
 interface Tools {
@@ -23,7 +27,10 @@ interface Tools {
   readonly attend: (beat: string) => void;
   readonly clear: () => void;
   readonly forget: () => void;
+  readonly guided: (active: boolean) => void;
   readonly keycap: HTMLElement;
+  readonly origin: Snapshot;
+  readonly plan: (beat: string) => Plan | null;
   readonly run: () => void;
   readonly show: (actor: Actor) => void;
   readonly sprite: Editor;
@@ -98,15 +105,92 @@ const play = async (tools: Tools, state: State, steps: readonly Step[]): Promise
   }
 };
 
-const settle = (tools: Tools, state: State, focus: boolean): void => {
+const replay = (tools: Tools, tokens: readonly string[]): void => {
+  for (const step of expand(tokens)) {
+    if (step.token !== 'run') {
+      tools.sprite.press(step.token);
+    }
+  }
+};
+
+const rewind = (tools: Tools, history: readonly string[]): void => {
+  tools.sprite.restore(tools.origin);
+  replay(tools, history);
+};
+
+const release = (tools: Tools, state: State): void => {
+  if (state.guided !== '') {
+    state.guided = '';
+    tools.student.guide(null);
+  }
+};
+
+interface Turn {
+  readonly beat: string;
+  readonly plan: Plan;
+  readonly state: State;
+  readonly tools: Tools;
+}
+
+const startOf = ({ beat, plan, state, tools }: Turn): Snapshot => {
+  const known = state.starts.get(beat);
+  if (known !== undefined) {
+    return known;
+  }
+  tools.show('sprite');
+  rewind(tools, plan.history);
+  const start = tools.sprite.snapshot();
+  tools.show('student');
+  tools.forget();
+  state.starts.set(beat, start);
+  return start;
+};
+
+const lead = (tools: Tools, state: State, beat: string): void => {
+  const plan = tools.plan(beat);
+  if (plan === null || plan.path.length === 0 || state.guided === beat) {
+    return;
+  }
+  const start = startOf({ beat, plan, state, tools });
+  const now = tools.student.snapshot();
+  if (now.text !== start.text || now.cursor !== start.cursor) {
+    tools.student.restore(start);
+  }
+  tools.student.guide(plan.path);
+  state.guided = beat;
+};
+
+const takeTurn = (tools: Tools, state: State, beat: string): void => {
+  if (state.turnBeat !== beat) {
+    state.turnBeat = beat;
+    tools.clear();
+  }
+  lead(tools, state, beat);
+};
+
+const leaveDemo = (tools: Tools, state: State): void => {
   if (state.acting) {
     state.acting = false;
     tools.clear();
     tools.forget();
   }
   tools.show('student');
-  tools.arm(focus);
-  if (focus) {
+};
+
+const handOver = (tools: Tools, state: State, stage: Stage): void => {
+  if (stage.focus) {
+    takeTurn(tools, state, stage.beat);
+    return;
+  }
+  release(tools, state);
+};
+
+const settle = (tools: Tools, state: State, stage: Stage): void => {
+  leaveDemo(tools, state);
+  handOver(tools, state, stage);
+  tools.arm(stage.focus);
+  tools.guided(state.guided !== '');
+  if (stage.focus) {
     tools.student.focus();
     return;
   }
@@ -115,21 +199,19 @@ const settle = (tools: Tools, state: State, focus: boolean): void => {
 
 const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
   state.acting = true;
+  release(tools, state);
+  tools.guided(false);
   tools.arm(false);
   tools.student.blur();
-  tools.sprite.restore(tools.student.snapshot());
   tools.show('sprite');
+  rewind(tools, tools.plan(stage.beat)?.history ?? []);
   tools.clear();
-  for (const step of expand(stage.before)) {
-    if (step.token !== 'run') {
-      tools.sprite.press(step.token);
-    }
-  }
+  replay(tools, stage.before);
   void play(tools, state, expand(stage.now));
 };
 
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
-  const state: State = { acting: false, turn: 0 };
+  const state: State = { acting: false, guided: '', starts: new Map(), turn: 0, turnBeat: '' };
   return (detail) => {
     const stage = stageSchema.parse(detail);
     state.turn += 1;
@@ -139,7 +221,7 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
       demonstrate(tools, state, stage);
       return;
     }
-    settle(tools, state, stage.focus);
+    settle(tools, state, stage);
   };
 };
 

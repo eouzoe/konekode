@@ -347,12 +347,12 @@ test.describe('起步單元', () => {
   });
 
   test('寫錯會顯示編譯沒有過，無窮迴圈會被停下來', async ({ page }) => {
-    await open(page, 'run-cout');
+    await open(page, 'task');
     await writeProgram(page, wrap('    cout << 11'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('編譯沒有過', { timeout: 150_000 });
     await expect(output(page)).toContainText('行的最後面少了分號');
-    expect(await currentId(page)).toBe('run-cout');
+    expect(await currentId(page)).toBe('task');
     await writeProgram(page, wrap('    while (true) {\n    }'));
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('跑太久，已經停下來', { timeout: 60_000 });
@@ -360,7 +360,7 @@ test.describe('起步單元', () => {
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('執行完成', { timeout: 60_000 });
     await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
-    expect(await currentId(page)).toBe('run-cout');
+    expect(await currentId(page)).toBe('task');
   });
 
   test('不是輪到學生時不能執行也不能改，Enter 就是下一句', async ({ page }) => {
@@ -375,7 +375,7 @@ test.describe('起步單元', () => {
   });
 
   test('輪到學生時，焦點不在編輯器按 Enter 也會執行', async ({ page }) => {
-    await open(page, 'run-cout');
+    await open(page, 'task');
     const button = page.locator('[data-code-runner] [data-role="run"]');
     await expect(button).toBeEnabled();
     await expect(page.locator(studentEditor)).toHaveAttribute('contenteditable', 'true');
@@ -386,7 +386,7 @@ test.describe('起步單元', () => {
     });
     await page.keyboard.press('Enter');
     await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
-    expect(await currentId(page)).toBe('run-cout');
+    expect(await currentId(page)).toBe('task');
   });
 
   test('示範的提示與按鍵高亮，只在講到的那一句出現', async ({ page }) => {
@@ -428,27 +428,65 @@ test.describe('起步單元', () => {
     await expect(typing).toBeFocused();
     await page.keyboard.type('i#include <');
     await expect(auto).toHaveText(['>']);
-    await open(page, 'run-cout');
+    await open(page, 'task');
     await expect(editor).toBeFocused();
     await page.keyboard.press('O');
     await page.keyboard.type('int a{');
     await expect(editor).toContainText('int a{}');
   });
 
-  test('command keys that have not been taught do nothing in normal mode', async ({ page }) => {
+  test('a guided gate accepts only the next key and says which one', async ({ page }) => {
     const editor = page.locator(studentEditor);
     const hint = page.locator('[data-code-runner] [data-role="hint"]');
     await open(page, 'run-cout');
     await expect(editor).toBeFocused();
+    await expect(hint).toHaveText('按 G（Shift + g）');
     const before = await editorText(page);
-    for (const key of ['d', 'd', 'x', 'D', 'u', 'o', 'a', 'Delete']) {
+    for (const key of ['d', 'd', 'x', 'D', 'u', 'o', 'a', 'i', 'c', 'Delete', 'Backspace', 'Tab']) {
+      await page.keyboard.press(key);
+    }
+    await page.keyboard.insertText('cout << 11;');
+    await page.keyboard.insertText('ｃ');
+    expect(await editorText(page)).toBe(before);
+    await expect(hint).toHaveText('按錯囉！要按 G（Shift + g）');
+    await page.keyboard.press('G');
+    await expect(hint).toHaveText('按 O（Shift + o）');
+    await page.keyboard.press('O');
+    await expect(hint).toHaveText('輸入 c');
+    await page.keyboard.type('cout <');
+    await expect(hint).toHaveText('輸入 <（Shift + ,）');
+    await page.keyboard.press('x');
+    await expect(hint).toHaveText('按錯囉！要輸入 <（Shift + ,）');
+    await page.keyboard.type('< 11;');
+    await expect(hint).toHaveText('按 Esc');
+    await page.keyboard.press('Escape');
+    await expect(hint).toHaveText('Enter 執行');
+    expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
+  });
+
+  test('a gate starts from its own declared text, not from a stray draft', async ({ page }) => {
+    await open(page, 'run-two', { draft: { cursor: 0, text: wrap('    something else;') } });
+    await expect(page.locator(studentEditor)).toBeFocused();
+    expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
+    await follow(page, lessons['run-two'] ?? []);
+    await expect
+      .poll(async () => await currentId(page), { timeout: 150_000 })
+      .toBe('stuck-together');
+  });
+
+  test('command keys that have not been taught do nothing at the free task', async ({ page }) => {
+    const editor = page.locator(studentEditor);
+    const hint = page.locator('[data-code-runner] [data-role="hint"]');
+    await open(page, 'task');
+    await expect(editor).toBeFocused();
+    const before = await editorText(page);
+    for (const key of ['u', 'D', 'a', 's', 'C', 'J']) {
       await page.keyboard.press(key);
     }
     expect(await editorText(page)).toBe(before);
     await expect(hint).toContainText('還沒學到');
-    await follow(page, lessons['run-cout'] ?? []);
-    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
-    await expect.poll(async () => await currentId(page)).toBe('saw-output');
   });
 
   test('pairs unlock only after the learner has typed the template by hand', async ({ page }) => {
@@ -527,20 +565,6 @@ test.describe('起步單元', () => {
     expect(await editorText(page)).not.toContain('cout << 11;');
   });
 
-  test('小精靈示範完之後，學生按 . 不會重做小精靈做過的事', async ({ page }) => {
-    const mine = programs['run-two'] ?? '';
-    await open(page, 'repeat', { draft: draftAt(mine, 'cout << 22;') });
-    await expect
-      .poll(async () => await editorText(page, spriteEditor), { timeout: 30_000 })
-      .toBe(programs['run-newline'] ?? '');
-    await page.keyboard.press('Space');
-    expect(await currentId(page)).toBe('run-newline');
-    await expect(page.locator(studentEditor)).toBeFocused();
-    await page.keyboard.press('.');
-    await page.keyboard.press('Escape');
-    expect(await editorText(page)).toBe(mine);
-  });
-
   test('示範時會依序顯示小精靈按的每一個鍵', async ({ page }) => {
     await page.addInitScript(() => {
       const shown: string[] = [];
@@ -584,10 +608,11 @@ test.describe('起步單元', () => {
     expect(await currentId(page)).toBe('run-cout');
     await expect(page.locator(studentEditor)).toBeFocused();
     await expect(page.locator(studentEditor)).not.toContainText('cout << 11;');
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+    await expect(status(page)).toBeEmpty();
     await expect(output(page)).toBeEmpty();
-    await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-code-runner] [data-role="hint"]')).toContainText('按錯囉');
+    await expect(status(page)).toBeEmpty();
     expect(await currentId(page)).toBe('run-cout');
   });
 
@@ -597,7 +622,7 @@ test.describe('起步單元', () => {
       for (const key of ['Space', 'ArrowRight', 'ArrowDown', 'Enter', 'Space']) {
         await page.keyboard.press(key);
       }
-      if (gate !== 'type-template') {
+      if (gate === 'task') {
         await expect
           .poll(
             async () =>
@@ -605,6 +630,9 @@ test.describe('起步單元', () => {
             { timeout: 150_000 },
           )
           .toBe('執行完成｜');
+      }
+      if (gate in lessons) {
+        await expect(status(page)).toBeEmpty();
       }
       expect(await currentId(page)).toBe(gate);
     });
@@ -684,21 +712,17 @@ test.describe('起步單元', () => {
     }
   });
 
-  test('示範播到一半重新整理，學生自己的程式不會被示範的內容蓋掉', async ({ page }) => {
+  test('a demonstration starts from the unit text, whatever the learner has', async ({ page }) => {
     const mine = programs['run-two'] ?? '';
     await open(page, 'semicolon', { draft: draftAt(mine, 'cout << 22;') });
     await expect
-      .poll(async () => (await editorText(page, spriteEditor)).split('cout << 11;').length, {
-        timeout: 20_000,
-      })
-      .toBeGreaterThan(2);
+      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
+      .toBe(programs['run-cout'] ?? '');
     await page.reload();
     await page.locator('[data-scene][data-ready="true"]').waitFor();
-    for (let step = 0; step < 4 && (await currentId(page)) !== 'run-cout'; step += 1) {
-      await page.keyboard.press('Space');
-    }
-    expect(await currentId(page)).toBe('run-cout');
-    await expect.poll(async () => await editorText(page)).toBe(mine);
+    await expect
+      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
+      .toBe(programs['run-cout'] ?? '');
   });
 
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {

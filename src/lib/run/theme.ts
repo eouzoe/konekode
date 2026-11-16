@@ -1,12 +1,13 @@
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, drawSelection } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
 const night = {
   blue: '#7aa2f7',
   comment: '#565f89',
   current: '#292e42',
+  cursor: '#3d59a1',
   cyan: '#7dcfff',
   green: '#9ece6a',
   ink: '#c0caf5',
@@ -32,13 +33,17 @@ const look = EditorView.theme(
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {
       backgroundColor: night.selection,
     },
+    '&.cm-focused > .cm-scroller > .cm-cursorLayer > .cm-fat-cursor': {
+      background: night.cursor,
+      color: 'transparent',
+    },
     '&:not(.cm-focused) .cm-fat-cursor': { background: 'none', outline: `1px solid ${night.blue}` },
     '.cm-activeLine': { backgroundColor: night.current },
     '.cm-activeLineGutter': { backgroundColor: night.current, color: night.ink },
     '.cm-content': { caretColor: night.ink },
     '.cm-content, .cm-gutters': { fontFamily: 'var(--mono)' },
     '.cm-cursor': { borderLeftColor: night.ink },
-    '.cm-fat-cursor': { background: night.blue, color: 'var(--page)' },
+    '.cm-fat-cursor': { background: night.cursor, color: 'transparent' },
     '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: night.number },
     '.cm-matchingBracket': { backgroundColor: night.selection, outline: 'none' },
     '.cm-panels': { backgroundColor: 'transparent', color: 'var(--soft)' },
@@ -62,6 +67,8 @@ const colors = HighlightStyle.define([
   { color: night.ink, tag: tags.variableName },
 ]);
 
-const tokyoNight: Extension[] = [look, syntaxHighlighting(colors)];
+const steadyCursor = drawSelection({ cursorBlinkRate: 0 });
+
+const tokyoNight: Extension[] = [look, syntaxHighlighting(colors), steadyCursor];
 
 export { tokyoNight };

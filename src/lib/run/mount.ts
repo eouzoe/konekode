@@ -1,7 +1,11 @@
+import { planOf, starterOf } from '@/units/index';
+
 import { readDraft, writeDraft } from './draft';
 import { createEditor, forgetVimMemory, type Editor } from './editor';
-import { explain } from './explain';
+import { isGuided, mayRun, showGuided, showStep, unitOf } from './guidance';
+import { type Step } from './guided';
 import { noteRun } from './note';
+import { describe, type View } from './outcome';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 import { createStage, type Actor } from './stage';
@@ -15,12 +19,6 @@ interface Parts {
   readonly root: HTMLElement;
   readonly sprite: Editor;
   readonly status: HTMLElement;
-}
-
-interface View {
-  readonly state: string;
-  readonly status: string;
-  readonly text: string;
 }
 
 const firstTouch = ['pointerdown', 'keydown'];
@@ -43,22 +41,6 @@ const find = <Kind extends HTMLElement>(
     throw new TypeError(`找不到 ${role}`);
   }
   return found;
-};
-
-const describe = (outcome: Outcome): View => {
-  if (outcome.kind === 'compile-error') {
-    return { state: 'error', status: '編譯沒有過', text: explain(outcome.message) };
-  }
-  if (outcome.kind === 'timeout') {
-    return { state: 'error', status: '跑太久，已經停下來', text: '' };
-  }
-  if (outcome.kind === 'crashed') {
-    return { state: 'error', status: '執行時出錯', text: outcome.message };
-  }
-  if (outcome.exitCode !== 0) {
-    return { state: 'error', status: '程式中途結束', text: outcome.output };
-  }
-  return { state: 'ok', status: '執行完成', text: outcome.output };
 };
 
 const show = (parts: Parts, view: View): void => {
@@ -167,7 +149,12 @@ const commandHint = (refused: boolean): string => {
   return normalHint;
 };
 
-const makeEditor = (root: HTMLElement, run: () => void): Editor => {
+interface Hooks {
+  readonly run: () => void;
+  readonly step: (step: Step) => void;
+}
+
+const makeEditor = (root: HTMLElement, { run, step }: Hooks): Editor => {
   const parent = find(root, 'editor', HTMLElement);
   const name = root.dataset.draft ?? '';
   const saved = readDraft(name) ?? { cursor: 0, text: parent.dataset.source ?? '' };
@@ -180,9 +167,12 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
       }
     },
     onCommand: (refused) => {
-      find(root, 'hint', HTMLElement).textContent = commandHint(refused);
+      if (!isGuided(root)) {
+        find(root, 'hint', HTMLElement).textContent = commandHint(refused);
+      }
     },
     onRun: run,
+    onStep: step,
     parent,
     text: saved.text,
   });
@@ -214,7 +204,12 @@ const guide = (parts: Parts): void => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
     forget: forgetVimMemory,
+    guided: (active) => {
+      showGuided(parts, active, hints.normal ?? '');
+    },
     keycap: find(parts.root, 'keycap', HTMLElement),
+    origin: { cursor: 0, text: starterOf(unitOf(parts.root)) ?? parts.editor.getText() },
+    plan: (beat) => planOf(unitOf(parts.root), beat),
     run: () => {
       void execute(parts, true);
     },
@@ -227,7 +222,9 @@ const guide = (parts: Parts): void => {
   arm(parts, false);
   parts.hint.textContent = hints.normal ?? '';
   parts.editor.onMode((mode) => {
-    parts.hint.textContent = hints[mode] ?? '';
+    if (!isGuided(parts.root)) {
+      parts.hint.textContent = hints[mode] ?? '';
+    }
   });
   parts.root.addEventListener('runner:stage', (event) => {
     if (event instanceof CustomEvent) {
@@ -236,22 +233,36 @@ const guide = (parts: Parts): void => {
   });
 };
 
+const buildParts = (root: HTMLElement, hooks: Hooks): Parts => ({
+  button: find(root, 'run', HTMLButtonElement),
+  editor: makeEditor(root, hooks),
+  hint: find(root, 'hint', HTMLElement),
+  input: find(root, 'stdin', HTMLTextAreaElement),
+  output: find(root, 'output', HTMLElement),
+  root,
+  sprite: makeSprite(root),
+  status: find(root, 'status', HTMLElement),
+});
+
 const mountRunner = (root: HTMLElement): void => {
-  const run = (): void => {
-    root.dispatchEvent(new CustomEvent('runner:run'));
-  };
-  const parts: Parts = {
-    button: find(root, 'run', HTMLButtonElement),
-    editor: makeEditor(root, run),
-    hint: find(root, 'hint', HTMLElement),
-    input: find(root, 'stdin', HTMLTextAreaElement),
-    output: find(root, 'output', HTMLElement),
-    root,
-    sprite: makeSprite(root),
-    status: find(root, 'status', HTMLElement),
-  };
+  const listeners: ((step: Step) => void)[] = [];
+  const parts = buildParts(root, {
+    run: () => {
+      root.dispatchEvent(new CustomEvent('runner:run'));
+    },
+    step: (step) => {
+      for (const listener of listeners) {
+        listener(step);
+      }
+    },
+  });
+  listeners.push((step) => {
+    showStep(parts, step);
+  });
   const start = (): void => {
-    void execute(parts, false);
+    if (mayRun(parts)) {
+      void execute(parts, false);
+    }
   };
   watchLoading((percent) => {
     if (root.dataset.state === 'busy') {
