@@ -12,10 +12,22 @@ interface Current {
 }
 
 const path = '/learn/start/';
-const seedPath = '/favicon.ico';
 const studentEditor = '[data-role="editor"] .cm-content';
 const spriteEditor = '[data-role="sprite-editor"] .cm-content';
 const unitName = 'start';
+const seedPath = '/seed';
+const seedPage = '<!doctype html><title>seed</title>';
+
+const openSeed = async (page: Page): Promise<void> => {
+  await page.route(
+    `**${seedPath}`,
+    async (route) => {
+      await route.fulfill({ body: seedPage, contentType: 'text/html' });
+    },
+    { times: 1 },
+  );
+  await page.goto(seedPath);
+};
 const storedEvent = object({ kind: string(), ref: string() });
 const storedEvents = array(storedEvent);
 const template = [
@@ -116,7 +128,7 @@ const open = async (
   position: string | null = null,
   setup: Setup = {},
 ): Promise<void> => {
-  await page.goto(seedPath);
+  await openSeed(page);
   await page.evaluate(
     async ({ ids, ref, saved, unit }) => {
       localStorage.clear();

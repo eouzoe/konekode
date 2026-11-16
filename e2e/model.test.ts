@@ -7,13 +7,25 @@ import { array } from 'zod';
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
 
 const path = '/learn/start/';
-const seedPath = '/favicon.ico';
 const boundary = 'line-main';
 const runs = 6;
 const commands = 14;
+const seedPath = '/seed';
+const seedPage = '<!doctype html><title>seed</title>';
+
+const openSeed = async (page: Page): Promise<void> => {
+  await page.route(
+    `**${seedPath}`,
+    async (route) => {
+      await route.fulfill({ body: seedPage, contentType: 'text/html' });
+    },
+    { times: 1 },
+  );
+  await page.goto(seedPath);
+};
 
 const reset = async (page: Page): Promise<void> => {
-  await page.goto(seedPath);
+  await openSeed(page);
   await page.evaluate(async () => {
     localStorage.clear();
     await new Promise<null>((resolve) => {
