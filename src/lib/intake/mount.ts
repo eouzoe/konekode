@@ -1,10 +1,11 @@
 import { number, record, string } from 'zod';
 
-import { openLog, recorded, track } from '@/lib/record/current';
+import { keptKinds } from '@/lib/learner/kinds';
+import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
 
 import { environment, siteVersion } from './environment';
 import { noteFingerprint } from './fingerprint';
-import { acknowledge, pendingBatches, type Acked, type Batch } from './pending';
+import { acknowledge, pendingBatches, settled, type Acked, type Batch } from './pending';
 import { startReplay } from './replay';
 import { keepaliveLimit, upload, uploadLast, type Ticket } from './send';
 import { watchPage } from './watch';
@@ -13,6 +14,7 @@ interface State {
   acked: Acked;
   busy: boolean;
   failures: number;
+  readonly forgotten: Set<string>;
   readonly site: string;
 }
 
@@ -74,6 +76,16 @@ const sendAll = async (state: State, batches: readonly Batch[]): Promise<void> =
   await sendAll(state, rest);
 };
 
+const prune = (state: State): void => {
+  const ids = settled(recorded(), state.acked, keptKinds).filter((id) => !state.forgotten.has(id));
+  for (const id of ids) {
+    state.forgotten.add(id);
+  }
+  if (ids.length > 0) {
+    forgetRecorded(ids);
+  }
+};
+
 const drain = async (state: State): Promise<void> => {
   if (state.busy) {
     return;
@@ -81,6 +93,7 @@ const drain = async (state: State): Promise<void> => {
   state.busy = true;
   try {
     await sendAll(state, pendingBatches(recorded(), state.acked, batchSize));
+    prune(state);
   } finally {
     state.busy = false;
   }
@@ -99,7 +112,13 @@ const lastCall = (state: State): void => {
 
 const startIntake = async (): Promise<void> => {
   await openLog();
-  const state: State = { acked: readAcked(), busy: false, failures: 0, site: siteVersion() };
+  const state: State = {
+    acked: readAcked(),
+    busy: false,
+    failures: 0,
+    forgotten: new Set(),
+    site: siteVersion(),
+  };
   track('session.started', { data: environment(state.site) });
   watchPage();
   void startReplay(state.site);

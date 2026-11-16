@@ -74,6 +74,10 @@ const databasePersistence = async (): Promise<Persistence> => {
       const all: unknown[] = await settle(store.getAll());
       return all;
     },
+    remove: async (ids) => {
+      const store = database.transaction(storeName, 'readwrite').objectStore(storeName);
+      await Promise.all(ids.map((id) => settle(store.delete(id))));
+    },
   };
 };
 

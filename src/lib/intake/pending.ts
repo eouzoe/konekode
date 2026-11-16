@@ -13,10 +13,11 @@ type Acked = Readonly<Record<string, number>>;
 const fromEnd = -1;
 const identifier = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/u;
 
+const sendable = (event: LearningEvent): boolean =>
+  identifier.test(event.session) && identifier.test(event.actor);
+
 const uploadable = (event: LearningEvent, acked: Acked): boolean =>
-  identifier.test(event.session) &&
-  identifier.test(event.actor) &&
-  event.seq > (acked[event.session] ?? 0);
+  sendable(event) && event.seq > (acked[event.session] ?? 0);
 
 const slices = (events: readonly LearningEvent[], size: number): LearningEvent[][] => {
   const parts: LearningEvent[][] = [];
@@ -55,4 +56,13 @@ const acknowledge = (acked: Acked, batch: Batch): Acked => ({
   [batch.session]: Math.max(acked[batch.session] ?? 0, batch.last),
 });
 
-export { acknowledge, pendingBatches, type Acked, type Batch };
+const settled = (
+  events: readonly LearningEvent[],
+  acked: Acked,
+  kept: ReadonlySet<string>,
+): string[] =>
+  events
+    .filter((event) => !kept.has(event.kind) && sendable(event) && !uploadable(event, acked))
+    .map((event) => event.id);
+
+export { acknowledge, pendingBatches, settled, type Acked, type Batch };

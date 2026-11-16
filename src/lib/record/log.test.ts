@@ -63,6 +63,7 @@ test('每一筆事件發生時就立刻交給儲存，不用等前一筆寫完',
       await gate.promise;
     },
     load: () => Promise.resolve([]),
+    remove: () => Promise.resolve(),
   };
   const log = await createLog(source(slow));
   log.track('one');
@@ -80,12 +81,25 @@ test('儲存失敗不會讓寫入中斷', async () => {
       throw new Error('存不進去');
     },
     load: () => Promise.resolve([]),
+    remove: () => Promise.resolve(),
   };
   const log = await createLog(source(broken));
   log.track('one');
   log.track('two');
   await log.flush();
   expect(log.events()).toHaveLength(2);
+});
+
+test('forgotten events leave the store and stay in memory until the page goes', async () => {
+  const persistence = memoryPersistence();
+  const log = await createLog(source(persistence));
+  const key = log.track('key.down');
+  log.track('beat.reached', { ref: 'intro', unit: 'start' });
+  log.forget([key.id]);
+  await log.flush();
+  const reopened = await createLog(source(persistence));
+  expect(log.events().map((event) => event.kind)).toEqual(['key.down', 'beat.reached']);
+  expect(reopened.events().map((event) => event.kind)).toEqual(['beat.reached']);
 });
 
 test('舊格式的事件會被升級成新格式', () => {

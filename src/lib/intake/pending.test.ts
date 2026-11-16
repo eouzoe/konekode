@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { type LearningEvent } from '@/lib/record/event';
 
-import { acknowledge, pendingBatches } from './pending';
+import { acknowledge, pendingBatches, settled } from './pending';
 
 const actor = '11111111-1111-4111-8111-111111111111';
 const first = '22222222-2222-4222-8222-222222222222';
@@ -53,4 +53,17 @@ test('acknowledging a batch never moves the mark backwards', () => {
   }
   expect(acknowledge({}, batch)).toEqual({ [first]: 2 });
   expect(acknowledge({ [first]: 9 }, batch)).toEqual({ [first]: 9 });
+});
+
+test('only acknowledged events of kinds nobody reads locally are settled', () => {
+  const kept = new Set(['beat.reached']);
+  const events = [
+    { ...event(first, 1), kind: 'key.down' },
+    event(first, 2),
+    { ...event(first, 3), kind: 'key.down' },
+    { ...event(second, 1), kind: 'key.down' },
+    { ...event('legacy', 0), kind: 'key.down' },
+  ];
+  expect(settled(events, { [first]: 2 }, kept)).toEqual([`${first}-1`]);
+  expect(settled(events, {}, kept)).toEqual([]);
 });

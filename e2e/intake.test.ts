@@ -25,3 +25,29 @@ test('the intake refuses reads and malformed tickets', async ({ request }) => {
   expect(read.status()).toBe(refusedMethod);
   expect(malformed.status()).toBe(refusedTicket);
 });
+
+test('uploaded events nobody reads locally are dropped from the browser', async ({ page }) => {
+  const uploaded = page.waitForResponse(
+    (response) => response.url().includes('kind=events') && response.status() === stored,
+  );
+  await page.goto('/learn/start/');
+  await page.locator('[data-scene][data-ready="true"]').waitFor();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await uploaded;
+  const kinds = async (): Promise<string[]> =>
+    await page.evaluate(
+      async () =>
+        await new Promise<string[]>((resolve) => {
+          const opening = indexedDB.open('konekode');
+          opening.addEventListener('success', () => {
+            const all = opening.result.transaction('events').objectStore('events').getAll();
+            all.addEventListener('success', () => {
+              resolve(all.result.map((event: { kind: string }) => event.kind));
+            });
+          });
+        }),
+    );
+  await expect.poll(kinds).not.toContain('session.started');
+  await expect.poll(kinds).toContain('beat.reached');
+});

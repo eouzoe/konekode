@@ -131,4 +131,14 @@ const componentOf = (model: Model, id: string): Component => model.get(id) ?? un
 
 const reviewDue = (): readonly string[] => [];
 
-export { componentOf, learnerModel, reviewDue, type Component, type Domains, type Model };
+const handledKinds: readonly string[] = Object.keys(handles);
+
+export {
+  componentOf,
+  handledKinds,
+  learnerModel,
+  reviewDue,
+  type Component,
+  type Domains,
+  type Model,
+};

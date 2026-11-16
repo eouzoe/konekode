@@ -47,4 +47,8 @@ const flushLog = async (): Promise<void> => {
   await opened?.flush();
 };
 
-export { flushLog, onRecorded, openLog, recorded, track };
+const forgetRecorded = (ids: readonly string[]): void => {
+  opened?.forget(ids);
+};
+
+export { flushLog, forgetRecorded, onRecorded, openLog, recorded, track };

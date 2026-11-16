@@ -3,6 +3,7 @@ import { currentVersion, readEvents, type Data, type LearningEvent } from './eve
 interface Persistence {
   readonly append: (event: LearningEvent) => Promise<void>;
   readonly load: () => Promise<unknown[]>;
+  readonly remove: (ids: readonly string[]) => Promise<void>;
 }
 
 interface Entry {
@@ -22,6 +23,7 @@ interface Source {
 interface Log {
   readonly events: () => readonly LearningEvent[];
   readonly flush: () => Promise<void>;
+  readonly forget: (ids: readonly string[]) => void;
   readonly subscribe: (listener: (event: LearningEvent) => void) => void;
   readonly track: (kind: string, entry?: Entry) => LearningEvent;
 }
@@ -33,14 +35,22 @@ interface State {
   seq: number;
 }
 
+const hasId = (value: unknown, ids: ReadonlySet<string>): boolean =>
+  typeof value === 'object' && value !== null && 'id' in value && ids.has(String(value.id));
+
 const memoryPersistence = (initial: readonly unknown[] = []): Persistence => {
-  const stored: unknown[] = [...initial];
+  let stored: unknown[] = [...initial];
   return {
     append: async (event) => {
       stored.push(event);
       await Promise.resolve();
     },
     load: () => Promise.resolve([...stored]),
+    remove: async (ids) => {
+      const gone = new Set(ids);
+      stored = stored.filter((value) => !hasId(value, gone));
+      await Promise.resolve();
+    },
   };
 };
 
@@ -65,20 +75,20 @@ const build = ({ source, state }: Context, kind: string, entry: Entry): Learning
   };
 };
 
-const attempt = async (persistence: Persistence, event: LearningEvent): Promise<void> => {
+const attempt = async (work: () => Promise<void>): Promise<void> => {
   try {
-    await persistence.append(event);
+    await work();
   } catch {
     await Promise.resolve();
   }
 };
 
-const persist = ({ source, state }: Context, event: LearningEvent): void => {
+const queue = (state: State, work: () => Promise<void>): void => {
   const previous = state.pending;
-  const written = attempt(source.persistence, event);
+  const done = attempt(work);
   state.pending = (async (): Promise<void> => {
     await previous;
-    await written;
+    await done;
   })();
 };
 
@@ -94,13 +104,16 @@ const createLog = async (source: Source): Promise<Log> => {
     flush: async () => {
       await state.pending;
     },
+    forget: (ids) => {
+      queue(state, () => source.persistence.remove(ids));
+    },
     subscribe: (listener) => {
       state.listeners.push(listener);
     },
     track: (kind, entry = {}) => {
       const event = build({ source, state }, kind, entry);
       state.events.push(event);
-      persist({ source, state }, event);
+      queue(state, () => source.persistence.append(event));
       for (const listener of state.listeners) {
         listener(event);
       }
