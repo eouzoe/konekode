@@ -2,7 +2,7 @@ import { planOf, starterOf } from '@/units/index';
 
 import { readDraft, writeDraft } from './draft';
 import { createEditor, forgetVimMemory, type Editor } from './editor';
-import { isGuided, mayRun, showGuided, showStep, unitOf } from './guidance';
+import { enterTask, isGuided, mayRun, showGuided, showStep, unitOf } from './guidance';
 import { type Step } from './guided';
 import { noteRun } from './note';
 import { describe, type View } from './outcome';
@@ -106,7 +106,8 @@ const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<voi
   const input = parts.input.value;
   const began = performance.now();
   const outcome = await runProgram(source, input);
-  noteRun({ beat, forced, input, outcome, source, took: performance.now() - began });
+  const place = { beat, unit: unitOf(parts.root) };
+  noteRun({ forced, input, outcome, place, source, took: performance.now() - began });
   finish(parts, { beat, forced, outcome });
 };
 
@@ -203,6 +204,9 @@ const guide = (parts: Parts): void => {
     },
     clear: () => {
       show(parts, { state: 'idle', status: '', text: '' });
+    },
+    entered: (mode) => {
+      enterTask(parts.root, mode);
     },
     forget: forgetVimMemory,
     fresh: parts.fresh,

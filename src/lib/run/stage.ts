@@ -16,6 +16,7 @@ type Actor = 'sprite' | 'student';
 
 interface State {
   acting: boolean;
+  entered: string;
   fresh: boolean;
   guided: string;
   readonly starts: Map<string, Snapshot>;
@@ -27,6 +28,7 @@ interface Tools {
   readonly arm: (armed: boolean) => void;
   readonly attend: (beat: string) => void;
   readonly clear: () => void;
+  readonly entered: (mode: 'free' | 'guided') => void;
   readonly forget: () => void;
   readonly fresh: boolean;
   readonly guided: (active: boolean) => void;
@@ -121,6 +123,7 @@ const rewind = (tools: Tools, history: readonly string[]): void => {
 };
 
 const release = (tools: Tools, state: State): void => {
+  state.entered = '';
   if (state.guided !== '') {
     state.guided = '';
     tools.student.guide(null);
@@ -179,11 +182,26 @@ const lead = (tools: Tools, state: State, beat: string): void => {
   state.guided = beat;
 };
 
+const modeOf = (plan: Plan | null): 'free' | 'guided' => {
+  if (plan !== null && plan.path.length > 0) {
+    return 'guided';
+  }
+  return 'free';
+};
+
+const enter = (tools: Tools, state: State, beat: string): void => {
+  if (state.entered !== beat) {
+    state.entered = beat;
+    tools.entered(modeOf(tools.plan(beat)));
+  }
+};
+
 const takeTurn = (tools: Tools, state: State, beat: string): void => {
   if (state.turnBeat !== beat) {
     state.turnBeat = beat;
     tools.clear();
   }
+  enter(tools, state, beat);
   lead(tools, state, beat);
 };
 
@@ -241,6 +259,7 @@ const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
   const state: State = {
     acting: false,
+    entered: '',
     fresh: tools.fresh,
     guided: '',
     starts: new Map(),

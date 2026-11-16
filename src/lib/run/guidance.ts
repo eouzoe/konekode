@@ -1,6 +1,6 @@
 import { type Editor } from './editor';
 import { describeExpected, describeStep, type Step } from './guided';
-import { noteStep } from './note';
+import { noteEntry, noteStep, type Place } from './note';
 
 interface Panel {
   readonly button: HTMLButtonElement;
@@ -13,6 +13,15 @@ const isGuided = (root: HTMLElement): boolean => root.dataset.guided === 'true';
 
 const unitOf = (root: HTMLElement): string =>
   root.closest<HTMLElement>('[data-unit]')?.dataset.unit ?? '';
+
+const placeOf = (root: HTMLElement): Place => ({
+  beat: root.dataset.beat ?? '',
+  unit: unitOf(root),
+});
+
+const enterTask = (root: HTMLElement, mode: string): void => {
+  noteEntry(placeOf(root), mode);
+};
 
 const holdRun = (panel: Panel): void => {
   panel.button.disabled = panel.editor.nextStep()?.kind !== 'run';
@@ -32,7 +41,7 @@ const showStep = (panel: Panel, step: Step): void => {
   panel.root.dataset.wrong = String(step.verdict !== 'right');
   panel.hint.textContent = describeStep(step.verdict, panel.editor.nextStep());
   holdRun(panel);
-  noteStep(panel.root.dataset.beat ?? '', step);
+  noteStep(placeOf(panel.root), step);
 };
 
 const mayRun = (panel: Panel): boolean => {
@@ -44,4 +53,4 @@ const mayRun = (panel: Panel): boolean => {
   return false;
 };
 
-export { isGuided, mayRun, showGuided, showStep, unitOf };
+export { enterTask, isGuided, mayRun, showGuided, showStep, unitOf };

@@ -3,11 +3,16 @@ import { track } from '@/lib/record/current';
 import { type Step } from './guided';
 import { type Outcome } from './protocol';
 
-interface Run {
+interface Place {
   readonly beat: string;
+  readonly unit: string;
+}
+
+interface Run {
   readonly forced: boolean;
   readonly input: string;
   readonly outcome: Outcome;
+  readonly place: Place;
   readonly source: string;
   readonly took: number;
 }
@@ -40,7 +45,7 @@ const operator = (forced: boolean): string => {
   return 'student';
 };
 
-const noteRun = ({ beat, forced, input, outcome, source, took }: Run): void => {
+const noteRun = ({ forced, input, outcome, place, source, took }: Run): void => {
   track('run.finished', {
     data: {
       by: operator(forced),
@@ -51,11 +56,12 @@ const noteRun = ({ beat, forced, input, outcome, source, took }: Run): void => {
       source: clip(source),
       took: Math.round(took),
     },
-    ref: beat,
+    ref: place.beat,
+    unit: place.unit,
   });
 };
 
-const noteStep = (beat: string, step: Step): void => {
+const noteStep = (place: Place, step: Step): void => {
   track('step.tried', {
     data: {
       at: step.at,
@@ -64,8 +70,13 @@ const noteStep = (beat: string, step: Step): void => {
       kind: step.expected?.kind ?? '',
       verdict: step.verdict,
     },
-    ref: beat,
+    ref: place.beat,
+    unit: place.unit,
   });
 };
 
-export { noteRun, noteStep };
+const noteEntry = (place: Place, mode: string): void => {
+  track('task.entered', { data: { mode }, ref: place.beat, unit: place.unit });
+};
+
+export { noteEntry, noteRun, noteStep, type Place };

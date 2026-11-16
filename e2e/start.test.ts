@@ -23,7 +23,12 @@ const openSeed = async (page: Page): Promise<void> => {
   visits += 1;
   await page.goto(`${seedPath}?visit=${String(visits)}`);
 };
-const storedEvent = object({ at: number(), kind: string(), ref: string() });
+const storedEvent = object({
+  at: number(),
+  kind: string(),
+  ref: string(),
+  unit: string().default(''),
+});
 const storedEvents = array(storedEvent);
 const template = [
   '#include <bits/stdc++.h>',
@@ -185,6 +190,11 @@ const storedPosition = async (page: Page): Promise<string> => {
   }
   return latest.ref;
 };
+
+const recordedAs = async (page: Page, label: string): Promise<number> =>
+  storedEvents
+    .parse(await readStored(page))
+    .filter((event) => `${event.kind} ${event.unit} ${event.ref}` === label).length;
 
 const writeProgram = async (page: Page, source: string): Promise<void> => {
   const here = await currentId(page);
@@ -464,6 +474,17 @@ test.describe('起步單元', () => {
     expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
     await page.keyboard.press('Enter');
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
+  });
+
+  test('a guided gate records the entry and every press with its unit', async ({ page }) => {
+    const hint = page.locator('[data-code-runner] [data-role="hint"]');
+    await open(page, 'run-cout');
+    await expect(hint).toHaveText('按 G（Shift + g）');
+    await page.keyboard.press('g');
+    await page.keyboard.press('G');
+    await expect(hint).toHaveText('按 O（Shift + o）');
+    await expect.poll(async () => await recordedAs(page, 'step.tried start run-cout')).toBe(2);
+    await expect.poll(async () => await recordedAs(page, 'task.entered start run-cout')).toBe(1);
   });
 
   test('a gate starts from its own declared text, not from a stray draft', async ({ page }) => {
