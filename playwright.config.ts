@@ -20,7 +20,7 @@ export default defineConfig({
   timeout: testSeconds * second,
   use: { baseURL: `http://localhost:${String(port)}`, trace: 'retain-on-failure' },
   webServer: {
-    command: `bun x wrangler dev --port ${String(port)}`,
+    command: `bun x wrangler d1 migrations apply cp-intake --local && bun x wrangler dev --port ${String(port)}`,
     reuseExistingServer: true,
     timeout: serverSeconds * second,
     url: `http://localhost:${String(port)}/learn/start/`,

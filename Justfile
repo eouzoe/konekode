@@ -2,7 +2,7 @@ dev:
     bun --bun run dev
 
 build:
-    bun --bun run build
+    PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build
 
 preview:
     bun --bun run preview
@@ -17,7 +17,7 @@ format:
     bun x oxfmt --write .
 
 test:
-    bun test src
+    bun test src worker
 
 check: typecheck lint test build
     bun x oxfmt --check .

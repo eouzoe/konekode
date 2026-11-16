@@ -1,16 +1,15 @@
+import { acceptIntake, intakePath, type Database } from './intake';
+
 interface Env {
   readonly ASSETS: { readonly fetch: (request: Request) => Promise<Response> };
+  readonly INTAKE?: Database;
 }
 
 const types: Record<string, string> = { tar: 'application/x-tar', wasm: 'application/wasm' };
 const packed = /\.(?<kind>tar|wasm)$/u;
 
-const serve = async (request: Request, env: Env): Promise<Response> => {
+const servePacked = async (request: Request, env: Env, kind: string): Promise<Response> => {
   const url = new URL(request.url);
-  const kind = packed.exec(url.pathname)?.groups?.kind;
-  if (kind === undefined) {
-    return env.ASSETS.fetch(request);
-  }
   url.pathname += '.br';
   const stored = await env.ASSETS.fetch(new Request(url, { method: request.method }));
   if (!stored.ok) {
@@ -25,6 +24,18 @@ const serve = async (request: Request, env: Env): Promise<Response> => {
     },
   };
   return new Response(stored.body, init);
+};
+
+const serve = (request: Request, env: Env): Promise<Response> | Response => {
+  const url = new URL(request.url);
+  if (url.pathname === intakePath) {
+    return acceptIntake(request, url, env.INTAKE);
+  }
+  const kind = packed.exec(url.pathname)?.groups?.kind;
+  if (kind === undefined) {
+    return env.ASSETS.fetch(request);
+  }
+  return servePacked(request, env, kind);
 };
 
 const handler = { fetch: serve };

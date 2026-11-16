@@ -6,6 +6,13 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/_astro/*.wasm", "/_astro/*.tar"],
+    "run_worker_first": ["/_astro/*.wasm", "/_astro/*.tar", "/api/*"],
   },
+  "d1_databases": [
+    {
+      "binding": "INTAKE",
+      "database_name": "cp-intake",
+      "migrations_dir": "migrations",
+    },
+  ],
 }

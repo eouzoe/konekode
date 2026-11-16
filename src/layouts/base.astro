@@ -19,6 +19,11 @@ const { title, full = false } = Astro.props;
     <script is:inline>
       document.documentElement.classList.add('js');
     </script>
+    <script>
+      import { startIntake } from '@/lib/intake/mount';
+
+      void startIntake();
+    </script>
   </head>
   <body>
     <main class:list={[full ? 'full' : 'page']}><slot /></main>

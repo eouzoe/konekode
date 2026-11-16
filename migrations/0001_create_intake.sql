@@ -1,0 +1,19 @@
+CREATE TABLE intake (
+  id INTEGER PRIMARY KEY,
+  received_at INTEGER NOT NULL,
+  kind TEXT NOT NULL,
+  actor TEXT NOT NULL,
+  session TEXT NOT NULL,
+  seq INTEGER NOT NULL,
+  site TEXT NOT NULL,
+  encoding TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  country TEXT NOT NULL,
+  region TEXT NOT NULL,
+  city TEXT NOT NULL,
+  asn INTEGER NOT NULL,
+  network TEXT NOT NULL,
+  timezone TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  body BLOB NOT NULL
+);
