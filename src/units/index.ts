@@ -1,3 +1,4 @@
+import { unitDomain, type UnitDomain } from '@/lib/learner/domain';
 import { planFor, runToken, type Beat, type Plan, type Task } from '@/lib/unit/format';
 
 import { beats as startBeats, starter as startStarter, tasks as startTasks } from './start';
@@ -45,4 +46,7 @@ const planOf = (unit: string, beat: string): Plan | null => {
 
 const beatsOf = (unit: string): readonly Beat[] => units[unit]?.beats ?? [];
 
-export { beatsOf, planOf, starterOf };
+const allDomains = (): Readonly<Record<string, UnitDomain>> =>
+  Object.fromEntries(Object.entries(units).map(([name, unit]) => [name, unitDomain(unit)]));
+
+export { allDomains, beatsOf, planOf, starterOf };

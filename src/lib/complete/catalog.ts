@@ -28,4 +28,4 @@ const keys: readonly KeyItem[] = commandKeys.map((key) => ({ id: `key.${key}`, k
 
 const catalog: readonly Item[] = [...pairs, ...keys];
 
-export { catalog, type Item, type KeyItem, type PairItem, type Where };
+export { catalog, keys, type Item, type KeyItem, type PairItem, type Where };
