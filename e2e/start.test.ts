@@ -15,18 +15,13 @@ const path = '/learn/start/';
 const studentEditor = '[data-role="editor"] .cm-content';
 const spriteEditor = '[data-role="sprite-editor"] .cm-content';
 const unitName = 'start';
-const seedPath = '/seed';
-const seedPage = '<!doctype html><title>seed</title>';
+const seedPath = '/favicon.ico';
+
+let visits = 0;
 
 const openSeed = async (page: Page): Promise<void> => {
-  await page.route(
-    `**${seedPath}`,
-    async (route) => {
-      await route.fulfill({ body: seedPage, contentType: 'text/html' });
-    },
-    { times: 1 },
-  );
-  await page.goto(seedPath);
+  visits += 1;
+  await page.goto(`${seedPath}?visit=${String(visits)}`);
 };
 const storedEvent = object({ kind: string(), ref: string() });
 const storedEvents = array(storedEvent);
