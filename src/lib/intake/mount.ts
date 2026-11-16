@@ -5,6 +5,7 @@ import { openLog, recorded, track } from '@/lib/record/current';
 import { environment, siteVersion } from './environment';
 import { acknowledge, pendingBatches, type Acked, type Batch } from './pending';
 import { upload, uploadLast, type Ticket } from './send';
+import { watchPage } from './watch';
 
 interface State {
   acked: Acked;
@@ -99,6 +100,7 @@ const startIntake = async (): Promise<void> => {
   await openLog();
   const state: State = { acked: readAcked(), busy: false, failures: 0, site: siteVersion() };
   track('session.started', { data: environment(state.site) });
+  watchPage();
   setTimeout(() => {
     void drain(state);
   }, firstDelay);

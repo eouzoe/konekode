@@ -1,6 +1,7 @@
 import { readDraft, writeDraft } from './draft';
 import { createEditor, forgetVimMemory, type Editor } from './editor';
 import { explain } from './explain';
+import { noteRun } from './note';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 import { createStage, type Actor } from './stage';
@@ -117,6 +118,15 @@ const sourceOf = (parts: Parts, forced: boolean): string => {
   return parts.editor.getText();
 };
 
+const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<void> => {
+  const source = sourceOf(parts, forced);
+  const input = parts.input.value;
+  const began = performance.now();
+  const outcome = await runProgram(source, input);
+  noteRun({ beat, forced, input, outcome, source, took: performance.now() - began });
+  finish(parts, { beat, forced, outcome });
+};
+
 const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   if (parts.root.dataset.state === 'busy' || (!forced && !isArmed(parts))) {
     return;
@@ -124,8 +134,7 @@ const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   const beat = attending(parts);
   begin(parts);
   try {
-    const outcome = await runProgram(sourceOf(parts, forced), parts.input.value);
-    finish(parts, { beat, forced, outcome });
+    await runOnce(parts, beat, forced);
   } catch (error) {
     fail(parts, beat, error);
   } finally {
