@@ -27,6 +27,7 @@ interface Task {
   readonly ask: string;
   readonly demo: readonly Shown[];
   readonly expect: string;
+  readonly goal: string;
   readonly id: string;
   readonly input?: string;
   readonly show: string;
@@ -104,6 +105,14 @@ const pathOf = (task: Task): string[] => {
   return [...keys, runToken];
 };
 
+const indent = '    ';
+
+const programOf = (starter: string, goal: string): string => {
+  const lines = starter.split('\n');
+  const body = goal.split('\n').map((line) => `${indent}${line}`);
+  return [...lines.slice(0, fromEnd), ...body, ...lines.slice(fromEnd)].join('\n');
+};
+
 interface Plan {
   readonly history: readonly string[];
   readonly path: readonly string[];
@@ -129,6 +138,7 @@ export {
   flatten,
   pathOf,
   planFor,
+  programOf,
   resetToken,
   runToken,
   tasksOf,

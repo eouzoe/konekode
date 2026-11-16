@@ -21,6 +21,11 @@ const listen = String.raw`int a{};
 cin >> a;
 cout << a << '\n';`;
 const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
+const swapped = String.raw`int a{};
+int b{};
+cin >> a >> b;
+cout << b << '\n';
+cout << a << '\n';`;
 
 const opening: readonly Beat[] = [
   { id: 'fullscreen-ask', say: '開始之前，建議先按 F11，把畫面放到全螢幕喔！', stage: 'empty' },
@@ -158,6 +163,7 @@ const addCout: Task = {
     },
   ],
   expect: '11',
+  goal: printOne,
   id: 'run-cout',
   show: printOne,
 };
@@ -178,6 +184,7 @@ const addSecond: Task = {
     },
   ],
   expect: '1122',
+  goal: printTwo,
   id: 'run-two',
   show: printTwo,
 };
@@ -204,6 +211,7 @@ const addNewlines: Task = {
     },
   ],
   expect: '11\n22',
+  goal: printLines,
   id: 'run-newline',
   show: printLines,
 };
@@ -224,6 +232,7 @@ const useVariable: Task = {
     },
   ],
   expect: '11',
+  goal: remember,
   id: 'run-int',
   show: remember,
 };
@@ -250,6 +259,7 @@ const readInput: Task = {
     },
   ],
   expect: '42',
+  goal: listen,
   id: 'run-cin',
   input: '42',
   show: listen,
@@ -259,6 +269,7 @@ const swapTwo: Task = {
   ask: '請照上面的題目寫出程式，然後執行。',
   demo: [],
   expect: '5\n3',
+  goal: swapped,
   id: 'task',
   input: '3 5',
   show: task,

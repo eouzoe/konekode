@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { flatten, pathOf, planFor, tasksOf, type Part, type Task } from './format';
+import { flatten, pathOf, planFor, programOf, tasksOf, type Part, type Task } from './format';
 
 const task: Task = {
   ask: 'your turn',
@@ -9,6 +9,7 @@ const task: Task = {
     { id: 'second', keys: ['O', 'type:x;', 'Esc'], say: 'open a line' },
   ],
   expect: '1',
+  goal: 'x;',
   id: 'gate',
   input: '7',
   show: 'x;',
@@ -76,4 +77,8 @@ test('a plan replays every earlier task without its runs', () => {
     path: ['G', 'O', 'type:x;', 'Esc', 'run'],
   });
   expect(planFor([task, later], 'elsewhere')).toBeNull();
+});
+
+test('a program is the starting text with the goal indented before its last line', () => {
+  expect(programOf('int main()\n{\n}', 'a;\nb;')).toBe('int main()\n{\n    a;\n    b;\n}');
 });

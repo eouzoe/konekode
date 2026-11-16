@@ -3,6 +3,7 @@ import { createActor } from 'xstate';
 import { array, number, object, string } from 'zod';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
+import { checksOf } from '../src/units/index';
 
 interface Current {
   readonly id: string;
@@ -52,16 +53,9 @@ const wrap = (body: string): string =>
     '}',
   ].join('\n');
 
-const programs: Record<string, string> = {
-  'run-cin': wrap("    int a{};\n    cin >> a;\n    cout << a << '\\n';"),
-  'run-cout': wrap('    cout << 11;'),
-  'run-int': wrap("    int a{11};\n    cout << a << '\\n';"),
-  'run-newline': wrap("    cout << 11 << '\\n';\n    cout << 22 << '\\n';"),
-  'run-two': wrap('    cout << 11;\n    cout << 22;'),
-  task: wrap(
-    "    int a{};\n    int b{};\n    cin >> a >> b;\n    cout << b << '\\n';\n    cout << a << '\\n';",
-  ),
-};
+const programs: Record<string, string> = Object.fromEntries(
+  checksOf('start').map((check) => [check.id, check.program]),
+);
 
 type Act = readonly [kind: 'keys' | 'type', value: string];
 

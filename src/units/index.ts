@@ -1,5 +1,5 @@
 import { unitDomain, type UnitDomain } from '@/lib/learner/domain';
-import { planFor, runToken, type Beat, type Plan, type Task } from '@/lib/unit/format';
+import { planFor, programOf, runToken, type Beat, type Plan, type Task } from '@/lib/unit/format';
 
 import { beats as startBeats, starter as startStarter, tasks as startTasks } from './start';
 
@@ -46,7 +46,27 @@ const planOf = (unit: string, beat: string): Plan | null => {
 
 const beatsOf = (unit: string): readonly Beat[] => units[unit]?.beats ?? [];
 
+interface Check {
+  readonly expect: string;
+  readonly id: string;
+  readonly input: string;
+  readonly program: string;
+}
+
+const checksOf = (unit: string): Check[] => {
+  const found = units[unit];
+  if (found === undefined) {
+    return [];
+  }
+  return found.tasks.map((task) => ({
+    expect: task.expect,
+    id: task.id,
+    input: task.input ?? '',
+    program: programOf(found.starter, task.goal),
+  }));
+};
+
 const allDomains = (): Readonly<Record<string, UnitDomain>> =>
   Object.fromEntries(Object.entries(units).map(([name, unit]) => [name, unitDomain(unit)]));
 
-export { allDomains, beatsOf, planOf, starterOf };
+export { allDomains, beatsOf, checksOf, planOf, starterOf, type Check };
