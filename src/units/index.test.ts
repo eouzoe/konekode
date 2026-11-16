@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { beatsOf, planOf, starterOf } from './index';
+import { allDomains, beatsOf, planOf, starterOf } from './index';
 
 test('a beat before the first gate has no plan', () => {
   expect(planOf('start', 'intro')).toBeNull();
@@ -28,4 +28,21 @@ test('an unknown unit has no plan, no beats and no starting text', () => {
   expect(planOf('nowhere', 'run-cout')).toBeNull();
   expect(beatsOf('nowhere')).toEqual([]);
   expect(starterOf('nowhere')).toBeNull();
+});
+
+test('every key a gate asks for was shown in an earlier beat', () => {
+  const missing: string[] = [];
+  for (const [unit, domain] of Object.entries(allDomains())) {
+    const shown = new Set<string>();
+    for (const beat of beatsOf(unit)) {
+      const wanted = (domain.uses.get(beat.id) ?? []).flat();
+      missing.push(
+        ...wanted.filter((id) => !shown.has(id)).map((id) => `${unit}/${beat.id}: ${id}`),
+      );
+      for (const id of domain.shows.get(beat.id) ?? []) {
+        shown.add(id);
+      }
+    }
+  }
+  expect(missing).toEqual([]);
 });
