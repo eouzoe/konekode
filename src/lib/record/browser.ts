@@ -1,6 +1,12 @@
 import { readEvents, type LearningEvent } from './event';
 import { memoryPersistence, type Persistence } from './log';
 
+interface Storage {
+  readonly durable: boolean;
+  readonly persistence: Persistence;
+  readonly reason: string;
+}
+
 const databaseName = 'konekode';
 const storeName = 'events';
 const schemaVersion = 1;
@@ -81,11 +87,11 @@ const databasePersistence = async (): Promise<Persistence> => {
   };
 };
 
-const browserPersistence = async (): Promise<Persistence> => {
+const browserPersistence = async (): Promise<Storage> => {
   try {
-    return await databasePersistence();
-  } catch {
-    return memoryPersistence(readLegacy());
+    return { durable: true, persistence: await databasePersistence(), reason: '' };
+  } catch (error) {
+    return { durable: false, persistence: memoryPersistence(readLegacy()), reason: String(error) };
   }
 };
 

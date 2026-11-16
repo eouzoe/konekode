@@ -16,6 +16,7 @@ interface Source {
   readonly actor: string;
   readonly newId: () => string;
   readonly now: () => number;
+  readonly onFault?: (error: unknown) => void;
   readonly persistence: Persistence;
   readonly session: string;
 }
@@ -75,17 +76,17 @@ const build = ({ source, state }: Context, kind: string, entry: Entry): Learning
   };
 };
 
-const attempt = async (work: () => Promise<void>): Promise<void> => {
+const attempt = async (source: Source, work: () => Promise<void>): Promise<void> => {
   try {
     await work();
-  } catch {
-    await Promise.resolve();
+  } catch (error) {
+    source.onFault?.(error);
   }
 };
 
-const queue = (state: State, work: () => Promise<void>): void => {
+const queue = ({ source, state }: Context, work: () => Promise<void>): void => {
   const previous = state.pending;
-  const done = attempt(work);
+  const done = attempt(source, work);
   state.pending = (async (): Promise<void> => {
     await previous;
     await done;
@@ -105,7 +106,7 @@ const createLog = async (source: Source): Promise<Log> => {
       await state.pending;
     },
     forget: (ids) => {
-      queue(state, () => source.persistence.remove(ids));
+      queue({ source, state }, () => source.persistence.remove(ids));
     },
     subscribe: (listener) => {
       state.listeners.push(listener);
@@ -113,7 +114,7 @@ const createLog = async (source: Source): Promise<Log> => {
     track: (kind, entry = {}) => {
       const event = build({ source, state }, kind, entry);
       state.events.push(event);
-      queue(state, () => source.persistence.append(event));
+      queue({ source, state }, () => source.persistence.append(event));
       for (const listener of state.listeners) {
         listener(event);
       }

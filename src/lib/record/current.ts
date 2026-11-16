@@ -9,21 +9,36 @@ type Listener = (event: LearningEvent) => void;
 const listeners: Listener[] = [];
 const nothing: readonly LearningEvent[] = [];
 
+const reasonLimit = 300;
+
 let opening: Promise<Log> | null = null;
 let opened: Log | null = null;
+let faulted = false;
+
+const noteFault = (error: unknown): void => {
+  if (!faulted) {
+    faulted = true;
+    opened?.track('storage.failed', { data: { reason: String(error).slice(0, reasonLimit) } });
+  }
+};
 
 const start = async (): Promise<Log> => {
+  const storage = await browserPersistence();
   const log = await createLog({
     actor: actorId(),
     newId,
     now: () => Date.now(),
-    persistence: await browserPersistence(),
+    onFault: noteFault,
+    persistence: storage.persistence,
     session: sessionId(),
   });
   for (const listener of listeners) {
     log.subscribe(listener);
   }
   opened = log;
+  if (!storage.durable) {
+    log.track('storage.unavailable', { data: { reason: storage.reason.slice(0, reasonLimit) } });
+  }
   return log;
 };
 

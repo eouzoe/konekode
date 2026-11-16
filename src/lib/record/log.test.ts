@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test';
 import { readEvent, type LearningEvent } from './event';
 import { createLog, memoryPersistence, type Persistence, type Source } from './log';
 
-const source = (persistence: Persistence): Source => {
+const source = (persistence: Persistence, faults: unknown[] = []): Source => {
   let clock = 1000;
   let count = 0;
   return {
@@ -15,6 +15,9 @@ const source = (persistence: Persistence): Source => {
     now: () => {
       clock += 1;
       return clock;
+    },
+    onFault: (error) => {
+      faults.push(error);
     },
     persistence,
     session: 'session-a',
@@ -74,7 +77,8 @@ test('每一筆事件發生時就立刻交給儲存，不用等前一筆寫完',
   await log.flush();
 });
 
-test('儲存失敗不會讓寫入中斷', async () => {
+test('儲存失敗不會讓寫入中斷，而且每一次失敗都會回報', async () => {
+  const faults: unknown[] = [];
   const broken: Persistence = {
     append: async () => {
       await Promise.resolve();
@@ -83,11 +87,12 @@ test('儲存失敗不會讓寫入中斷', async () => {
     load: () => Promise.resolve([]),
     remove: () => Promise.resolve(),
   };
-  const log = await createLog(source(broken));
+  const log = await createLog(source(broken, faults));
   log.track('one');
   log.track('two');
   await log.flush();
   expect(log.events()).toHaveLength(2);
+  expect(faults.map(String)).toEqual(['Error: 存不進去', 'Error: 存不進去']);
 });
 
 test('forgotten events leave the store and stay in memory until the page goes', async () => {
