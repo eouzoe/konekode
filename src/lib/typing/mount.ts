@@ -92,8 +92,16 @@ const shown = (session: Session): Drill => {
   return session.live;
 };
 
+const yieldInput = (session: Session, parts: Parts): void => {
+  if (session.demo && document.activeElement === parts.input) {
+    parts.input.blur();
+  }
+  parts.input.disabled = session.demo;
+};
+
 const paint = (session: Session, parts: Parts): void => {
   render(parts, shown(session));
+  yieldInput(session, parts);
   parts.root.dataset.demo = String(session.demo);
   if (session.demo && (!session.guide || isDone(session.show))) {
     quiet(parts);
@@ -224,7 +232,9 @@ const listen = (session: Session, parts: Parts): void => {
     parts.input.value = '';
   });
   parts.root.addEventListener('click', () => {
-    parts.input.focus();
+    if (!session.demo) {
+      parts.input.focus();
+    }
   });
   parts.root.addEventListener('drill:demo', (event) => {
     if (event instanceof CustomEvent && isScript(event.detail)) {

@@ -610,6 +610,19 @@ test.describe('起步單元', () => {
     }
   });
 
+  test('clicking the drill during a demonstration does not trap the keyboard', async ({ page }) => {
+    const input = page.locator('[data-typing-drill] [data-role="input"]');
+    await open(page, 'press-i');
+    await expect(input).toBeDisabled();
+    await page.locator('[data-typing-drill]').click();
+    await expect(input).not.toBeFocused();
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('insert-is');
+    await open(page, 'type-template');
+    await expect(input).toBeEnabled();
+    await expect(input).toBeFocused();
+  });
+
   test('full-width input gets its own hint and types nothing', async ({ page }) => {
     const hint = page.locator('[data-typing-drill] [data-role="hint"]');
     const mode = page.locator('[data-typing-drill] [data-role="mode"]');
