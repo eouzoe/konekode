@@ -10,17 +10,22 @@ const stops: readonly Stop[] = [
   { id: 'c' },
 ];
 
-test('jumping passes every gate before the target and lands on it', () => {
+test('jumping starts the unit over, passes every gate before the target and lands on it', () => {
   expect(jumpTo(stops, 'c')).toEqual([
+    { kind: 'unit.restarted', ref: '' },
     { kind: 'check.passed', ref: 'gate-1' },
     { kind: 'check.passed', ref: 'gate-2' },
     { kind: 'beat.reached', ref: 'c' },
   ]);
   expect(jumpTo(stops, 'gate-2')).toEqual([
+    { kind: 'unit.restarted', ref: '' },
     { kind: 'check.passed', ref: 'gate-1' },
     { kind: 'beat.reached', ref: 'gate-2' },
   ]);
-  expect(jumpTo(stops, 'a')).toEqual([{ kind: 'beat.reached', ref: 'a' }]);
+  expect(jumpTo(stops, 'a')).toEqual([
+    { kind: 'unit.restarted', ref: '' },
+    { kind: 'beat.reached', ref: 'a' },
+  ]);
 });
 
 test('jumping to an unknown beat does nothing', () => {

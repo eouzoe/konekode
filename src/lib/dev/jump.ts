@@ -4,7 +4,7 @@ interface Stop {
 }
 
 interface Entry {
-  readonly kind: 'beat.reached' | 'check.passed';
+  readonly kind: 'beat.reached' | 'check.passed' | 'unit.restarted';
   readonly ref: string;
 }
 
@@ -19,7 +19,7 @@ const jumpTo = (stops: readonly Stop[], target: string): Entry[] => {
     .slice(0, at)
     .filter((stop) => stop.wait !== undefined)
     .map((stop) => ({ kind: 'check.passed', ref: stop.id }));
-  return [...passed, { kind: 'beat.reached', ref: target }];
+  return [{ kind: 'unit.restarted', ref: '' }, ...passed, { kind: 'beat.reached', ref: target }];
 };
 
 const skipFrom = (stops: readonly Stop[], current: string): Entry[] => {
