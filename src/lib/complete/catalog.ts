@@ -8,12 +8,24 @@ interface PairItem {
   readonly where: Where;
 }
 
-type Item = PairItem;
+interface KeyItem {
+  readonly id: string;
+  readonly key: string;
+  readonly kind: 'key';
+}
 
-const catalog: readonly Item[] = [
+type Item = KeyItem | PairItem;
+
+const commandKeys = ['$', '.', '0', 'G', 'O', 'd', 'f', 'i', 'j', 'k', 'o', 'x'];
+
+const pairs: readonly PairItem[] = [
   { close: ')', id: 'pair.paren', kind: 'pair', open: '(', where: 'anywhere' },
   { close: '}', id: 'pair.brace', kind: 'pair', open: '{', where: 'anywhere' },
   { close: '>', id: 'pair.include-angle', kind: 'pair', open: '<', where: 'include-line' },
 ];
 
-export { catalog, type Item, type PairItem, type Where };
+const keys: readonly KeyItem[] = commandKeys.map((key) => ({ id: `key.${key}`, key, kind: 'key' }));
+
+const catalog: readonly Item[] = [...pairs, ...keys];
+
+export { catalog, type Item, type KeyItem, type PairItem, type Where };

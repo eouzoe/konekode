@@ -246,6 +246,7 @@ const mountScene = (root: HTMLElement, read: ReadUnit): void => {
   const scene = build(root, read);
   for (const beat of scene.beats.slice(0, scene.index)) {
     fillInput(scene, beat);
+    grantUnlocks(scene.unit, beat);
   }
   scene.actor.subscribe((snapshot) => {
     sync(scene, snapshot);

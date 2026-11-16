@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createActor } from 'xstate';
-import { array, object, string } from 'zod';
+import { array, number, object, string } from 'zod';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
 
@@ -23,7 +23,7 @@ const openSeed = async (page: Page): Promise<void> => {
   visits += 1;
   await page.goto(`${seedPath}?visit=${String(visits)}`);
 };
-const storedEvent = object({ kind: string(), ref: string() });
+const storedEvent = object({ at: number(), kind: string(), ref: string() });
 const storedEvents = array(storedEvent);
 const template = [
   '#include <bits/stdc++.h>',
@@ -159,12 +159,42 @@ const open = async (
   await page.locator('[data-scene][data-ready="true"]').waitFor();
 };
 
+const readStored = async (page: Page): Promise<unknown> =>
+  await page.evaluate(
+    async () =>
+      await new Promise<unknown>((resolve, reject) => {
+        const opening = indexedDB.open('konekode');
+        opening.addEventListener('error', () => {
+          reject(new Error('cannot open the database'));
+        });
+        opening.addEventListener('success', () => {
+          const all = opening.result.transaction('events').objectStore('events').getAll();
+          all.addEventListener('success', () => {
+            resolve(all.result);
+          });
+        });
+      }),
+  );
+
+const storedPosition = async (page: Page): Promise<string> => {
+  let latest = { at: -1, ref: '' };
+  for (const event of storedEvents.parse(await readStored(page))) {
+    if (event.kind === 'beat.reached' && event.at >= latest.at) {
+      latest = event;
+    }
+  }
+  return latest.ref;
+};
+
 const writeProgram = async (page: Page, source: string): Promise<void> => {
-  await page.locator(studentEditor).click();
-  await page.keyboard.press('Escape');
-  await page.keyboard.type('ggdGi');
-  await page.keyboard.insertText(source);
-  await page.keyboard.press('Escape');
+  const here = await currentId(page);
+  await expect.poll(async () => await storedPosition(page)).toBe(here);
+  await page.evaluate((text) => {
+    localStorage.setItem('cp:draft:start', JSON.stringify({ cursor: 0, text }));
+  }, source);
+  await page.reload();
+  await page.locator('[data-scene][data-ready="true"]').waitFor();
+  await expect(page.locator(studentEditor)).toBeFocused();
 };
 
 const status = (page: Page) => page.locator('[data-code-runner] [data-role="status"]');
@@ -382,7 +412,9 @@ test.describe('起步單元', () => {
     await expect(lit).toHaveCount(3);
   });
 
-  test('還沒解鎖的成對符號不會補，解鎖後才會', async ({ page }) => {
+  test('the drill marks a closer as completed only for unlocked pairs; the editor closes them', async ({
+    page,
+  }) => {
     const auto = page.locator('[data-typing-drill] .is-auto');
     const typing = page.locator('[data-typing-drill] [data-role="input"]');
     const editor = page.locator(studentEditor);
@@ -398,15 +430,25 @@ test.describe('起步單元', () => {
     await expect(auto).toHaveText(['>']);
     await open(page, 'run-cout');
     await expect(editor).toBeFocused();
-    await page.keyboard.press('o');
-    await page.keyboard.type('int a{');
-    await expect(editor).toContainText('int a{');
-    await expect(editor).not.toContainText('int a{}');
-    await open(page, 'run-cout', { unlocked: ['pair.brace'] });
-    await expect(editor).toBeFocused();
-    await page.keyboard.press('o');
+    await page.keyboard.press('O');
     await page.keyboard.type('int a{');
     await expect(editor).toContainText('int a{}');
+  });
+
+  test('command keys that have not been taught do nothing in normal mode', async ({ page }) => {
+    const editor = page.locator(studentEditor);
+    const hint = page.locator('[data-code-runner] [data-role="hint"]');
+    await open(page, 'run-cout');
+    await expect(editor).toBeFocused();
+    const before = await editorText(page);
+    for (const key of ['d', 'd', 'x', 'D', 'u', 'o', 'a', 'Delete']) {
+      await page.keyboard.press(key);
+    }
+    expect(await editorText(page)).toBe(before);
+    await expect(hint).toContainText('還沒學到');
+    await follow(page, lessons['run-cout'] ?? []);
+    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+    await expect.poll(async () => await currentId(page)).toBe('saw-output');
   });
 
   test('pairs unlock only after the learner has typed the template by hand', async ({ page }) => {
@@ -427,7 +469,9 @@ test.describe('起步單元', () => {
             });
           }),
       );
-      const events = storedEvents.parse(value).filter((event) => event.kind === 'item.unlocked');
+      const events = storedEvents
+        .parse(value)
+        .filter((event) => event.kind === 'item.unlocked' && event.ref.startsWith('pair.'));
       return new Set(events.map((event) => event.ref));
     };
     const wanted = new Set(['pair.brace', 'pair.include-angle', 'pair.paren']);

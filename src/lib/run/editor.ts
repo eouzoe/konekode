@@ -1,14 +1,13 @@
-import { indentWithTab } from '@codemirror/commands';
-import { cpp } from '@codemirror/lang-cpp';
-import { indentUnit } from '@codemirror/language';
-import { Compartment, EditorState, Prec, type Extension } from '@codemirror/state';
+import { Compartment, Prec, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { Vim, getCM, vim } from '@replit/codemirror-vim';
 import { basicSetup } from 'codemirror';
 
+import { engine } from '@/lib/complete/current';
+
+import { language } from './language';
 import { unlockedPairs } from './pairs';
 import { press, restore, snapshot, type Snapshot } from './puppet';
-import { tokyoNight } from './theme';
 
 interface Editor {
   readonly blur: () => void;
@@ -24,12 +23,12 @@ interface Editor {
 interface Options {
   readonly cursor: number;
   readonly onChange?: (draft: { cursor: number; text: string }) => void;
+  readonly onCommand?: (refused: boolean) => void;
   readonly onRun?: () => void;
   readonly parent: HTMLElement;
   readonly text: string;
 }
 
-const tabWidth = 4;
 const stepEvent = 'scene:step';
 const forward = 1;
 const backward = -forward;
@@ -48,6 +47,45 @@ const isInserting = (view: EditorView): boolean => {
   }
   return state.insertMode === true || ('visualMode' in state && state.visualMode === true);
 };
+
+const isPending = (view: EditorView): boolean => {
+  const state: unknown = getCM(view)?.state.vim;
+  return typeof state === 'object' && state !== null && 'status' in state && state.status !== '';
+};
+
+const deleteKey = 'Delete';
+const deleteCommand = 'x';
+
+const commandOf = (event: KeyboardEvent): string | null => {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return null;
+  }
+  if (event.key === deleteKey) {
+    return deleteCommand;
+  }
+  if (event.key.length === 1) {
+    return event.key;
+  }
+  return null;
+};
+
+const taughtOnly = (report: (refused: boolean) => void): Extension =>
+  Prec.highest(
+    EditorView.domEventHandlers({
+      keydown: (event, view) => {
+        const command = commandOf(event);
+        if (command === null || isInserting(view) || isPending(view)) {
+          return false;
+        }
+        const refused = !engine.keys().has(command);
+        report(refused);
+        if (refused) {
+          event.preventDefault();
+        }
+        return refused;
+      },
+    }),
+  );
 
 const stepBy =
   (step: number) =>
@@ -103,6 +141,9 @@ const createEditor = (options: Options): Editor => {
   const view = new EditorView({
     doc: options.text,
     extensions: [
+      taughtOnly((refused) => {
+        options.onCommand?.(refused);
+      }),
       arrows,
       ...vimLayer(),
       Prec.highest(
@@ -114,11 +155,7 @@ const createEditor = (options: Options): Editor => {
       unlockedPairs,
       basicSetup,
       editable.of(EditorView.editable.of(false)),
-      keymap.of([indentWithTab]),
-      cpp(),
-      indentUnit.of(' '.repeat(tabWidth)),
-      EditorState.tabSize.of(tabWidth),
-      tokyoNight,
+      ...language,
       EditorView.updateListener.of((update) => {
         if (update.docChanged || update.selectionSet) {
           options.onChange?.({

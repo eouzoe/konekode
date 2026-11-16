@@ -105,6 +105,7 @@ const opening: readonly Beat[] = [
     id: 'press-i',
     say: '要輸入文字的話，需要按 i 切換成輸入模式。',
     stage: 'drill',
+    unlock: ['key.i'],
   },
   {
     demo: 'hush down:i key:i up:i',
@@ -167,6 +168,7 @@ const editing: readonly Beat[] = [
     say: '在一般模式按大寫的 G，游標會跳到最後一行。',
     snippet: printOne,
     stage: 'run',
+    unlock: ['key.G'],
   },
   {
     id: 'open-above',
@@ -174,6 +176,7 @@ const editing: readonly Beat[] = [
     say: '再按大寫的 O，上面就會多出新的一行，而且直接變成輸入模式。',
     snippet: printOne,
     stage: 'run',
+    unlock: ['key.O'],
   },
   {
     id: 'indent',
@@ -216,6 +219,7 @@ const printing: readonly Beat[] = [
     say: '游標還停在剛才那一行。按小寫的 o，下面就會多出新的一行。大寫是往上開，小寫是往下開。',
     snippet: printTwo,
     stage: 'run',
+    unlock: ['key.o'],
   },
   {
     id: 'type-second',
@@ -250,6 +254,7 @@ const printing: readonly Beat[] = [
     say: '要在分號的前面加東西。按 $，游標會跳到這一行的最後面，也就是分號上。',
     snippet: printLines,
     stage: 'run',
+    unlock: ['key.$'],
   },
   {
     id: 'insert-before',
@@ -264,6 +269,7 @@ const printing: readonly Beat[] = [
     say: '上面那一行也要改。按 k 往上一行，按 $ 到最後面，再按 . ，就會把剛才做的事再做一次。',
     snippet: printLines,
     stage: 'run',
+    unlock: ['key.k', 'key..'],
   },
   {
     expect: '11\n22',
@@ -294,6 +300,7 @@ const storing: readonly Beat[] = [
     say: '原本的兩行不要了。按 d 再按 j，會把游標這一行和下面那一行一起刪掉。',
     snippet: remember,
     stage: 'run',
+    unlock: ['key.d', 'key.j'],
   },
   {
     id: 'retype',
@@ -337,6 +344,7 @@ const storing: readonly Beat[] = [
     say: '先把 11 拿掉。按 k 回到上一行，按 0 回到這一行的最前面，再按 f 和 1，游標會往右找到第一個 1。',
     snippet: listen,
     stage: 'run',
+    unlock: ['key.0', 'key.f'],
   },
   {
     id: 'delete-char',
@@ -344,6 +352,7 @@ const storing: readonly Beat[] = [
     say: '按 x 會刪掉游標上的那個字。按兩次，11 就不見了。',
     snippet: listen,
     stage: 'run',
+    unlock: ['key.x'],
   },
   {
     id: 'add-cin',

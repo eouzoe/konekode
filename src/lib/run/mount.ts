@@ -148,6 +148,16 @@ const preload = (): void => {
   }
 };
 
+const notTaught = '這個鍵還沒學到，先不能用喔！';
+const normalHint = 'Enter 執行';
+
+const commandHint = (refused: boolean): string => {
+  if (refused) {
+    return notTaught;
+  }
+  return normalHint;
+};
+
 const makeEditor = (root: HTMLElement, run: () => void): Editor => {
   const parent = find(root, 'editor', HTMLElement);
   const name = root.dataset.draft ?? '';
@@ -159,6 +169,9 @@ const makeEditor = (root: HTMLElement, run: () => void): Editor => {
       if (name !== '') {
         writeDraft(name, next);
       }
+    },
+    onCommand: (refused) => {
+      find(root, 'hint', HTMLElement).textContent = commandHint(refused);
     },
     onRun: run,
     parent,
@@ -177,7 +190,7 @@ const showActor = (root: HTMLElement, actor: Actor): void => {
 
 const hints: Record<string, string> = {
   insert: 'Esc 回到一般模式',
-  normal: 'Enter 執行',
+  normal: normalHint,
 };
 
 const guide = (parts: Parts): void => {
