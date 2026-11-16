@@ -56,11 +56,11 @@ const sendHalves: Sender = async (tape, frames) => {
 
 const sendFrames = async (tape: Tape, frames: readonly unknown[]): Promise<readonly unknown[]> => {
   const packed = await pack(JSON.stringify(frames));
-  if (packed.body.size <= bodyLimit) {
+  if (packed.body.byteLength <= bodyLimit) {
     return sendWhole(tape, frames, packed);
   }
   if (frames.length === 1) {
-    track('replay.dropped', { data: { bytes: packed.body.size, reason: 'oversize' } });
+    track('replay.dropped', { data: { bytes: packed.body.byteLength, reason: 'oversize' } });
     return [];
   }
   return sendHalves(tape, frames);

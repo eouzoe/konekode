@@ -7,7 +7,7 @@ interface Ticket {
 }
 
 interface Packed {
-  readonly body: Blob;
+  readonly body: ArrayBuffer;
   readonly encoding: 'gzip' | 'identity';
 }
 
@@ -28,12 +28,20 @@ const address = (ticket: Ticket, encoding: string): string => {
   return `${endpoint}?${query.toString()}`;
 };
 
+const squeeze = (bytes: Uint8Array<ArrayBuffer>): Promise<ArrayBuffer> => {
+  const plain = new Response(bytes).body;
+  if (plain === null) {
+    throw new TypeError('no stream to compress');
+  }
+  return new Response(plain.pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+};
+
 const pack = async (text: string): Promise<Packed> => {
+  const bytes = new TextEncoder().encode(text);
   try {
-    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
-    return { body: await new Response(stream).blob(), encoding: 'gzip' };
+    return { body: await squeeze(bytes), encoding: 'gzip' };
   } catch {
-    return { body: new Blob([text]), encoding: 'identity' };
+    return { body: bytes.buffer, encoding: 'identity' };
   }
 };
 
@@ -41,7 +49,7 @@ const post = async (ticket: Ticket, packed: Packed): Promise<boolean> => {
   try {
     const response = await fetch(address(ticket, packed.encoding), {
       body: packed.body,
-      keepalive: packed.body.size <= keepaliveLimit,
+      keepalive: packed.body.byteLength <= keepaliveLimit,
       method: 'POST',
     });
     return response.status === stored;
@@ -53,9 +61,7 @@ const post = async (ticket: Ticket, packed: Packed): Promise<boolean> => {
 const upload = async (ticket: Ticket, text: string): Promise<boolean> =>
   post(ticket, await pack(text));
 
-const uploadLast = (ticket: Ticket, text: string): boolean => {
-  const body = new Blob([text], { type: 'application/json' });
-  return navigator.sendBeacon(address(ticket, 'identity'), body);
-};
+const uploadLast = (ticket: Ticket, text: string): boolean =>
+  navigator.sendBeacon(address(ticket, 'identity'), text);
 
 export { bodyLimit, keepaliveLimit, pack, post, upload, uploadLast, type Packed, type Ticket };
