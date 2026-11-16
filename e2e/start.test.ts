@@ -548,6 +548,26 @@ test.describe('起步單元', () => {
     }
   });
 
+  test('full-width input gets its own hint and types nothing', async ({ page }) => {
+    const hint = page.locator('[data-typing-drill] [data-role="hint"]');
+    const mode = page.locator('[data-typing-drill] [data-role="mode"]');
+    const done = page.locator('[data-typing-drill] [data-role="done"]');
+    await open(page, 'type-template');
+    await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
+    await expect(page.locator('[data-typing-drill] .drill-tip')).toContainText('半形');
+    await page.keyboard.insertText('ｉ');
+    await expect(hint).toContainText('全形');
+    await expect(mode).toHaveText('-- NORMAL --');
+    await page.keyboard.press('i');
+    await expect(mode).toHaveText('-- INSERT --');
+    await page.keyboard.insertText('＃');
+    await expect(hint).toContainText('全形');
+    await expect(done).toHaveText('');
+    await page.keyboard.press('#');
+    await expect(done).toHaveText('#');
+    await expect(hint).not.toContainText('全形');
+  });
+
   test('小精靈的示範打完時，不會出現稱讚學生的話', async ({ page }) => {
     const hint = page.locator('[data-typing-drill] [data-role="hint"]');
     await open(page, 'type-template');

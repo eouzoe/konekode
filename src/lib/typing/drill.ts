@@ -1,6 +1,6 @@
 type Mode = 'insert' | 'normal';
 
-type Feedback = 'ime' | 'need-insert' | 'no-delete' | 'none' | 'wrong-key';
+type Feedback = 'full-width' | 'ime' | 'need-insert' | 'no-delete' | 'none' | 'wrong-key';
 
 interface Drill {
   readonly feedback: Feedback;

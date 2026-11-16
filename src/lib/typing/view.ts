@@ -1,7 +1,15 @@
 import { engine } from '@/lib/complete/current';
 import { autoClosed } from '@/lib/complete/pairs';
 
-import { expectedChar, hasStarted, insertKey, isDone, isTyped, type Drill } from './drill';
+import {
+  expectedChar,
+  hasStarted,
+  insertKey,
+  isDone,
+  isTyped,
+  type Drill,
+  type Feedback,
+} from './drill';
 import {
   enterKey,
   escapeKey,
@@ -83,9 +91,15 @@ const describeNext = (char: string): string => {
   return `${messages.typeChar}${char}`;
 };
 
+const warnings: Partial<Record<Feedback, string>> = {
+  'full-width': messages.fullWidth,
+  ime: messages.ime,
+};
+
 const describeNormal = (drill: Drill): string => {
-  if (drill.feedback === 'ime') {
-    return messages.ime;
+  const warning = warnings[drill.feedback];
+  if (warning !== undefined) {
+    return warning;
   }
   if (drill.feedback === 'need-insert') {
     return messages.needInsert;
@@ -105,8 +119,9 @@ const describeTyped = (drill: Drill): string => {
 
 const describeInsert = (drill: Drill): string => {
   const next = describeNext(expectedChar(drill));
-  if (drill.feedback === 'ime') {
-    return messages.ime;
+  const warning = warnings[drill.feedback];
+  if (warning !== undefined) {
+    return warning;
   }
   if (drill.feedback === 'no-delete') {
     return `${messages.noDelete}${next}`;

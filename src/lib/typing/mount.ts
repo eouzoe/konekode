@@ -20,6 +20,7 @@ import {
   type Session,
 } from './steps';
 import { buildKeyboard, findPart, quiet, render, type Parts } from './view';
+import { isFullWidth } from './width';
 
 const deleteKeys = new Set(['Backspace', 'Delete']);
 
@@ -58,6 +59,9 @@ const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
 
 const onInput = (drill: Drill, event: InputEvent): Drill => {
   event.preventDefault();
+  if (isFullWidth(event.data ?? '')) {
+    return remind(drill, 'full-width');
+  }
   if (event.isComposing || event.inputType === 'insertCompositionText') {
     return remind(drill, 'ime');
   }
