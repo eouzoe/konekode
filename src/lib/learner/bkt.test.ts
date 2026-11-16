@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { bktUpdate, bktUpdateAfterExam, defaultParams } from './bkt';
+import { bktExpect, bktUpdate, bktUpdateAfterExam, defaultParams } from './bkt';
 
 const params = { pG: 0.2, pL0: 0.3, pS: 0.1, pT: 0.4 };
 const half = 0.5;
@@ -59,4 +59,9 @@ test('with the default parameters two correct answers pass 0.9', () => {
   const twice = bktUpdate(once, defaultParams, { correct: true });
   expect(once).toBeCloseTo(0.636, 3);
   expect(twice).toBeCloseTo(0.902, 3);
+});
+
+test('the chance of a right answer follows from the estimate, the guess and the slip', () => {
+  expect(bktExpect(defaultParams.pL0, defaultParams)).toBeCloseTo(0.396, 3);
+  expect(bktExpect(1, defaultParams)).toBeCloseTo(0.9, 3);
 });

@@ -6,7 +6,7 @@ import { type LearningEvent } from '@/lib/record/event';
 import { allDomains } from '@/units/index';
 
 import { components } from './domain';
-import { componentOf, learnerModel, reviewDue, type Component, type Model } from './model';
+import { componentOf, learnerModel, observe, reviewDue, type Component, type Model } from './model';
 
 interface Sketch {
   readonly at: number;
@@ -147,6 +147,35 @@ test('the side estimate follows first presses only and is not used for the stand
   expect(componentOf(wrong, 'key.G').standing).toBe('done');
 });
 
+test('each opportunity is listed with the wait before it and the chance given beforehand', () => {
+  const { observations } = observe(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 400, step: 0, verdict: 'wrong' },
+      { at: 500, step: 0 },
+      { at: 900, step: 1 },
+      { at: 2000, kind: 'task.entered' },
+      { at: 2300, step: 0 },
+    ]),
+    domains,
+  );
+  expect(
+    observations.map((item) => [item.component, item.opportunity, item.right, item.waited]),
+  ).toEqual([
+    ['key.G', 1, false, 300],
+    ['key.O', 1, true, 400],
+    ['key.G', 2, true, 300],
+  ]);
+  expect(observations[0]?.predicted).toBeCloseTo(0.396, 3);
+  expect(observations[2]?.predicted).toBeLessThan(0.396);
+  expect(observations[0]).toMatchObject({
+    session: 'one',
+    step: 0,
+    task: 'run-cout',
+    unit: 'start',
+  });
+});
+
 test('nothing is due for review yet', () => {
   expect(reviewDue()).toEqual([]);
 });
@@ -178,8 +207,11 @@ test('the same events give the same model in any order, with repeats', () => {
 test('first-time rights never exceed completions, which never exceed opportunities', () => {
   assert(
     property(sketches, (list) => {
-      const model = plain(read(build(list)));
-      for (const component of Object.values(model)) {
+      const reading = observe(build(list), domains);
+      const model = plain(reading.model);
+      for (const [id, component] of Object.entries(model)) {
+        const listed = reading.observations.filter((item) => item.component === id);
+        expect(listed).toHaveLength(component.opportunities);
         expect(component.estimate).toBeGreaterThanOrEqual(0);
         expect(component.estimate).toBeLessThanOrEqual(1);
         expect(component.firstRight).toBeLessThanOrEqual(component.completed);

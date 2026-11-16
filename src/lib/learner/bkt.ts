@@ -43,6 +43,11 @@ const bktPosterior = (prior: number, observation: Observation, params: Params): 
   return (prior * givenMastered) / seen;
 };
 
+const bktExpect = (pL: number, params: Params): number => {
+  const prior = bktPrior(pL, params.pT);
+  return prior * (1 - params.pS) + (1 - prior) * params.pG;
+};
+
 const weightOf = (observation: Observation): number =>
   Math.min(observation.softEvidence?.weight ?? observation.weight ?? 1, maxWeight);
 
@@ -64,6 +69,7 @@ const bktUpdateAfterExam = (pL: number, params: Params, correct: boolean): numbe
   bktUpdate(pL, params, { correct, weight: examWeight });
 
 export {
+  bktExpect,
   bktPosterior,
   bktPrior,
   bktUpdate,

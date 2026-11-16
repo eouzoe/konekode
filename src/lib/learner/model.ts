@@ -1,6 +1,6 @@
 import { ordered, type LearningEvent } from '@/lib/record/event';
 
-import { bktUpdate, defaultParams } from './bkt';
+import { bktExpect, bktUpdate, defaultParams } from './bkt';
 import { type UnitDomain } from './domain';
 
 type Standing = 'done' | 'shown' | 'unseen';
@@ -20,8 +20,34 @@ interface Component extends Readonly<Tally> {
 type Domains = Readonly<Record<string, UnitDomain>>;
 type Model = ReadonlyMap<string, Component>;
 
+interface Observation {
+  readonly at: number;
+  readonly component: string;
+  readonly opportunity: number;
+  readonly predicted: number;
+  readonly right: boolean;
+  readonly session: string;
+  readonly step: number;
+  readonly task: string;
+  readonly unit: string;
+  readonly waited: number;
+}
+
+interface Entry {
+  last: number;
+  readonly steps: Map<number, boolean>;
+}
+
+interface Mark {
+  readonly first: boolean;
+  readonly right: boolean;
+  readonly step: number;
+  readonly waited: number;
+}
+
 interface Fold {
-  readonly entries: Map<string, Map<number, boolean>>;
+  readonly entries: Map<string, Entry>;
+  readonly observations: Observation[];
   readonly seen: Set<string>;
   readonly tallies: Map<string, Tally>;
 }
@@ -58,7 +84,7 @@ const reach: Handle = (fold, event, domain) => {
 const entryKey = (event: LearningEvent): string => `${event.session}|${event.unit}|${event.ref}`;
 
 const enter: Handle = (fold, event) => {
-  fold.entries.set(entryKey(event), new Map());
+  fold.entries.set(entryKey(event), { last: event.at, steps: new Map() });
 };
 
 const score = (tally: Tally, first: boolean, right: boolean): void => {
@@ -74,17 +100,49 @@ const score = (tally: Tally, first: boolean, right: boolean): void => {
   }
 };
 
+const markOf = (entry: Entry, event: LearningEvent, step: number): Mark => {
+  const mark: Mark = {
+    first: !entry.steps.has(step),
+    right: event.data.verdict === 'right',
+    step,
+    waited: event.at - entry.last,
+  };
+  entry.steps.set(step, mark.right);
+  if (mark.right) {
+    entry.last = event.at;
+  }
+  return mark;
+};
+
+const observed = (
+  event: LearningEvent,
+  mark: Mark,
+  tally: Tally,
+): Omit<Observation, 'component'> => ({
+  at: event.at,
+  opportunity: tally.opportunities + 1,
+  predicted: bktExpect(tally.estimate, defaultParams),
+  right: mark.right,
+  session: event.session,
+  step: mark.step,
+  task: event.ref,
+  unit: event.unit,
+  waited: mark.waited,
+});
+
 const attempt: Handle = (fold, event, domain) => {
   const entry = fold.entries.get(entryKey(event));
-  const { at } = event.data;
-  if (entry === undefined || typeof at !== 'number' || entry.get(at) === true) {
+  const { at: step } = event.data;
+  if (entry === undefined || typeof step !== 'number' || entry.steps.get(step) === true) {
     return;
   }
-  const first = !entry.has(at);
-  const right = event.data.verdict === 'right';
-  entry.set(at, right);
-  for (const id of domain.uses.get(event.ref)?.[at] ?? []) {
-    score(tallyOf(fold, id), first, right);
+  const mark = markOf(entry, event, step);
+  for (const component of domain.uses.get(event.ref)?.[step] ?? []) {
+    const tally = tallyOf(fold, component);
+    if (mark.first) {
+      fold.observations.push({ component, ...observed(event, mark, tally) });
+    }
+    score(tally, mark.first, mark.right);
   }
 };
 
@@ -104,8 +162,13 @@ const standingOf = (tally: Tally): Standing => {
   return 'unseen';
 };
 
-const learnerModel = (events: readonly LearningEvent[], domains: Domains): Model => {
-  const fold: Fold = { entries: new Map(), seen: new Set(), tallies: new Map() };
+interface Reading {
+  readonly model: Model;
+  readonly observations: readonly Observation[];
+}
+
+const observe = (events: readonly LearningEvent[], domains: Domains): Reading => {
+  const fold: Fold = { entries: new Map(), observations: [], seen: new Set(), tallies: new Map() };
   for (const event of ordered(events)) {
     const domain = domains[event.unit];
     const handle = handles[event.kind];
@@ -113,10 +176,14 @@ const learnerModel = (events: readonly LearningEvent[], domains: Domains): Model
       handle(fold, event, domain);
     }
   }
-  return new Map(
+  const model: Model = new Map(
     [...fold.tallies].map(([id, tally]) => [id, { ...tally, standing: standingOf(tally) }]),
   );
+  return { model, observations: fold.observations };
 };
+
+const learnerModel = (events: readonly LearningEvent[], domains: Domains): Model =>
+  observe(events, domains).model;
 
 const unseen: Component = {
   completed: 0,
@@ -137,8 +204,10 @@ export {
   componentOf,
   handledKinds,
   learnerModel,
+  observe,
   reviewDue,
   type Component,
   type Domains,
   type Model,
+  type Observation,
 };
