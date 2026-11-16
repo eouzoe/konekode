@@ -6,6 +6,7 @@ import { clearDraft } from '@/lib/run/draft';
 import { allDomains, beatsOf } from '@/units/index';
 
 import { jumpTo, skipFrom, type Entry } from './jump';
+import { lookButton } from './looks';
 
 const styles = `
 .dev-panel { position: fixed; top: 0.5rem; right: 0.5rem; z-index: 50; display: flex; gap: 0.5rem;
@@ -159,14 +160,13 @@ const buildPanel = (unit: string): HTMLElement => {
   const jump = jumpSheet(unit);
   const note = noteSheet(unit);
   const model = modelSheet();
-  const skip = skipButton(unit);
   onRecorded((event) => {
     if (event.kind === 'beat.reached' && event.unit === unit) {
       where.textContent = event.ref;
     }
   });
-  const buttons = [opener('跳到…', jump), skip, opener('留話', note), opener('學生模型', model)];
-  panel.append('開發模式', where, ...buttons, jump, note, model);
+  const openers = [opener('跳到…', jump), opener('留話', note), opener('學生模型', model)];
+  panel.append('開發模式', where, skipButton(unit), ...openers, lookButton(), jump, note, model);
   return panel;
 };
 

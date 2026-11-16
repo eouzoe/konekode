@@ -6,6 +6,7 @@ build:
 
 build-dev:
     PUBLIC_MODE=dev PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build --outDir dist-dev
+    cp -r dev-assets/fonts dist-dev/fonts
 
 serve-dev: build-dev
     bun x wrangler dev --assets dist-dev --port 8789
