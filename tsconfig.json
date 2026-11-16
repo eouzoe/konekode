@@ -27,5 +27,5 @@
     "worker/**/*.ts",
     "*.config.ts"
   ],
-  "exclude": ["dist"]
+  "exclude": ["dist", "dist-dev"]
 }

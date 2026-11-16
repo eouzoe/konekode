@@ -20,9 +20,13 @@ const { title, full = false } = Astro.props;
       document.documentElement.classList.add('js');
     </script>
     <script>
+      import { startDev } from '@/lib/dev/start';
       import { startIntake } from '@/lib/intake/mount';
 
       void startIntake();
+      if (import.meta.env.PUBLIC_MODE === 'dev') {
+        void startDev();
+      }
     </script>
   </head>
   <body>

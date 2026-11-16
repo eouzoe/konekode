@@ -1,3 +1,4 @@
+import { siteMode } from '@/lib/mode';
 import { type Data } from '@/lib/record/event';
 
 const versionPattern = /^[0-9a-z.-]{1,40}$/u;
@@ -24,6 +25,7 @@ const environment = (site: string): Data => ({
   cores: navigator.hardwareConcurrency,
   language: navigator.language,
   languages: navigator.languages.join(','),
+  mode: siteMode(),
   path: globalThis.location.pathname,
   pixelRatio: globalThis.devicePixelRatio,
   referrer: document.referrer,

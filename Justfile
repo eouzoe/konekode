@@ -4,6 +4,12 @@ dev:
 build:
     PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build
 
+build-dev:
+    PUBLIC_MODE=dev PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build --outDir dist-dev
+
+serve-dev: build-dev
+    bun x wrangler dev --assets dist-dev --port 8789
+
 preview:
     bun --bun run preview
 
@@ -32,4 +38,4 @@ deploy: check e2e
     bun x wrangler deploy
 
 clean:
-    rm -rf .astro dist
+    rm -rf .astro dist dist-dev
