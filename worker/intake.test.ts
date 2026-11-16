@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 
+import { accountOf, dayLimits, networkOf } from './budget';
 import { acceptIntake, bodyLimit, intakePath, readTicket, type Database } from './intake';
 
 const actor = '11111111-1111-4111-8111-111111111111';
@@ -17,20 +18,28 @@ const query = (changes: Record<string, string> = {}): URLSearchParams =>
     ...changes,
   });
 
-const recording = (): { database: Database; rows: unknown[][] } => {
+interface Fake {
+  readonly database: Database;
+  readonly rows: unknown[][];
+}
+
+const recording = (used: unknown = null): Fake => {
   const rows: unknown[][] = [];
+  const pending = new Map<object, readonly unknown[]>();
   const database: Database = {
-    prepare: () => {
-      let bound: readonly unknown[] = [];
+    batch: async (statements) => {
+      for (const statement of statements) {
+        rows.push([...(pending.get(statement) ?? [])]);
+      }
+      await Promise.resolve();
+    },
+    prepare: (text) => {
       const statement = {
         bind: (...values: readonly unknown[]) => {
-          bound = values;
+          pending.set(statement, [text, ...values]);
           return statement;
         },
-        run: async () => {
-          rows.push([...bound]);
-          await Promise.resolve();
-        },
+        first: () => Promise.resolve(used),
       };
       return statement;
     },
@@ -39,6 +48,7 @@ const recording = (): { database: Database; rows: unknown[][] } => {
 };
 
 const failing: Database = {
+  batch: () => Promise.resolve(),
   prepare: () => {
     throw new Error('no such table');
   },
@@ -97,11 +107,36 @@ test('a valid batch is stored once with where it came from', async () => {
     headers: { 'cf-connecting-ip': '203.0.113.9', origin, 'user-agent': 'probe' },
   });
   expect(await statusOf(request, url, database)).toBe(204);
-  expect(rows).toHaveLength(1);
-  const [row] = rows;
-  expect(row?.slice(1, 8)).toEqual(['events', actor, session, 7, '8141515', 'gzip', '203.0.113.9']);
+  expect(rows).toHaveLength(2);
+  const [row, charge] = rows;
+  expect(row?.slice(2, 9)).toEqual(['events', actor, session, 7, '8141515', 'gzip', '203.0.113.9']);
   expect(row?.at(-2)).toBe('probe');
   expect(decoded(row?.at(-1))).toBe('payload');
+  expect(charge?.[1]).toBe('203.0.113.9');
+  expect(charge?.[2]).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+  expect(charge?.at(-1)).toBe('payload'.length);
+});
+
+test('a network that has used up its day is refused and nothing is stored', async () => {
+  const full = recording({ batches: dayLimits.batches, bytes: 0 });
+  const heavy = recording({ batches: 1, bytes: dayLimits.bytes });
+  const light = recording({ batches: 1, bytes: 1 });
+  const [first, firstUrl] = post(query());
+  const [second, secondUrl] = post(query());
+  const [third, thirdUrl] = post(query());
+  expect(await statusOf(first, firstUrl, full.database)).toBe(429);
+  expect(await statusOf(second, secondUrl, heavy.database)).toBe(429);
+  expect(await statusOf(third, thirdUrl, light.database)).toBe(204);
+  expect([full.rows.length, heavy.rows.length, light.rows.length]).toEqual([0, 0, 2]);
+});
+
+test('the budget is kept per address, or per /64 for the newer kind of address', () => {
+  expect(networkOf('203.0.113.9')).toBe('203.0.113.9');
+  expect(networkOf('2001:db8:1:2:3:4:5:6')).toBe('2001:db8:1:2::/64');
+  expect(networkOf('2001:0db8::1')).toBe('2001:db8:0:0::/64');
+  expect(networkOf('::1')).toBe('0:0:0:0::/64');
+  expect(networkOf('')).toBe('');
+  expect(accountOf('203.0.113.9', 0)).toEqual({ day: '1970-01-01', network: '203.0.113.9' });
 });
 
 test('anything but a same-origin POST with a body is refused before storing', async () => {

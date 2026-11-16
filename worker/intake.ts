@@ -1,9 +1,12 @@
+import { accountOf, addUsage, hasRoom, readUsage, usageOf } from './budget';
+
 interface Statement {
   readonly bind: (...values: readonly unknown[]) => Statement;
-  readonly run: () => Promise<unknown>;
+  readonly first: () => Promise<unknown>;
 }
 
 interface Database {
+  readonly batch: (statements: readonly Statement[]) => Promise<unknown>;
   readonly prepare: (query: string) => Statement;
 }
 
@@ -37,6 +40,7 @@ const status = {
   notAllowed: 405,
   stored: 204,
   tooLarge: 413,
+  tooMany: 429,
   unavailable: 503,
 };
 
@@ -151,8 +155,8 @@ interface Parcel {
   readonly ticket: Ticket;
 }
 
-const store = async (database: Database, { body, now, origin, ticket }: Parcel): Promise<void> => {
-  await database
+const storing = (database: Database, { body, now, origin, ticket }: Parcel): Statement =>
+  database
     .prepare(insert)
     .bind(
       now,
@@ -171,8 +175,18 @@ const store = async (database: Database, { body, now, origin, ticket }: Parcel):
       origin.timezone,
       origin.agent,
       body,
-    )
-    .run();
+    );
+
+const keep = async (database: Database, parcel: Parcel): Promise<number> => {
+  const account = accountOf(parcel.origin.ip, parcel.now);
+  const size = parcel.body.byteLength;
+  const used = await database.prepare(readUsage).bind(account.network, account.day).first();
+  if (!hasRoom(usageOf(used), size)) {
+    return status.tooMany;
+  }
+  const charge = database.prepare(addUsage).bind(account.network, account.day, size);
+  await database.batch([storing(database, parcel), charge]);
+  return status.stored;
 };
 
 const receive = async (request: Request, database: Database, ticket: Ticket): Promise<Response> => {
@@ -184,11 +198,11 @@ const receive = async (request: Request, database: Database, ticket: Ticket): Pr
     return reply(status.tooLarge);
   }
   try {
-    await store(database, { body, now: Date.now(), origin: readOrigin(request), ticket });
+    const parcel = { body, now: Date.now(), origin: readOrigin(request), ticket };
+    return reply(await keep(database, parcel));
   } catch {
     return reply(status.unavailable);
   }
-  return reply(status.stored);
 };
 
 const acceptIntake = (
