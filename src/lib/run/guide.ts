@@ -18,6 +18,29 @@ interface Pressed {
 
 type Verdict = 'full-width' | 'ime' | 'right' | 'wrong';
 
+type Cause =
+  | ''
+  | 'case'
+  | 'early-leave'
+  | 'early-run'
+  | 'mistyped'
+  | 'need-insert'
+  | 'no-delete'
+  | 'other'
+  | 'taught'
+  | 'untaught';
+
+interface Slip {
+  readonly inserting: boolean;
+  readonly key: string;
+  readonly taught: boolean;
+}
+
+interface Seen extends Slip {
+  readonly expected: Expected;
+  readonly upcoming: string;
+}
+
 const typePrefix = 'type:';
 const named: Record<string, Expected> = {
   BS: { key: 'Backspace', kind: 'command' },
@@ -91,6 +114,32 @@ const advance = (guide: Guide): void => {
   }
 };
 
+const deleteKeys = new Set(['Backspace', 'Delete']);
+const isChar = (key: string): boolean => key.length === 1;
+
+const rules: readonly (readonly [Cause, (seen: Seen) => boolean])[] = [
+  ['no-delete', (seen) => deleteKeys.has(seen.key)],
+  ['case', (seen) => seen.key.toLowerCase() === seen.expected.key.toLowerCase()],
+  ['early-leave', (seen) => seen.key === 'Escape' && seen.expected.kind === 'text'],
+  ['early-run', (seen) => seen.key === 'Enter' && !seen.inserting],
+  ['need-insert', (seen) => !seen.inserting && seen.key === seen.upcoming],
+  ['taught', (seen) => !seen.inserting && isChar(seen.key) && seen.taught],
+  ['untaught', (seen) => !seen.inserting && isChar(seen.key)],
+  ['mistyped', (seen) => seen.inserting && isChar(seen.key)],
+];
+
+const upcomingText = (guide: Guide): string =>
+  guide.steps.slice(guide.at).find((step) => step.kind === 'text')?.key ?? '';
+
+const causeOf = (guide: Guide, slip: Slip): Cause => {
+  const expected = expectedNow(guide);
+  if (expected === null) {
+    return 'other';
+  }
+  const seen: Seen = { ...slip, expected, upcoming: upcomingText(guide) };
+  return rules.find(([, applies]) => applies(seen))?.[0] ?? 'other';
+};
+
 const takeText = (guide: Guide, text: string): boolean => {
   if (guide.pending !== text) {
     return false;
@@ -101,11 +150,13 @@ const takeText = (guide: Guide, text: string): boolean => {
 
 export {
   advance,
+  causeOf,
   createGuide,
   expand,
   expectedNow,
   judge,
   takeText,
+  type Cause,
   type Expected,
   type Guide,
   type Verdict,

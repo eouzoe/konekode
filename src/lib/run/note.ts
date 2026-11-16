@@ -65,6 +65,7 @@ const noteStep = (place: Place, step: Step): void => {
   track('step.tried', {
     data: {
       at: step.at,
+      cause: step.cause,
       expected: step.expected?.key ?? '',
       key: step.key,
       kind: step.expected?.kind ?? '',

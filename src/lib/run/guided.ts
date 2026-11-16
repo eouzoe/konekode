@@ -6,9 +6,11 @@ import { messages } from '@/lib/typing/messages';
 
 import {
   advance,
+  causeOf,
   expectedNow,
   judge,
   takeText,
+  type Cause,
   type Expected,
   type Guide,
   type Verdict,
@@ -16,6 +18,7 @@ import {
 
 interface Step {
   readonly at: number;
+  readonly cause: Cause;
   readonly expected: Expected | null;
   readonly key: string;
   readonly verdict: Verdict;
@@ -23,7 +26,13 @@ interface Step {
 
 interface Holder {
   guide: Guide | null;
+  isTaught: (key: string) => boolean;
   report: (step: Step) => void;
+}
+
+interface Moment {
+  readonly event: KeyboardEvent;
+  readonly inserting: boolean;
 }
 
 const modifiers = new Set(['Alt', 'CapsLock', 'Control', 'Meta', 'NumLock', 'OS', 'Shift']);
@@ -66,19 +75,30 @@ const describeStep = (verdict: Verdict, expected: Expected | null): string => {
 const passes = (event: KeyboardEvent, inserting: boolean): boolean =>
   modifiers.has(event.key) || functionKey.test(event.key) || (arrows.has(event.key) && !inserting);
 
-const press = (holder: Holder, guide: Guide, event: KeyboardEvent): boolean => {
-  const step: Step = {
-    at: guide.at,
-    expected: expectedNow(guide),
-    key: event.key,
-    verdict: judge(guide, { composing: event.isComposing, key: event.key }),
-  };
-  if (step.verdict === 'right') {
-    advance(guide);
-    holder.report(step);
-    return false;
-  }
+const reason = (holder: Holder, guide: Guide, { event, inserting }: Moment): Cause =>
+  causeOf(guide, { inserting, key: event.key, taught: holder.isTaught(event.key) });
+
+const reasons: Record<Verdict, (holder: Holder, guide: Guide, moment: Moment) => Cause> = {
+  'full-width': () => '',
+  ime: () => '',
+  right: () => '',
+  wrong: reason,
+};
+
+const accept = (holder: Holder, guide: Guide, step: Step): boolean => {
+  advance(guide);
   holder.report(step);
+  return false;
+};
+
+const press = (holder: Holder, guide: Guide, moment: Moment): boolean => {
+  const { event } = moment;
+  const seen = { at: guide.at, expected: expectedNow(guide), key: event.key };
+  const verdict = judge(guide, { composing: event.isComposing, key: event.key });
+  if (verdict === 'right') {
+    return accept(holder, guide, { ...seen, cause: '', verdict });
+  }
+  holder.report({ ...seen, cause: reasons[verdict](holder, guide, moment), verdict });
   event.preventDefault();
   return true;
 };
@@ -98,13 +118,14 @@ const guidedLayer = (holder: Holder, isInserting: (view: EditorView) => boolean)
       drop: (event) => block(holder, event),
       keydown: (event, view) => {
         const { guide } = holder;
-        if (guide === null || passes(event, isInserting(view))) {
+        const inserting = isInserting(view);
+        if (guide === null || passes(event, inserting)) {
           return false;
         }
         if (event.ctrlKey || event.metaKey || event.altKey) {
           return true;
         }
-        return press(holder, guide, event);
+        return press(holder, guide, { event, inserting });
       },
       mousedown: (event, view) => {
         if (!block(holder, event)) {

@@ -170,6 +170,7 @@ const createEditor = (options: Options): Editor => {
   const editable = new Compartment();
   const holder: Holder = {
     guide: null,
+    isTaught: (key) => engine.keys().has(key),
     report: (step) => {
       options.onStep?.(step);
     },

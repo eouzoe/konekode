@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { advance, createGuide, expand, expectedNow, judge, takeText } from './guide';
+import { advance, causeOf, createGuide, expand, expectedNow, judge, takeText } from './guide';
 
 const press = (key: string): { composing: boolean; key: string } => ({ composing: false, key });
 
@@ -63,4 +63,41 @@ test('after the path ends only the run can be repeated', () => {
   const silent = createGuide(['x']);
   advance(silent);
   expect(expectedNow(silent)).toBeNull();
+});
+
+const normal = (
+  key: string,
+  taught = false,
+): { inserting: boolean; key: string; taught: boolean } => ({
+  inserting: false,
+  key,
+  taught,
+});
+
+test('a wrong press in normal mode is told apart by what the learner probably meant', () => {
+  const guide = createGuide(['G', 'O', 'type:cout', 'Esc', 'run']);
+  expect(causeOf(guide, normal('g'))).toBe('case');
+  expect(causeOf(guide, normal('c'))).toBe('need-insert');
+  expect(causeOf(guide, normal('Enter'))).toBe('early-run');
+  expect(causeOf(guide, normal('Backspace'))).toBe('no-delete');
+  expect(causeOf(guide, normal('O', true))).toBe('taught');
+  expect(causeOf(guide, normal('q'))).toBe('untaught');
+  expect(causeOf(guide, normal('Tab'))).toBe('other');
+});
+
+test('a wrong press while typing is a slip of the finger, or leaving too early', () => {
+  const guide = createGuide(['O', 'type:co', 'Esc']);
+  advance(guide);
+  const typing = { inserting: true, taught: false };
+  expect(causeOf(guide, { ...typing, key: 'x' })).toBe('mistyped');
+  expect(causeOf(guide, { ...typing, key: 'C' })).toBe('case');
+  expect(causeOf(guide, { ...typing, key: 'Escape' })).toBe('early-leave');
+  expect(causeOf(guide, { ...typing, key: 'Delete' })).toBe('no-delete');
+  expect(causeOf(guide, { ...typing, key: 'Enter' })).toBe('other');
+});
+
+test('once the path is over a wrong press has no particular cause', () => {
+  const guide = createGuide(['x']);
+  advance(guide);
+  expect(causeOf(guide, normal('x', true))).toBe('other');
 });
