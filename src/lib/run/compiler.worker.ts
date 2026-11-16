@@ -33,10 +33,22 @@ const load = async (): Promise<typeof commands> => {
 
 let loading: ReturnType<typeof load> | null = null;
 
-const build = async (source: string, report: (text: string) => void): Promise<CompileReply> => {
-  const decoder = new TextDecoder();
+const ready = async (): Promise<typeof commands | null> => {
   loading ??= load();
-  const tools = await loading;
+  try {
+    return await loading;
+  } catch {
+    loading = null;
+    return null;
+  }
+};
+
+const build = async (
+  tools: typeof commands,
+  source: string,
+  report: (text: string) => void,
+): Promise<CompileReply> => {
+  const decoder = new TextDecoder();
   const files = await tools['clang++'](
     flags,
     { include: { bits: { 'stdc++.h': umbrella } }, 'main.cpp': source },
@@ -53,20 +65,24 @@ const build = async (source: string, report: (text: string) => void): Promise<Co
   if (wasm instanceof Uint8Array) {
     return { ok: true, wasm };
   }
-  return { message: '編譯沒有產生結果。', ok: false };
+  return { cause: 'compiler', message: 'no output', ok: false };
 };
 
 const compile = async (source: string): Promise<CompileReply> => {
+  const tools = await ready();
+  if (tools === null) {
+    return { cause: 'compiler', message: 'not loaded', ok: false };
+  }
   let message = '';
   try {
-    return await build(source, (text) => {
+    return await build(tools, source, (text) => {
       message += text;
     });
   } catch (error) {
     if (message === '') {
-      return { message: String(error), ok: false };
+      return { cause: 'compiler', message: String(error), ok: false };
     }
-    return { message, ok: false };
+    return { cause: 'program', message, ok: false };
   }
 };
 

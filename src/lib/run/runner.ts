@@ -19,6 +19,13 @@ const getCompiler = (): Worker => {
   return compiler;
 };
 
+const discard = (worker: Worker): void => {
+  if (worker === compiler) {
+    compiler = null;
+    worker.terminate();
+  }
+};
+
 const watchLoading = (listener: Listener): void => {
   listeners.add(listener);
 };
@@ -61,6 +68,7 @@ const once = <Reply>(
     'error',
     (event) => {
       controller.abort();
+      discard(worker);
       reject(new Error(event.message));
     },
     { signal },
@@ -115,6 +123,9 @@ const warmUp = async (): Promise<boolean> => {
 
 const runProgram = async (source: string, input: string): Promise<Outcome> => {
   const compiled = await compile(source);
+  if (!compiled.ok && compiled.cause === 'compiler') {
+    return { kind: 'unavailable', message: compiled.message };
+  }
   if (!compiled.ok) {
     return { kind: 'compile-error', message: compiled.message };
   }

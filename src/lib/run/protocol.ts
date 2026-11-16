@@ -3,8 +3,8 @@ interface CompileRequest {
 }
 
 type CompileReply =
-  | { readonly ok: true; readonly wasm: Uint8Array }
-  | { readonly message: string; readonly ok: false };
+  | { readonly cause: 'compiler' | 'program'; readonly message: string; readonly ok: false }
+  | { readonly ok: true; readonly wasm: Uint8Array };
 
 type CompileMessage =
   | { readonly kind: 'done'; readonly reply: CompileReply }
@@ -24,6 +24,7 @@ type Outcome =
   | { readonly exitCode: number; readonly kind: 'finished'; readonly output: string }
   | { readonly kind: 'compile-error'; readonly message: string }
   | { readonly kind: 'crashed'; readonly message: string }
-  | { readonly kind: 'timeout' };
+  | { readonly kind: 'timeout' }
+  | { readonly kind: 'unavailable'; readonly message: string };
 
 export type { CompileMessage, CompileReply, CompileRequest, Outcome, RunReply, RunRequest };
