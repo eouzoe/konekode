@@ -402,8 +402,8 @@ test.describe('起步單元', () => {
     await expect(editor).toContainText('int a{}');
   });
 
-  test('走到示範開頭的那一句，成對符號的解鎖會寫進紀錄', async ({ page }) => {
-    await open(page, 'lets-type');
+  test('pairs unlock only after the learner has typed the template by hand', async ({ page }) => {
+    await open(page, 'type-template');
     const unlockedNow = async (): Promise<Set<string>> => {
       const value: unknown = await page.evaluate(
         async () =>
@@ -425,8 +425,13 @@ test.describe('起步單元', () => {
     };
     const wanted = new Set(['pair.brace', 'pair.include-angle', 'pair.paren']);
     expect(await unlockedNow()).toEqual(new Set());
+    await page.keyboard.type('i#include <');
+    await expect(page.locator('[data-typing-drill] .is-auto')).toHaveCount(0);
+    await page.keyboard.type(template.slice('#include <'.length));
+    await page.keyboard.press('Escape');
+    expect(await unlockedNow()).toEqual(new Set());
     await page.keyboard.press('Space');
-    expect(await currentId(page)).toBe('demo-intro');
+    expect(await currentId(page)).toBe('do-things');
     await expect.poll(unlockedNow).toEqual(wanted);
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.press('Space');

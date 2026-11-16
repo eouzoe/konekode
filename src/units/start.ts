@@ -79,7 +79,6 @@ const opening: readonly Beat[] = [
     id: 'demo-intro',
     say: '開始之前，先看一遍示範吧！',
     stage: 'drill',
-    unlock: ['pair.include-angle', 'pair.paren', 'pair.brace'],
   },
   {
     id: 'vim-what',
@@ -142,7 +141,12 @@ const opening: readonly Beat[] = [
 ];
 
 const editing: readonly Beat[] = [
-  { id: 'do-things', say: '接下來，讓程式開始做事吧！', stage: 'run' },
+  {
+    id: 'do-things',
+    say: '接下來，讓程式開始做事吧！',
+    stage: 'run',
+    unlock: ['pair.include-angle', 'pair.paren', 'pair.brace'],
+  },
   { id: 'editor', say: '這裡是我們寫程式的地方，用法和剛才一樣喔！', stage: 'run' },
   {
     id: 'add-cout',
