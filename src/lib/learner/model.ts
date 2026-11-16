@@ -11,6 +11,7 @@ interface Tally {
   firstRight: number;
   opportunities: number;
   shown: number;
+  unsettled: boolean;
 }
 
 interface Component extends Readonly<Tally> {
@@ -65,6 +66,7 @@ const tallyOf = (fold: Fold, id: string): Tally => {
     firstRight: 0,
     opportunities: 0,
     shown: 0,
+    unsettled: false,
   };
   fold.tallies.set(id, fresh);
   return fresh;
@@ -91,6 +93,7 @@ const score = (tally: Tally, first: boolean, right: boolean): void => {
   if (first) {
     tally.opportunities += 1;
     tally.estimate = bktUpdate(tally.estimate, defaultParams, { correct: right });
+    tally.unsettled = !right;
   }
   if (first && right) {
     tally.firstRight += 1;
@@ -192,6 +195,7 @@ const unseen: Component = {
   opportunities: 0,
   shown: 0,
   standing: 'unseen',
+  unsettled: false,
 };
 
 const componentOf = (model: Model, id: string): Component => model.get(id) ?? unseen;

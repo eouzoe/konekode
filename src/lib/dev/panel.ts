@@ -99,7 +99,17 @@ const noteSheet = (unit: string): HTMLDialogElement => {
 };
 
 const standings: Record<string, string> = { done: '自己做過', shown: '看過示範', unseen: '沒看過' };
-const columns = ['知識點', '狀態', '看過示範', '機會', '第一下就對', '做到了', 'BKT（只記錄）'];
+const columns = [
+  '知識點',
+  '狀態',
+  '看過示範',
+  '機會',
+  '第一下就對',
+  '做到了',
+  '最近一次第一下錯',
+  'BKT（只記錄）',
+];
+const marks: Record<string, string> = { false: '', true: '是' };
 const digits = 3;
 
 const modelRows = (): HTMLTableRowElement[] => {
@@ -114,6 +124,7 @@ const modelRows = (): HTMLTableRowElement[] => {
       item.opportunities,
       item.firstRight,
       item.completed,
+      marks[String(item.unsettled)],
       item.estimate.toFixed(digits),
     ];
     row.append(...cells.map((value) => make('td', String(value))));

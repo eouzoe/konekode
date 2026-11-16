@@ -38,6 +38,12 @@ const domains = allDomains();
 
 const read = (events: readonly LearningEvent[]): Model => learnerModel(events, domains);
 
+const afterwards = (event: LearningEvent): LearningEvent => ({
+  ...event,
+  at: event.at + 100,
+  id: `later-${event.id}`,
+});
+
 const plain = (model: Model): Record<string, Component> =>
   Object.fromEntries(components.map((id) => [id, componentOf(model, id)]));
 
@@ -51,6 +57,7 @@ test('nothing recorded means nothing seen', () => {
     opportunities: 0,
     shown: 0,
     standing: 'unseen',
+    unsettled: false,
   });
 });
 
@@ -174,6 +181,17 @@ test('each opportunity is listed with the wait before it and the chance given be
     task: 'run-cout',
     unit: 'start',
   });
+});
+
+test('a key stays unsettled until a later opportunity is right the first time', () => {
+  const slipped = build([{ kind: 'task.entered' }, { step: 0, verdict: 'wrong' }, { step: 0 }]);
+  const again = [
+    ...slipped,
+    ...build([{ kind: 'task.entered' }, { step: 0 }]).map((event) => afterwards(event)),
+  ];
+  expect(componentOf(read(slipped), 'key.G')).toMatchObject({ completed: 1, unsettled: true });
+  expect(componentOf(read(again), 'key.G').unsettled).toBe(false);
+  expect(componentOf(read(slipped), 'key.O').unsettled).toBe(false);
 });
 
 test('nothing is due for review yet', () => {
