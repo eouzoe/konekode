@@ -18,7 +18,7 @@ export default defineConfig({
   reporter: 'list',
   testDir: 'e2e',
   timeout: testSeconds * second,
-  use: { baseURL: `http://localhost:${String(port)}` },
+  use: { baseURL: `http://localhost:${String(port)}`, trace: 'retain-on-failure' },
   webServer: {
     command: `bun x wrangler dev --port ${String(port)}`,
     reuseExistingServer: true,

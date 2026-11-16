@@ -559,7 +559,13 @@ test.describe('起步單元', () => {
         await page.keyboard.press(key);
       }
       if (gate !== 'type-template') {
-        await expect(status(page), gate).toHaveText('執行完成', { timeout: 150_000 });
+        await expect
+          .poll(
+            async () =>
+              `${(await status(page).textContent()) ?? ''}｜${(await output(page).textContent()) ?? ''}`,
+            { message: gate, timeout: 150_000 },
+          )
+          .toBe('執行完成｜');
       }
       expect(await currentId(page), gate).toBe(gate);
     }
