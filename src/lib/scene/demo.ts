@@ -1,4 +1,4 @@
-import { array, parse, string } from 'valibot';
+import { array, string } from 'zod';
 
 const demoStart = (beats: readonly HTMLElement[], index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && (beat.dataset.demo ?? '').startsWith('reset'));
@@ -25,7 +25,7 @@ const readKeys = (beat: HTMLElement | undefined): string[] | null => {
     return null;
   }
   const value: unknown = JSON.parse(raw);
-  return parse(array(string()), value);
+  return array(string()).parse(value);
 };
 
 interface Detail {

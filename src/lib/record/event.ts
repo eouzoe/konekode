@@ -1,17 +1,14 @@
 import {
   boolean,
+  int,
   literal,
-  minLength,
   number,
   object,
-  pipe,
   record,
-  safeInteger,
-  safeParse,
   string,
   union,
-  type InferOutput,
-} from 'valibot';
+  type infer as Infer,
+} from 'zod';
 
 const currentVersion = 2;
 const legacyVersion = 1;
@@ -19,8 +16,8 @@ const legacySession = 'legacy';
 
 const valueSchema = union([boolean(), number(), string()]);
 const dataSchema = record(string(), valueSchema);
-const moment = pipe(number(), safeInteger());
-const name = pipe(string(), minLength(1));
+const moment = int();
+const name = string().min(1);
 
 const eventSchema = object({
   actor: string(),
@@ -45,10 +42,10 @@ const legacySchema = object({
   version: literal(legacyVersion),
 });
 
-type LearningEvent = InferOutput<typeof eventSchema>;
-type Data = InferOutput<typeof dataSchema>;
+type LearningEvent = Infer<typeof eventSchema>;
+type Data = Infer<typeof dataSchema>;
 
-const upgrade = (old: InferOutput<typeof legacySchema>): LearningEvent => ({
+const upgrade = (old: Infer<typeof legacySchema>): LearningEvent => ({
   actor: old.device,
   at: old.at,
   data: {},
@@ -62,13 +59,13 @@ const upgrade = (old: InferOutput<typeof legacySchema>): LearningEvent => ({
 });
 
 const readEvent = (value: unknown): LearningEvent | null => {
-  const current = safeParse(eventSchema, value);
+  const current = eventSchema.safeParse(value);
   if (current.success) {
-    return current.output;
+    return current.data;
   }
-  const legacy = safeParse(legacySchema, value);
+  const legacy = legacySchema.safeParse(value);
   if (legacy.success) {
-    return upgrade(legacy.output);
+    return upgrade(legacy.data);
   }
   return null;
 };

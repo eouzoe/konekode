@@ -1,4 +1,4 @@
-import { object, optional, safeParse, string, type InferOutput } from 'valibot';
+import { object, string, type infer as Infer } from 'zod';
 
 import { watchFullScreen } from './conditions';
 import { readIntent, type Intent } from './keys';
@@ -14,17 +14,17 @@ interface Handlers {
   readonly screen: () => void;
 }
 
-const reportSchema = object({ beat: string(), output: optional(string(), '') });
+const reportSchema = object({ beat: string(), output: string().default('') });
 
-const readReport = (event: Event): InferOutput<typeof reportSchema> | null => {
+const readReport = (event: Event): Infer<typeof reportSchema> | null => {
   if (!(event instanceof CustomEvent)) {
     return null;
   }
-  const parsed = safeParse(reportSchema, event.detail);
+  const parsed = reportSchema.safeParse(event.detail);
   if (!parsed.success) {
     return null;
   }
-  return parsed.output;
+  return parsed.data;
 };
 
 const runProgram = (root: HTMLElement): boolean => {

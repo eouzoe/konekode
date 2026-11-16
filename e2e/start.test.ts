@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { array, object, parse, string } from 'valibot';
 import { createActor } from 'xstate';
+import { array, object, string } from 'zod';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
 
@@ -221,7 +221,7 @@ const readMetas = async (page: Page): Promise<BeatMeta[]> => {
       return { expect: wanted ?? null, id, next: after === 'next', wait, when };
     }),
   );
-  return parse(array(beatSchema), raw);
+  return array(beatSchema).parse(raw);
 };
 
 test.describe('起步單元', () => {
@@ -420,7 +420,7 @@ test.describe('起步單元', () => {
             });
           }),
       );
-      const events = parse(storedEvents, value).filter((event) => event.kind === 'item.unlocked');
+      const events = storedEvents.parse(value).filter((event) => event.kind === 'item.unlocked');
       return new Set(events.map((event) => event.ref));
     };
     const wanted = new Set(['pair.brace', 'pair.include-angle', 'pair.paren']);

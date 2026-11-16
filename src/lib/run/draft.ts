@@ -1,16 +1,16 @@
-import { number, object, safeParse, string, type InferOutput } from 'valibot';
+import { number, object, string, type infer as Infer } from 'zod';
 
 const prefix = 'cp:draft:';
 const draftSchema = object({ cursor: number(), text: string() });
 
-type Draft = InferOutput<typeof draftSchema>;
+type Draft = Infer<typeof draftSchema>;
 
 const decode = (raw: string): Draft => {
   try {
     const value: unknown = JSON.parse(raw);
-    const parsed = safeParse(draftSchema, value);
+    const parsed = draftSchema.safeParse(value);
     if (parsed.success) {
-      return parsed.output;
+      return parsed.data;
     }
   } catch {
     return { cursor: 0, text: raw };

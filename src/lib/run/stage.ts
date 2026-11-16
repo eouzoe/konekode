@@ -1,4 +1,4 @@
-import { array, boolean, object, parse, string, type InferOutput } from 'valibot';
+import { array, boolean, object, string, type infer as Infer } from 'zod';
 
 import { chunks } from '@/lib/perform/rhythm';
 
@@ -38,7 +38,7 @@ const stageSchema = object({
   now: array(string()),
 });
 
-type Stage = InferOutput<typeof stageSchema>;
+type Stage = Infer<typeof stageSchema>;
 
 const typePrefix = 'type:';
 const keyPause = 450;
@@ -131,7 +131,7 @@ const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
   const state: State = { acting: false, turn: 0 };
   return (detail) => {
-    const stage = parse(stageSchema, detail);
+    const stage = stageSchema.parse(detail);
     state.turn += 1;
     tools.attend(stage.beat);
     tools.keycap.textContent = '';

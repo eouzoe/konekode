@@ -1,5 +1,3 @@
-import { parse } from 'valibot';
-
 import { unlockedNow } from '@/lib/learner/live';
 import { track } from '@/lib/record/current';
 
@@ -7,7 +5,7 @@ import { beatSchema, type BeatMeta } from './machine';
 
 const readMeta = (beat: HTMLElement): BeatMeta => {
   const { after, expect, id = '', wait = '', when = '' } = beat.dataset;
-  return parse(beatSchema, { expect: expect ?? null, id, next: after === 'next', wait, when });
+  return beatSchema.parse({ expect: expect ?? null, id, next: after === 'next', wait, when });
 };
 
 const grantUnlocks = (unit: string, beat: HTMLElement): void => {

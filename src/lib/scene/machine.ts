@@ -1,17 +1,17 @@
+import { createMachine, type EventFromLogic } from 'xstate';
 import {
   array,
   boolean,
+  literal,
   nullable,
   number,
   object,
-  picklist,
   string,
-  type InferOutput,
-} from 'valibot';
-import { createMachine, type EventFromLogic } from 'xstate';
+  type infer as Infer,
+} from 'zod';
 
-const checkSchema = picklist(['', 'drill', 'run']);
-const whenSchema = picklist(['', 'fullscreen', 'windowed']);
+const checkSchema = literal(['', 'drill', 'run']);
+const whenSchema = literal(['', 'fullscreen', 'windowed']);
 
 const beatSchema = object({
   expect: nullable(string()),
@@ -37,11 +37,11 @@ const inputSchema = object({
 const moveSchema = object({ full: boolean() });
 const checkedSchema = object({ full: boolean(), kind: checkSchema, output: string() });
 
-type Check = InferOutput<typeof checkSchema>;
-type BeatMeta = InferOutput<typeof beatSchema>;
-type Context = InferOutput<typeof contextSchema>;
-type Move = InferOutput<typeof moveSchema>;
-type Checked = InferOutput<typeof checkedSchema>;
+type Check = Infer<typeof checkSchema>;
+type BeatMeta = Infer<typeof beatSchema>;
+type Context = Infer<typeof contextSchema>;
+type Move = Infer<typeof moveSchema>;
+type Checked = Infer<typeof checkedSchema>;
 
 interface Arrival {
   readonly context: Context;
