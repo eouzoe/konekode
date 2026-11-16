@@ -1,7 +1,9 @@
+import { components } from '@/lib/learner/domain';
+import { componentOf, learnerModel } from '@/lib/learner/model';
 import { unitState } from '@/lib/learner/progress';
 import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
-import { beatsOf } from '@/units/index';
+import { allDomains, beatsOf } from '@/units/index';
 
 import { jumpTo, skipFrom, type Entry } from './jump';
 
@@ -21,6 +23,8 @@ const styles = `
 .dev-sheet li code { margin-right: 0.6rem; color: var(--faint); font-family: var(--mono); }
 .dev-sheet textarea { display: block; width: 100%; min-height: 7rem; margin: 0.75rem 0; padding: 0.6rem;
   border: 1px solid var(--line); border-radius: 0.4rem; background: var(--page); color: var(--ink); font: inherit; }
+.dev-sheet table { width: 100%; margin-top: 0.75rem; border-collapse: collapse; font-family: var(--mono); }
+.dev-sheet th, .dev-sheet td { padding: 0.2rem 0.6rem; border-bottom: 1px solid var(--line); text-align: left; }
 `;
 
 const make = <Tag extends keyof HTMLElementTagNameMap>(
@@ -93,6 +97,46 @@ const noteSheet = (unit: string): HTMLDialogElement => {
   return sheet;
 };
 
+const standings: Record<string, string> = { done: '自己做過', shown: '看過示範', unseen: '沒看過' };
+const columns = ['知識點', '狀態', '看過示範', '機會', '第一下就對', '做到了', 'BKT（只記錄）'];
+const digits = 3;
+
+const modelRows = (): HTMLTableRowElement[] => {
+  const model = learnerModel(recorded(), allDomains());
+  return components.map((id) => {
+    const item = componentOf(model, id);
+    const row = make('tr');
+    const cells = [
+      id,
+      standings[item.standing],
+      item.shown,
+      item.opportunities,
+      item.firstRight,
+      item.completed,
+      item.estimate.toFixed(digits),
+    ];
+    row.append(...cells.map((value) => make('td', String(value))));
+    return row;
+  });
+};
+
+const modelSheet = (): HTMLDialogElement => {
+  const sheet = make('dialog', '', 'dev-sheet');
+  const head = make('tr');
+  const body = make('tbody');
+  const table = make('table');
+  head.append(...columns.map((text) => make('th', text)));
+  table.append(head, body);
+  sheet.addEventListener('toggle', () => {
+    body.replaceChildren(...modelRows());
+  });
+  sheet.append(
+    make('strong', '學生模型（由事件紀錄算出來；第一版只有指令鍵；BKT 只記錄、不決定任何事）'),
+    table,
+  );
+  return sheet;
+};
+
 const opener = (label: string, sheet: HTMLDialogElement): HTMLButtonElement => {
   const button = make('button', label);
   button.addEventListener('click', () => {
@@ -101,21 +145,28 @@ const opener = (label: string, sheet: HTMLDialogElement): HTMLButtonElement => {
   return button;
 };
 
+const skipButton = (unit: string): HTMLButtonElement => {
+  const skip = make('button', '略過這一關');
+  skip.addEventListener('click', () => {
+    void apply(unit, skipFrom(beatsOf(unit), positionOf(unit)));
+  });
+  return skip;
+};
+
 const buildPanel = (unit: string): HTMLElement => {
   const panel = make('aside', '', 'dev-panel');
   const where = make('code', positionOf(unit));
   const jump = jumpSheet(unit);
   const note = noteSheet(unit);
-  const skip = make('button', '略過這一關');
-  skip.addEventListener('click', () => {
-    void apply(unit, skipFrom(beatsOf(unit), positionOf(unit)));
-  });
+  const model = modelSheet();
+  const skip = skipButton(unit);
   onRecorded((event) => {
     if (event.kind === 'beat.reached' && event.unit === unit) {
       where.textContent = event.ref;
     }
   });
-  panel.append('開發模式', where, opener('跳到…', jump), skip, opener('留話', note), jump, note);
+  const buttons = [opener('跳到…', jump), skip, opener('留話', note), opener('學生模型', model)];
+  panel.append('開發模式', where, ...buttons, jump, note, model);
   return panel;
 };
 
