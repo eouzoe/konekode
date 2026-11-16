@@ -19,8 +19,8 @@ const placeOf = (root: HTMLElement): Place => ({
   unit: unitOf(root),
 });
 
-const enterTask = (root: HTMLElement, mode: string): void => {
-  noteEntry(placeOf(root), mode);
+const enterTask = (panel: Panel, mode: string): void => {
+  noteEntry(placeOf(panel.root), mode, panel.editor.getText());
 };
 
 const holdRun = (panel: Panel): void => {

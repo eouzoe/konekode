@@ -201,8 +201,8 @@ const takeTurn = (tools: Tools, state: State, beat: string): void => {
     state.turnBeat = beat;
     tools.clear();
   }
-  enter(tools, state, beat);
   lead(tools, state, beat);
+  enter(tools, state, beat);
 };
 
 const leaveDemo = (tools: Tools, state: State): void => {

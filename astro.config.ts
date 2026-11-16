@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs';
-import { copyFile, mkdir, readdir, rm, stat } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, readdir, rm, stat } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { constants, createBrotliCompress } from 'node:zlib';
@@ -62,6 +62,17 @@ const packAssets = async (dir: URL): Promise<void> => {
   );
 };
 
+const readVersion = async (name: string): Promise<string> => {
+  const file = new URL(`node_modules/${name}/package.json`, import.meta.url);
+  const parsed: unknown = JSON.parse(await readFile(file, 'utf8'));
+  if (typeof parsed === 'object' && parsed !== null && 'version' in parsed) {
+    return String(parsed.version);
+  }
+  return 'unknown';
+};
+
+const compiler = await readVersion('@yowasp/clang');
+
 export default defineConfig({
   integrations: [
     {
@@ -75,6 +86,9 @@ export default defineConfig({
   ],
   site: 'https://cp.konekode.workers.dev',
   vite: {
+    define: {
+      'import.meta.env.PUBLIC_COMPILER': JSON.stringify(compiler),
+    },
     optimizeDeps: {
       exclude: ['@yowasp/clang'],
     },

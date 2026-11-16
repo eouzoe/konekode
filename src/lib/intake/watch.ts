@@ -1,4 +1,5 @@
 import { track } from '@/lib/record/current';
+import { isFullScreen, watchFullScreen } from '@/lib/scene/conditions';
 
 const plainText = /^[ -~]*$/u;
 const resizeGap = 1000;
@@ -108,6 +109,9 @@ const watchWindow = (): void => {
 const watchPage = (): void => {
   watchInput();
   watchWindow();
+  watchFullScreen(() => {
+    track('page.fullscreen', { data: { on: isFullScreen() } });
+  });
 };
 
 export { watchPage };

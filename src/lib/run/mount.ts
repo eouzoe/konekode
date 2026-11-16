@@ -206,7 +206,7 @@ const guide = (parts: Parts): void => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
     entered: (mode) => {
-      enterTask(parts.root, mode);
+      enterTask(parts, mode);
     },
     forget: forgetVimMemory,
     fresh: parts.fresh,

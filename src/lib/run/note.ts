@@ -75,8 +75,12 @@ const noteStep = (place: Place, step: Step): void => {
   });
 };
 
-const noteEntry = (place: Place, mode: string): void => {
-  track('task.entered', { data: { mode }, ref: place.beat, unit: place.unit });
+const noteEntry = (place: Place, mode: string, source: string): void => {
+  track('task.entered', {
+    data: { mode, source: clip(source) },
+    ref: place.beat,
+    unit: place.unit,
+  });
 };
 
 export { noteEntry, noteRun, noteStep, type Place };
