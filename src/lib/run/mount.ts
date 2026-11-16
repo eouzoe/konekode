@@ -12,6 +12,7 @@ import { createStage, type Actor } from './stage';
 
 interface Parts {
   readonly button: HTMLButtonElement;
+  readonly fresh: boolean;
   readonly editor: Editor;
   readonly hint: HTMLElement;
   readonly input: HTMLTextAreaElement;
@@ -204,6 +205,7 @@ const guide = (parts: Parts): void => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
     forget: forgetVimMemory,
+    fresh: parts.fresh,
     guided: (active) => {
       showGuided(parts, active, hints.normal ?? '');
     },
@@ -236,6 +238,7 @@ const guide = (parts: Parts): void => {
 const buildParts = (root: HTMLElement, hooks: Hooks): Parts => ({
   button: find(root, 'run', HTMLButtonElement),
   editor: makeEditor(root, hooks),
+  fresh: readDraft(root.dataset.draft ?? '') === null,
   hint: find(root, 'hint', HTMLElement),
   input: find(root, 'stdin', HTMLTextAreaElement),
   output: find(root, 'output', HTMLElement),

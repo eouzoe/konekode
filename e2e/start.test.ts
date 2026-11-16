@@ -623,13 +623,8 @@ test.describe('起步單元', () => {
         await page.keyboard.press(key);
       }
       if (gate === 'task') {
-        await expect
-          .poll(
-            async () =>
-              `${(await status(page).textContent()) ?? ''}｜${(await output(page).textContent()) ?? ''}`,
-            { timeout: 150_000 },
-          )
-          .toBe('執行完成｜');
+        await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+        await expect(output(page)).not.toBeEmpty();
       }
       if (gate in lessons) {
         await expect(status(page)).toBeEmpty();
@@ -710,6 +705,16 @@ test.describe('起步單元', () => {
         .poll(async () => await editorText(page, spriteEditor), { message: beat, timeout: 30_000 })
         .toBe(wanted);
     }
+  });
+
+  test('a learner who returns without a draft finds what the earlier gates left', async ({
+    page,
+  }) => {
+    await open(page, 'each-line');
+    await expect(page.locator(studentEditor)).toContainText(String.raw`cout << 22 << '\n';`);
+    await open(page, 'saw-output');
+    await expect(page.locator(studentEditor)).toContainText('cout << 11;');
+    await expect(page.locator(studentEditor)).not.toContainText('cout << 22');
   });
 
   test('a demonstration starts from the unit text, whatever the learner has', async ({ page }) => {

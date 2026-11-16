@@ -16,6 +16,7 @@ type Actor = 'sprite' | 'student';
 
 interface State {
   acting: boolean;
+  fresh: boolean;
   guided: string;
   readonly starts: Map<string, Snapshot>;
   turn: number;
@@ -27,6 +28,7 @@ interface Tools {
   readonly attend: (beat: string) => void;
   readonly clear: () => void;
   readonly forget: () => void;
+  readonly fresh: boolean;
   readonly guided: (active: boolean) => void;
   readonly keycap: HTMLElement;
   readonly origin: Snapshot;
@@ -146,16 +148,33 @@ const startOf = ({ beat, plan, state, tools }: Turn): Snapshot => {
   return start;
 };
 
+const place = (turn: Turn): void => {
+  const start = startOf(turn);
+  const now = turn.tools.student.snapshot();
+  if (now.text !== start.text || now.cursor !== start.cursor) {
+    turn.tools.student.restore(start);
+  }
+};
+
+const needsStart = ({ plan, state }: Turn): boolean => state.fresh && plan.history.length > 0;
+
+const placeOnce = (turn: Turn): void => {
+  if (needsStart(turn)) {
+    place(turn);
+  }
+};
+
 const lead = (tools: Tools, state: State, beat: string): void => {
   const plan = tools.plan(beat);
-  if (plan === null || plan.path.length === 0 || state.guided === beat) {
+  if (plan === null || state.guided === beat) {
     return;
   }
-  const start = startOf({ beat, plan, state, tools });
-  const now = tools.student.snapshot();
-  if (now.text !== start.text || now.cursor !== start.cursor) {
-    tools.student.restore(start);
+  const turn: Turn = { beat, plan, state, tools };
+  if (plan.path.length === 0) {
+    placeOnce(turn);
+    return;
   }
+  place(turn);
   tools.student.guide(plan.path);
   state.guided = beat;
 };
@@ -177,17 +196,26 @@ const leaveDemo = (tools: Tools, state: State): void => {
   tools.show('student');
 };
 
+const rest = (tools: Tools, state: State, beat: string): void => {
+  release(tools, state);
+  const plan = tools.plan(beat);
+  if (plan !== null && plan.path.length === 0) {
+    placeOnce({ beat, plan, state, tools });
+  }
+};
+
 const handOver = (tools: Tools, state: State, stage: Stage): void => {
   if (stage.focus) {
     takeTurn(tools, state, stage.beat);
     return;
   }
-  release(tools, state);
+  rest(tools, state, stage.beat);
 };
 
 const settle = (tools: Tools, state: State, stage: Stage): void => {
   leaveDemo(tools, state);
   handOver(tools, state, stage);
+  state.fresh = false;
   tools.arm(stage.focus);
   tools.guided(state.guided !== '');
   if (stage.focus) {
@@ -211,7 +239,14 @@ const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
 };
 
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
-  const state: State = { acting: false, guided: '', starts: new Map(), turn: 0, turnBeat: '' };
+  const state: State = {
+    acting: false,
+    fresh: tools.fresh,
+    guided: '',
+    starts: new Map(),
+    turn: 0,
+    turnBeat: '',
+  };
   return (detail) => {
     const stage = stageSchema.parse(detail);
     state.turn += 1;
