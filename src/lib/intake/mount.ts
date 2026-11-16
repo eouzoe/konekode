@@ -3,6 +3,7 @@ import { number, record, string } from 'zod';
 import { openLog, recorded, track } from '@/lib/record/current';
 
 import { environment, siteVersion } from './environment';
+import { noteFingerprint } from './fingerprint';
 import { acknowledge, pendingBatches, type Acked, type Batch } from './pending';
 import { startReplay } from './replay';
 import { upload, uploadLast, type Ticket } from './send';
@@ -103,6 +104,7 @@ const startIntake = async (): Promise<void> => {
   track('session.started', { data: environment(state.site) });
   watchPage();
   void startReplay(state.site);
+  void noteFingerprint();
   setTimeout(() => {
     void drain(state);
   }, firstDelay);
