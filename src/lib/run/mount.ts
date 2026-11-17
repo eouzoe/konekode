@@ -9,7 +9,7 @@ import { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf 
 import { noteRun } from './note';
 import { describe, type View } from './outcome';
 import { type Outcome } from './protocol';
-import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
+import { isKnown, loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 import { createStage } from './stage';
 
 interface Parts {
@@ -101,7 +101,8 @@ const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<voi
   const began = performance.now();
   const outcome = await runProgram(source, input);
   const place = { beat, unit: unitOf(parts.root) };
-  noteRun({ forced, input, outcome, place, source, took: performance.now() - began });
+  const known = isKnown(source, input);
+  noteRun({ forced, input, known, outcome, place, source, took: performance.now() - began });
   finish(parts, { beat, forced, outcome });
 };
 

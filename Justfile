@@ -26,6 +26,10 @@ format:
 test:
     bun test src worker
 
+results:
+    bun src/units/results.build.ts
+    bun x oxfmt --write src/units/results.ts
+
 check: typecheck lint test build
     bun x oxfmt --check .
 

@@ -1,3 +1,4 @@
+import { knownOutcome } from './known';
 import {
   type CompileMessage,
   type CompileReply,
@@ -121,7 +122,13 @@ const warmUp = async (): Promise<boolean> => {
   }
 };
 
+const isKnown = (source: string, input: string): boolean => knownOutcome(source, input) !== null;
+
 const runProgram = async (source: string, input: string): Promise<Outcome> => {
+  const known = knownOutcome(source, input);
+  if (known !== null) {
+    return known;
+  }
   const compiled = await compile(source);
   if (!compiled.ok && compiled.cause === 'compiler') {
     return { kind: 'unavailable', message: compiled.message };
@@ -132,4 +139,4 @@ const runProgram = async (source: string, input: string): Promise<Outcome> => {
   return execute({ input, wasm: compiled.wasm });
 };
 
-export { loadedPercent, runProgram, warmUp, watchLoading };
+export { isKnown, loadedPercent, runProgram, warmUp, watchLoading };

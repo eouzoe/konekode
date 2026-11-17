@@ -470,6 +470,21 @@ test.describe('起步單元', () => {
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
   });
 
+  for (const gate of ['run-cout', 'run-two', 'run-newline', 'run-int', 'run-cin']) {
+    test(`${gate} shows the verified result at once, without the compiler`, async ({ page }) => {
+      const wanted: string[] = [];
+      await page.route(/compiler\.worker|program\.worker|\.wasm(?:\?|$)/u, async (route) => {
+        wanted.push(route.request().url());
+        await route.abort();
+      });
+      await open(page, gate);
+      await solve(page, gate);
+      await expect(status(page)).toHaveText('執行完成', { timeout: 1000 });
+      await expect.poll(async () => (await current(page)).waiting, { timeout: 3000 }).toBe(false);
+      expect(await currentId(page)).not.toBe(gate);
+    });
+  }
+
   test('a guided gate records the entry and every press with its unit', async ({ page }) => {
     const hint = page.locator('[data-code-runner] [data-role="hint"]');
     await open(page, 'run-cout');

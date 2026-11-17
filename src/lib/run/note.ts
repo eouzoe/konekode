@@ -11,6 +11,7 @@ interface Place {
 interface Run {
   readonly forced: boolean;
   readonly input: string;
+  readonly known: boolean;
   readonly outcome: Outcome;
   readonly place: Place;
   readonly source: string;
@@ -45,13 +46,14 @@ const operator = (forced: boolean): string => {
   return 'student';
 };
 
-const noteRun = ({ forced, input, outcome, place, source, took }: Run): void => {
+const noteRun = ({ forced, input, known, outcome, place, source, took }: Run): void => {
   track('run.finished', {
     data: {
       by: operator(forced),
       exit: exitOf(outcome),
       input: clip(input),
       kind: outcome.kind,
+      known,
       result: clip(resultOf(outcome)),
       source: clip(source),
       took: Math.round(took),
