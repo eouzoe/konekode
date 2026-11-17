@@ -112,7 +112,7 @@ const arrows = Prec.highest(
 );
 
 const follow = (holder: Holder, path: readonly string[] | null, start: Snapshot | null): void => {
-  holder.start = start;
+  Object.assign(holder, { settled: start, start });
   if (path === null) {
     holder.guide = null;
     return;
@@ -175,6 +175,7 @@ const createEditor = (options: Options): Editor => {
     report: (step) => {
       options.onStep?.(step);
     },
+    settled: null,
     start: null,
   };
   const view = new EditorView({

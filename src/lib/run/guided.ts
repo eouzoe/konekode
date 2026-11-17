@@ -16,7 +16,7 @@ import {
   type Verdict,
 } from './guide';
 import { typeChar } from './pairs';
-import { type Snapshot } from './puppet';
+import { snapshot, type Snapshot } from './puppet';
 import { renew } from './renew';
 
 interface Step {
@@ -31,6 +31,7 @@ interface Holder {
   guide: Guide | null;
   isTaught: (key: string) => boolean;
   report: (step: Step) => void;
+  settled: Snapshot | null;
   start: Snapshot | null;
 }
 
@@ -104,10 +105,29 @@ const accept = (holder: Holder, guide: Guide, step: Step): boolean => {
 const startsCommand = ({ inserting, pending }: Moment, step: Step): boolean =>
   step.expected?.kind === 'command' && !inserting && !pending;
 
-const refresh = (holder: Holder, guide: Guide, moment: Moment): void => {
-  if (holder.start !== null) {
-    renew(moment.view, holder.start, guide.steps.slice(0, guide.at));
+const drifted = (holder: Holder, view: EditorView): boolean => {
+  const now = snapshot(view);
+  const { settled } = holder;
+  return settled !== null && (now.text !== settled.text || now.cursor !== settled.cursor);
+};
+
+const refresh = (holder: Holder, view: EditorView): void => {
+  const { guide, start } = holder;
+  if (guide !== null && start !== null) {
+    renew(view, start, guide.steps.slice(0, guide.at));
   }
+};
+
+const mend = (holder: Holder, view: EditorView): void => {
+  if (drifted(holder, view)) {
+    refresh(holder, view);
+  }
+};
+
+const remember = (holder: Holder, view: EditorView): void => {
+  queueMicrotask(() => {
+    holder.settled = snapshot(view);
+  });
 };
 
 const write = ({ event, view }: Moment, step: Step): boolean => {
@@ -125,10 +145,11 @@ interface Done {
 }
 
 const carry = (holder: Holder, guide: Guide, { moment, step }: Done): boolean => {
-  if (startsCommand(moment, step)) {
-    refresh(holder, guide, moment);
+  if (startsCommand(moment, step) || drifted(holder, moment.view)) {
+    refresh(holder, moment.view);
   }
   const written = write(moment, step);
+  remember(holder, moment.view);
   return accept(holder, guide, step) || written;
 };
 
@@ -160,6 +181,7 @@ const refuseComposition = (holder: Holder, view: EditorView): boolean => {
   setTimeout(() => {
     view.focus();
     endComposition(view);
+    mend(holder, view);
   }, 0);
   return true;
 };
@@ -176,6 +198,12 @@ const guidedLayer = (holder: Holder, { isInserting, isPending }: Probes): Extens
       compositionstart: (_event, view) => refuseComposition(holder, view),
       cut: (event) => block(holder, event),
       drop: (event) => block(holder, event),
+      focus: (_event, view) => {
+        setTimeout(() => {
+          mend(holder, view);
+        }, 0);
+        return false;
+      },
       keydown: (event, view) => {
         const { guide } = holder;
         const inserting = isInserting(view);
