@@ -66,7 +66,9 @@ const checksOf = (unit: string): Check[] => {
   }));
 };
 
+const pathFor = (unit: string, beat: string): readonly string[] => planOf(unit, beat)?.path ?? [];
+
 const allDomains = (): Readonly<Record<string, UnitDomain>> =>
   Object.fromEntries(Object.entries(units).map(([name, unit]) => [name, unitDomain(unit)]));
 
-export { allDomains, beatsOf, checksOf, planOf, starterOf, type Check };
+export { allDomains, beatsOf, checksOf, pathFor, planOf, starterOf, type Check };
