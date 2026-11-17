@@ -121,6 +121,7 @@ const opening: readonly Line[] = [
 const addCout: Task = {
   demo: [
     { id: 'watch-edit', keys: [] },
+    { id: 'where-it-goes', keys: [] },
     {
       id: 'go-end',
       keys: ['G'],
@@ -179,11 +180,13 @@ const addNewlines: Task = {
       id: 'insert-before',
       keys: ['i', `type: << ${newline}`, 'Esc'],
     },
+    { id: 'repeat-ask', keys: [] },
     {
       id: 'repeat',
       keys: ['k', '$', '.'],
       teaches: ['key.k', 'key..'],
     },
+    { id: 'repeat-point', keys: [] },
   ],
   expect: '11\n22',
   goal: printLines,
