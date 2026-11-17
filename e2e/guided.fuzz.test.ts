@@ -3,9 +3,10 @@ import { expect, test, type CDPSession, type Page } from '@playwright/test';
 import { expand, type Expected } from '../src/lib/run/guide';
 import { messages } from '../src/lib/typing/messages';
 import { checksOf, pathFor } from '../src/units/index';
-import { generator, openAt, pickFrom } from './fuzz-support';
+import { generator, inputMethod, openAt, pickFrom, slowEveryOtherRound } from './fuzz-support';
 
 interface Shown {
+  readonly head: number;
   readonly hint: string;
   readonly mode: string;
   readonly text: string;
@@ -19,6 +20,7 @@ interface Run {
   readonly random: () => number;
   readonly reference: readonly Shown[];
   readonly steps: readonly Expected[];
+  stray: boolean;
 }
 
 const unit = 'start';
@@ -42,7 +44,26 @@ const shown = async (page: Page): Promise<Shown> =>
   await page.evaluate(() => {
     const runner = document.querySelector('[data-code-runner]');
     const lines = [...(runner?.querySelectorAll('[data-role="editor"] .cm-line') ?? [])];
+    const content = runner?.querySelector('[data-role="editor"] .cm-content');
+    const routes = [
+      ['cmView', 'view'],
+      ['cmView', 'rootView', 'view'],
+      ['cmTile', 'view'],
+    ];
+    let head: unknown = null;
+    for (const route of routes) {
+      let found: unknown = content;
+      for (const key of [...route, 'state', 'selection', 'main', 'head']) {
+        if (typeof found === 'object' && found !== null) {
+          found = Reflect.get(found, key);
+        }
+      }
+      if (typeof found === 'number') {
+        head = found;
+      }
+    }
     return {
+      head: Number(head),
       hint: runner?.querySelector('[data-role="hint"]')?.textContent ?? '',
       mode: runner?.querySelector('[data-role="editor"] .cm-vim-panel')?.textContent ?? '',
       text: lines.map((line) => line.textContent).join('\n'),
@@ -69,7 +90,8 @@ const mismatch = (run: Run, now: Shown): string => {
     return 'no reference for this step';
   }
   const hints = [want.hint, `${messages.wrong}${want.hint}`, messages.ime, messages.fullWidth];
-  if (now.text === want.text && now.mode === want.mode && hints.includes(now.hint)) {
+  const same = now.text === want.text && now.mode === want.mode && now.head === want.head;
+  if (same && hints.includes(now.hint)) {
     return '';
   }
   return JSON.stringify({ now, want });
@@ -84,7 +106,9 @@ const press = async (run: Run, key: string): Promise<void> => {
     return;
   }
   run.actions.push(`key ${JSON.stringify(key)}`);
-  if (expected?.key === key) {
+  if (run.stray) {
+    run.stray = key.length > 1 && key !== 'Tab';
+  } else if (expected?.key === key) {
     run.at += 1;
   }
   await run.page.keyboard.press(key);
@@ -95,6 +119,7 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     run.actions.push('blur and click back');
     await run.page.locator(editor).blur();
     await run.page.locator(editor).click();
+    run.stray = false;
   },
   burst: async (run) => {
     await press(run, run.steps[run.at]?.key ?? 'q');
@@ -106,6 +131,7 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     const left = (box?.x ?? 0) + run.random() * (box?.width ?? 1);
     const top = (box?.y ?? 0) + run.random() * (box?.height ?? 1);
     await run.page.mouse.click(left, top);
+    run.stray = false;
   },
   compose: async (run) => {
     const text = pick(run, composed);
@@ -136,6 +162,11 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     run.actions.push('tap Shift');
     await run.page.keyboard.press('Shift');
   },
+  stray: async (run) => {
+    run.actions.push('lose focus');
+    await run.page.locator(editor).blur();
+    run.stray = true;
+  },
   wrong: async (run) => {
     await press(run, pick(run, pool));
   },
@@ -150,12 +181,12 @@ const weights: readonly (readonly [string, number])[] = [
   ['click', 6],
   ['blur', 6],
   ['burst', 6],
+  ['stray', 6],
 ];
 
 const choose = (run: Run): string => {
-  const usable = weights.filter(
-    ([name]) => run.ime !== null || (name !== 'compose' && name !== 'insert'),
-  );
+  const typed = new Set(['compose', 'insert']);
+  const usable = weights.filter(([name]) => (run.ime !== null && !run.stray) || !typed.has(name));
   const total = usable.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = run.random() * total;
   for (const [name, weight] of usable) {
@@ -174,17 +205,12 @@ const expectSettled = async (run: Run, label: string): Promise<void> => {
 };
 
 const finish = async (run: Run, label: string): Promise<void> => {
+  await run.page.locator(editor).click();
+  run.stray = false;
   while (run.at < run.steps.length - 1) {
     await press(run, run.steps[run.at]?.key ?? 'q');
     await expectSettled(run, label);
   }
-};
-
-const imeOf = async (page: Page, browserName: string): Promise<CDPSession | null> => {
-  if (browserName !== 'chromium') {
-    return null;
-  }
-  return await page.context().newCDPSession(page);
 };
 
 for (const gate of gates) {
@@ -197,10 +223,21 @@ for (const gate of gates) {
     const reference = await walkClean(page, gate);
     const goal = checksOf(unit).find((check) => check.id === gate)?.program ?? '';
     expect(reference.at(-1)?.text).toBe(goal);
-    const ime = await imeOf(page, browserName);
+    expect(new Set(reference.map((item) => item.head)).size).toBeGreaterThan(1);
+    const ime = await inputMethod(page, browserName);
+    await slowEveryOtherRound(ime, info.repeatEachIndex);
     const firstSeed = info.repeatEachIndex * runs + 1;
     for (let seed = firstSeed; seed < firstSeed + runs; seed += 1) {
-      const run: Run = { actions: [], at: 0, ime, page, random: generator(seed), reference, steps };
+      const run: Run = {
+        actions: [],
+        at: 0,
+        ime,
+        page,
+        random: generator(seed),
+        reference,
+        steps,
+        stray: false,
+      };
       await openGate(page, gate);
       for (let count = 0; count < length; count += 1) {
         await acts[choose(run)]?.(run);

@@ -1,6 +1,6 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
 
-import { generator, openAt, pickFrom } from './fuzz-support';
+import { generator, inputMethod, openAt, pickFrom, slowEveryOtherRound } from './fuzz-support';
 
 interface Run {
   readonly actions: string[];
@@ -83,13 +83,6 @@ const choose = (run: Run): string => {
   return 'key';
 };
 
-const imeOf = async (page: Page, browserName: string): Promise<CDPSession | null> => {
-  if (browserName !== 'chromium') {
-    return null;
-  }
-  return await page.context().newCDPSession(page);
-};
-
 const stillWorks = async (run: Run, label: string): Promise<void> => {
   const { page } = run;
   const mode = page.locator(`${runner} [data-role="editor"] .cm-vim-panel`);
@@ -122,7 +115,8 @@ test('random input at the free gate never leaves the editor stuck', async ({
   page.on('pageerror', (error) => {
     errors.push(error.message);
   });
-  const ime = await imeOf(page, browserName);
+  const ime = await inputMethod(page, browserName);
+  await slowEveryOtherRound(ime, info.repeatEachIndex);
   const firstSeed = info.repeatEachIndex * runs + 1;
   for (let seed = firstSeed; seed < firstSeed + runs; seed += 1) {
     await openAt(page, gate, editor);

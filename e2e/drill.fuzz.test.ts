@@ -9,7 +9,7 @@ import {
   press,
   type Drill,
 } from '../src/lib/typing/drill';
-import { generator, openAt, pickFrom } from './fuzz-support';
+import { generator, inputMethod, openAt, pickFrom, slowEveryOtherRound } from './fuzz-support';
 
 interface Run {
   readonly actions: string[];
@@ -17,6 +17,7 @@ interface Run {
   model: Drill;
   readonly page: Page;
   readonly random: () => number;
+  stray: boolean;
 }
 
 const gate = 'type-template';
@@ -24,7 +25,8 @@ const runs = 4;
 const length = 40;
 const input = '[data-typing-drill] [data-role="input"]';
 const pool = String.raw`abcdefghijklmnopqrstuvwxyzIOX0123456789#<>(){};.-:' `.split('');
-const named = ['Enter', 'Escape', 'Backspace', 'Delete'];
+const named = ['Enter', 'Escape', 'Backspace', 'Delete', 'Tab'];
+const returning = new Set(['Enter', 'Tab']);
 const composed = ['ㄅ', 'ㄋㄧ', '`', 'ｃ'];
 const committed = ['八', '你好', '；', '#include'];
 
@@ -57,7 +59,11 @@ const after = (model: Drill, key: string): Drill => {
 
 const tap = async (run: Run, key: string): Promise<void> => {
   run.actions.push(`key ${JSON.stringify(key)}`);
-  run.model = after(run.model, key);
+  if (run.stray) {
+    run.stray = key.length > 1 && !returning.has(key);
+  } else {
+    run.model = after(run.model, key);
+  }
   await run.page.keyboard.press(key);
 };
 
@@ -66,6 +72,7 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     run.actions.push('blur and click back');
     await run.page.locator(input).blur();
     await run.page.locator('[data-typing-drill]').click();
+    run.stray = false;
   },
   compose: async (run) => {
     const text = pickFrom(run.random, composed);
@@ -85,8 +92,10 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     const text = pickFrom(run.random, committed);
     run.actions.push(`insert ${text}`);
     await run.ime?.send('Input.insertText', { text });
-    for (const char of text) {
-      run.model = after(run.model, char);
+    if (!run.stray) {
+      for (const char of text) {
+        run.model = after(run.model, char);
+      }
     }
   },
   right: async (run) => {
@@ -95,6 +104,11 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
   shift: async (run) => {
     run.actions.push('tap Shift');
     await run.page.keyboard.press('Shift');
+  },
+  stray: async (run) => {
+    run.actions.push('lose focus');
+    await run.page.locator(input).blur();
+    run.stray = true;
   },
   wrong: async (run) => {
     await tap(run, pickFrom(run.random, [...pool, ...named]));
@@ -107,13 +121,13 @@ const weights: readonly (readonly [string, number])[] = [
   ['compose', 8],
   ['insert', 6],
   ['shift', 6],
-  ['blur', 10],
+  ['blur', 8],
+  ['stray', 6],
 ];
 
 const choose = (run: Run): string => {
-  const usable = weights.filter(
-    ([name]) => run.ime !== null || (name !== 'compose' && name !== 'insert'),
-  );
+  const typed = new Set(['compose', 'insert']);
+  const usable = weights.filter(([name]) => (run.ime !== null && !run.stray) || !typed.has(name));
   const total = usable.reduce((sum, [, weight]) => sum + weight, 0);
   let roll = run.random() * total;
   for (const [name, weight] of usable) {
@@ -144,14 +158,9 @@ const expectSettled = async (run: Run, label: string): Promise<void> => {
   await expect.poll(async () => await mismatch(run), { message: label, timeout: 3000 }).toBe('');
 };
 
-const imeOf = async (page: Page, browserName: string): Promise<CDPSession | null> => {
-  if (browserName !== 'chromium') {
-    return null;
-  }
-  return await page.context().newCDPSession(page);
-};
-
 const finish = async (run: Run, label: string): Promise<void> => {
+  await run.page.locator('[data-typing-drill]').click();
+  run.stray = false;
   while (!isDone(run.model)) {
     await tap(run, wanted(run.model));
     if (!isDone(run.model)) {
@@ -165,7 +174,8 @@ test('random input at the typing drill never leaves what the drill describes', a
   page,
 }, info) => {
   test.setTimeout(180_000);
-  const ime = await imeOf(page, browserName);
+  const ime = await inputMethod(page, browserName);
+  await slowEveryOtherRound(ime, info.repeatEachIndex);
   const firstSeed = info.repeatEachIndex * runs + 1;
   for (let seed = firstSeed; seed < firstSeed + runs; seed += 1) {
     await openAt(page, gate, input);
@@ -176,6 +186,7 @@ test('random input at the typing drill never leaves what the drill describes', a
       model: createDrill(target ?? ''),
       page,
       random: generator(seed),
+      stray: false,
     };
     const label = (): string => `seed ${String(seed)}, actions: ${run.actions.join(' | ')}`;
     for (let count = 0; count < length && !isDone(run.model); count += 1) {

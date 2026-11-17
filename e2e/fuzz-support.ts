@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type CDPSession, type Page } from '@playwright/test';
 
 const modulus = 4_294_967_296;
 const multiplier = 1_664_525;
@@ -42,4 +42,20 @@ const openAt = async (page: Page, beat: string, focus: string): Promise<void> =>
   await expect(page.locator(focus)).toBeFocused();
 };
 
-export { generator, openAt, pickFrom };
+const slowdown = 4;
+const every = 2;
+
+const inputMethod = async (page: Page, browserName: string): Promise<CDPSession | null> => {
+  if (browserName !== 'chromium') {
+    return null;
+  }
+  return await page.context().newCDPSession(page);
+};
+
+const slowEveryOtherRound = async (session: CDPSession | null, round: number): Promise<void> => {
+  if (session !== null && round % every === 1) {
+    await session.send('Emulation.setCPUThrottlingRate', { rate: slowdown });
+  }
+};
+
+export { generator, inputMethod, openAt, pickFrom, slowEveryOtherRound };
