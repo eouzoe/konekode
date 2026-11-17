@@ -36,24 +36,53 @@ const runProgram = (root: HTMLElement): boolean => {
   return true;
 };
 
-const turn = (handlers: Handlers, intent: Intent): void => {
+const gateInputs = [
+  '[data-typing-drill] [data-role="input"]:not(:disabled)',
+  '[data-code-runner] .cm-content[contenteditable="true"]',
+].join(', ');
+const tabKey = 'Tab';
+
+const refocus = (root: HTMLElement): boolean => {
+  if (root.dataset.waiting !== 'true') {
+    return false;
+  }
+  const inputs = [...root.querySelectorAll<HTMLElement>(gateInputs)];
+  const target = inputs.find((input) => input.offsetParent !== null);
+  target?.focus();
+  return target !== undefined;
+};
+
+const turn = (root: HTMLElement, handlers: Handlers, intent: Intent): void => {
   if (intent === 'backward') {
     handlers.back();
     return;
   }
-  handlers.next();
+  if (!refocus(root)) {
+    handlers.next();
+  }
+};
+
+const inDialog = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('dialog') !== null;
+
+const keepInGate = (root: HTMLElement, event: KeyboardEvent): boolean => {
+  if (event.key !== tabKey || inDialog(event.target) || !refocus(root)) {
+    return false;
+  }
+  event.preventDefault();
+  return true;
 };
 
 const onKey = (root: HTMLElement, handlers: Handlers, event: KeyboardEvent): void => {
   const intent = readIntent(event);
-  if (intent === 'none') {
+  if (keepInGate(root, event) || intent === 'none') {
     return;
   }
   event.preventDefault();
   if (event.key === 'Enter' && runProgram(root)) {
     return;
   }
-  turn(handlers, intent);
+  turn(root, handlers, intent);
 };
 
 const release = (event: Event): void => {
