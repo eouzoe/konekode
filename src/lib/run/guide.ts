@@ -7,7 +7,6 @@ interface Expected {
 
 interface Guide {
   at: number;
-  pending: string | null;
   readonly steps: readonly Expected[];
 }
 
@@ -72,7 +71,6 @@ const expand = (path: readonly string[]): Expected[] => path.flatMap((token) => 
 
 const createGuide = (path: readonly string[]): Guide => ({
   at: 0,
-  pending: null,
   steps: expand(path),
 });
 
@@ -102,13 +100,6 @@ const judge = (guide: Guide, pressed: Pressed): Verdict => {
 };
 
 const advance = (guide: Guide): void => {
-  const expected = expectedNow(guide);
-  if (expected === null) {
-    return;
-  }
-  if (expected.kind === 'text') {
-    guide.pending = expected.key;
-  }
   if (guide.at < guide.steps.length) {
     guide.at += 1;
   }
@@ -140,14 +131,6 @@ const causeOf = (guide: Guide, slip: Slip): Cause => {
   return rules.find(([, applies]) => applies(seen))?.[0] ?? 'other';
 };
 
-const takeText = (guide: Guide, text: string): boolean => {
-  if (guide.pending !== text) {
-    return false;
-  }
-  guide.pending = null;
-  return true;
-};
-
 export {
   advance,
   causeOf,
@@ -155,7 +138,6 @@ export {
   expand,
   expectedNow,
   judge,
-  takeText,
   type Cause,
   type Expected,
   type Guide,

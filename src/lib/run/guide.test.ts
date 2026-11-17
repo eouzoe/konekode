@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { advance, causeOf, createGuide, expand, expectedNow, judge, takeText } from './guide';
+import { advance, causeOf, createGuide, expand, expectedNow, judge } from './guide';
 
 const press = (key: string): { composing: boolean; key: string } => ({ composing: false, key });
 
@@ -35,21 +35,6 @@ test('input method and full-width presses are told apart from wrong keys', () =>
   expect(judge(guide, press('Process'))).toBe('ime');
   expect(judge(guide, { composing: true, key: 'i' })).toBe('ime');
   expect(judge(guide, press('ｉ'))).toBe('full-width');
-});
-
-test('typed text is let in exactly once per accepted key', () => {
-  const guide = createGuide(['type:ab']);
-  expect(takeText(guide, 'a')).toBe(false);
-  advance(guide);
-  expect(takeText(guide, 'b')).toBe(false);
-  expect(takeText(guide, 'a')).toBe(true);
-  expect(takeText(guide, 'a')).toBe(false);
-});
-
-test('commands do not open the door for typed text', () => {
-  const guide = createGuide(['O', 'type:x']);
-  advance(guide);
-  expect(takeText(guide, 'O')).toBe(false);
 });
 
 test('after the path ends only the run can be repeated', () => {

@@ -151,12 +151,13 @@ const startOf = ({ beat, plan, state, tools }: Turn): Snapshot => {
   return start;
 };
 
-const place = (turn: Turn): void => {
+const place = (turn: Turn): Snapshot => {
   const start = startOf(turn);
   const now = turn.tools.student.snapshot();
   if (now.text !== start.text || now.cursor !== start.cursor) {
     turn.tools.student.restore(start);
   }
+  return start;
 };
 
 const needsStart = ({ plan, state }: Turn): boolean => state.fresh && plan.history.length > 0;
@@ -177,8 +178,7 @@ const lead = (tools: Tools, state: State, beat: string): void => {
     placeOnce(turn);
     return;
   }
-  place(turn);
-  tools.student.guide(plan.path);
+  tools.student.guide(plan.path, place(turn));
   state.guided = beat;
 };
 

@@ -15,7 +15,7 @@ interface Editor {
   readonly blur: () => void;
   readonly focus: () => void;
   readonly getText: () => string;
-  readonly guide: (path: readonly string[] | null) => void;
+  readonly guide: (path: readonly string[] | null, start?: Snapshot) => void;
   readonly nextStep: () => Expected | null;
   readonly onMode: (listener: (mode: string) => void) => void;
   readonly press: (token: string) => void;
@@ -111,7 +111,8 @@ const arrows = Prec.highest(
   ]),
 );
 
-const follow = (holder: Holder, path: readonly string[] | null): void => {
+const follow = (holder: Holder, path: readonly string[] | null, start: Snapshot | null): void => {
+  holder.start = start;
   if (path === null) {
     holder.guide = null;
     return;
@@ -140,8 +141,8 @@ const handle = ({ editable, holder, view }: Inner): Editor => ({
     view.focus();
   },
   getText: () => view.state.doc.toString(),
-  guide: (path) => {
-    follow(holder, path);
+  guide: (path, start) => {
+    follow(holder, path, start ?? null);
   },
   nextStep: () => nextOf(holder),
   onMode: (listener) => {
@@ -174,11 +175,12 @@ const createEditor = (options: Options): Editor => {
     report: (step) => {
       options.onStep?.(step);
     },
+    start: null,
   };
   const view = new EditorView({
     doc: options.text,
     extensions: [
-      guidedLayer(holder, isInserting),
+      guidedLayer(holder, { isInserting, isPending }),
       taughtOnly((refused, key) => {
         options.onCommand?.(refused, key);
       }),
