@@ -1,7 +1,7 @@
 import { currentVersion, readEvents, type Data, type LearningEvent } from './event';
 
 interface Persistence {
-  readonly append: (event: LearningEvent) => Promise<void>;
+  readonly append: (events: readonly LearningEvent[]) => Promise<void>;
   readonly load: () => Promise<unknown[]>;
   readonly remove: (ids: readonly string[]) => Promise<void>;
 }
@@ -33,7 +33,9 @@ interface State {
   readonly events: LearningEvent[];
   readonly listeners: ((event: LearningEvent) => void)[];
   pending: Promise<void>;
+  saving: Promise<void>;
   seq: number;
+  readonly unsaved: LearningEvent[];
 }
 
 const hasId = (value: unknown, ids: ReadonlySet<string>): boolean =>
@@ -42,8 +44,8 @@ const hasId = (value: unknown, ids: ReadonlySet<string>): boolean =>
 const memoryPersistence = (initial: readonly unknown[] = []): Persistence => {
   let stored: unknown[] = [...initial];
   return {
-    append: async (event) => {
-      stored.push(event);
+    append: async (events) => {
+      stored.push(...events);
       await Promise.resolve();
     },
     load: () => Promise.resolve([...stored]),
@@ -93,20 +95,46 @@ const queue = ({ source, state }: Context, work: () => Promise<void>): void => {
   })();
 };
 
+const save = async ({ source, state }: Context): Promise<void> => {
+  const batch = state.unsaved.splice(0);
+  if (batch.length > 0) {
+    await attempt(source, () => source.persistence.append(batch));
+  }
+};
+
+const saveLater = (context: Context): void => {
+  const previous = context.state.saving;
+  context.state.saving = (async (): Promise<void> => {
+    await previous;
+    await save(context);
+  })();
+};
+
+const removeLater = (context: Context, ids: readonly string[]): void => {
+  const written = context.state.saving;
+  queue(context, async () => {
+    await written;
+    await context.source.persistence.remove(ids);
+  });
+};
+
 const createLog = async (source: Source): Promise<Log> => {
   const state: State = {
     events: readEvents(await source.persistence.load()),
     listeners: [],
     pending: Promise.resolve(),
+    saving: Promise.resolve(),
     seq: 0,
+    unsaved: [],
   };
   return {
     events: () => state.events,
     flush: async () => {
+      await state.saving;
       await state.pending;
     },
     forget: (ids) => {
-      queue({ source, state }, () => source.persistence.remove(ids));
+      removeLater({ source, state }, ids);
     },
     subscribe: (listener) => {
       state.listeners.push(listener);
@@ -114,7 +142,8 @@ const createLog = async (source: Source): Promise<Log> => {
     track: (kind, entry = {}) => {
       const event = build({ source, state }, kind, entry);
       state.events.push(event);
-      queue({ source, state }, () => source.persistence.append(event));
+      state.unsaved.push(event);
+      saveLater({ source, state });
       for (const listener of state.listeners) {
         listener(event);
       }

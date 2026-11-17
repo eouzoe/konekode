@@ -72,8 +72,8 @@ const databasePersistence = async (): Promise<Persistence> => {
   const database = await openDatabase();
   await importLegacy(database);
   return {
-    append: async (event) => {
-      await putAll(database, [event]);
+    append: async (events) => {
+      await putAll(database, events);
     },
     load: async () => {
       const store = database.transaction(storeName, 'readonly').objectStore(storeName);

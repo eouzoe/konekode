@@ -57,12 +57,12 @@ test('訂閱的人會收到之後寫入的每一筆', async () => {
   expect(seen).toEqual(['one', 'two']);
 });
 
-test('每一筆事件發生時就立刻交給儲存，不用等前一筆寫完', async () => {
-  const started: string[] = [];
+test('one write is in flight at a time, and everything that arrived meanwhile goes in the next', async () => {
+  const writes: string[][] = [];
   const gate = Promise.withResolvers<null>();
   const slow: Persistence = {
-    append: async (event) => {
-      started.push(event.kind);
+    append: async (events) => {
+      writes.push(events.map((event) => event.kind));
       await gate.promise;
     },
     load: () => Promise.resolve([]),
@@ -70,11 +70,24 @@ test('每一筆事件發生時就立刻交給儲存，不用等前一筆寫完',
   };
   const log = await createLog(source(slow));
   log.track('one');
+  await Promise.resolve();
   log.track('two');
   log.track('three');
-  expect(started).toEqual(['one', 'two', 'three']);
+  log.track('four');
+  await Promise.resolve();
+  expect(writes).toEqual([['one']]);
   gate.resolve(null);
   await log.flush();
+  expect(writes).toEqual([['one'], ['two', 'three', 'four']]);
+});
+
+test('an event is handed to the store at once when no write is in flight', async () => {
+  const persistence = memoryPersistence();
+  const log = await createLog(source(persistence));
+  log.track('one');
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(await persistence.load()).toHaveLength(1);
 });
 
 test('儲存失敗不會讓寫入中斷，而且每一次失敗都會回報', async () => {
@@ -89,6 +102,7 @@ test('儲存失敗不會讓寫入中斷，而且每一次失敗都會回報', as
   };
   const log = await createLog(source(broken, faults));
   log.track('one');
+  await log.flush();
   log.track('two');
   await log.flush();
   expect(log.events()).toHaveLength(2);

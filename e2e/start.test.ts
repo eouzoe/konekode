@@ -829,6 +829,7 @@ test.describe('起步單元', () => {
     for (const gate of ['type-template', ...Object.keys(programs)]) {
       expect(seen).toContain(gate);
     }
+    await expect.poll(async () => await storedPosition(page)).toBe('done');
     await page.reload();
     await page.locator('[data-scene][data-ready="true"]').waitFor();
     expect(await currentId(page)).toBe('done');
