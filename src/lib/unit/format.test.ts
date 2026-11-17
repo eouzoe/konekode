@@ -2,11 +2,18 @@ import { expect, test } from 'bun:test';
 
 import { flatten, pathOf, planFor, programOf, tasksOf, type Part, type Task } from './format';
 
+const text = {
+  after: 'done',
+  before: 'hello',
+  first: 'go to the end',
+  gate: 'your turn',
+  second: 'open a line',
+};
+
 const task: Task = {
-  ask: 'your turn',
   demo: [
-    { id: 'first', keys: ['G'], say: 'go to the end', teaches: ['key.G'] },
-    { id: 'second', keys: ['O', 'type:x;', 'Esc'], say: 'open a line' },
+    { id: 'first', keys: ['G'], teaches: ['key.G'] },
+    { id: 'second', keys: ['O', 'type:x;', 'Esc'] },
   ],
   expect: '1',
   goal: 'x;',
@@ -16,13 +23,13 @@ const task: Task = {
 };
 
 const parts: readonly Part[] = [
-  { id: 'before', say: 'hello', stage: 'run' },
+  { id: 'before', stage: 'run' },
   { task },
-  { id: 'after', say: 'done', stage: 'run' },
+  { id: 'after', stage: 'run' },
 ];
 
 test('a task becomes its demonstration beats followed by its gate', () => {
-  expect(flatten(parts).map((beat) => beat.id)).toEqual([
+  expect(flatten(parts, text).map((beat) => beat.id)).toEqual([
     'before',
     'first',
     'second',
@@ -32,7 +39,7 @@ test('a task becomes its demonstration beats followed by its gate', () => {
 });
 
 test('the first demonstration beat resets and every beat shows the target', () => {
-  const [, first, second, gate] = flatten(parts);
+  const [, first, second, gate] = flatten(parts, text);
   expect(first).toEqual({
     id: 'first',
     keys: ['reset', 'G'],
@@ -55,10 +62,7 @@ test('the first demonstration beat resets and every beat shows the target', () =
 
 test('the path a learner follows is the demonstration plus a run', () => {
   expect(pathOf(task)).toEqual(['G', 'O', 'type:x;', 'Esc', 'run']);
-  expect(pathOf({ ...task, demo: [{ id: 'only', keys: ['Esc', 'run'], say: '' }] })).toEqual([
-    'Esc',
-    'run',
-  ]);
+  expect(pathOf({ ...task, demo: [{ id: 'only', keys: ['Esc', 'run'] }] })).toEqual(['Esc', 'run']);
   expect(pathOf({ ...task, demo: [] })).toEqual([]);
 });
 
@@ -67,7 +71,7 @@ test('tasks are listed in the order they appear', () => {
 });
 
 test('a plan replays every earlier task without its runs', () => {
-  const later: Task = { ...task, demo: [{ id: 'third', keys: ['o'], say: '' }], id: 'next' };
+  const later: Task = { ...task, demo: [{ id: 'third', keys: ['o'] }], id: 'next' };
   expect(planFor([task, later], 'third')).toEqual({
     history: ['G', 'O', 'type:x;', 'Esc'],
     path: ['o', 'run'],

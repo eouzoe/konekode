@@ -5,6 +5,7 @@ import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/cur
 import { clearDraft } from '@/lib/run/draft';
 import { allDomains, beatsOf } from '@/units/index';
 
+import { textEditor } from './edit';
 import { jumpTo, skipFrom, type Entry } from './jump';
 import { lookButton } from './looks';
 
@@ -165,19 +166,30 @@ const skipButton = (unit: string): HTMLButtonElement => {
   return skip;
 };
 
-const buildPanel = (unit: string): HTMLElement => {
-  const panel = make('aside', '', 'dev-panel');
-  const where = make('code', positionOf(unit));
+const editButton = (unit: string): HTMLElement[] => {
+  const editor = textEditor(unit);
+  const button = make('button', '改這句（F2）');
+  button.addEventListener('click', editor.open);
+  return [button, editor.sheet];
+};
+
+const sheets = (unit: string): HTMLElement[] => {
   const jump = jumpSheet(unit);
   const note = noteSheet(unit);
   const model = modelSheet();
+  const openers = [opener('跳到…', jump), opener('留話', note), opener('學生模型', model)];
+  return [...openers, lookButton(), jump, note, model];
+};
+
+const buildPanel = (unit: string): HTMLElement => {
+  const panel = make('aside', '', 'dev-panel');
+  const where = make('code', positionOf(unit));
   onRecorded((event) => {
     if (event.kind === 'beat.reached' && event.unit === unit) {
       where.textContent = event.ref;
     }
   });
-  const openers = [opener('跳到…', jump), opener('留話', note), opener('學生模型', model)];
-  panel.append('開發模式', where, skipButton(unit), ...openers, lookButton(), jump, note, model);
+  panel.append('開發模式', where, ...editButton(unit), skipButton(unit), ...sheets(unit));
   return panel;
 };
 

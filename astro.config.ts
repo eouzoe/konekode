@@ -6,6 +6,8 @@ import { constants, createBrotliCompress } from 'node:zlib';
 
 import { defineConfig } from 'astro/config';
 
+import { textEditing } from './text.config';
+
 const packed = /\.(?:tar|wasm)$/u;
 const kibi = 1024;
 const limitMebibytes = 25;
@@ -83,6 +85,7 @@ export default defineConfig({
       },
       name: 'pack-large-assets',
     },
+    textEditing(),
   ],
   site: 'https://cp.konekode.workers.dev',
   vite: {

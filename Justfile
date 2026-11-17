@@ -1,6 +1,9 @@
 dev:
     bun --bun run dev
 
+edit:
+    PUBLIC_MODE=dev bun --bun run dev
+
 build:
     PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build
 
