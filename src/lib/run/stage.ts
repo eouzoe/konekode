@@ -1,25 +1,26 @@
 import { array, boolean, object, string, type infer as Infer } from 'zod';
 
+import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
+import { expand, keysOf } from '@/lib/edit/path';
+import { knownKeys, run } from '@/lib/edit/step';
 import { chunks } from '@/lib/perform/rhythm';
 import { type Plan } from '@/lib/unit/format';
 
-import { type Editor } from './editor';
-import { textPrefix, type Snapshot } from './puppet';
+import { type Desk } from './desk';
 
-interface Step {
+interface Move {
+  readonly keys: readonly string[];
   readonly label: string;
-  readonly token: string;
+  readonly runs: boolean;
   readonly wait: number;
 }
-
-type Actor = 'sprite' | 'student';
 
 interface State {
   acting: boolean;
   entered: string;
   fresh: boolean;
   guided: string;
-  readonly starts: Map<string, Snapshot>;
+  sprite: Buffer;
   turn: number;
   turnBeat: string;
 }
@@ -28,17 +29,15 @@ interface Tools {
   readonly arm: (armed: boolean) => void;
   readonly attend: (beat: string) => void;
   readonly clear: () => void;
+  readonly desk: Desk;
   readonly entered: (mode: 'free' | 'guided') => void;
-  readonly forget: () => void;
   readonly fresh: boolean;
   readonly guided: (active: boolean) => void;
   readonly keycap: HTMLElement;
-  readonly origin: Snapshot;
+  readonly origin: string;
   readonly plan: (beat: string) => Plan | null;
+  readonly rules: () => Rules;
   readonly run: () => void;
-  readonly show: (actor: Actor) => void;
-  readonly sprite: Editor;
-  readonly student: Editor;
 }
 
 const stageSchema = object({
@@ -55,24 +54,25 @@ const typePrefix = 'type:';
 const keyPause = 450;
 const labels: Record<string, string> = { BS: 'Backspace', run: 'Enter' };
 
-const typing = (text: string): Step[] =>
+const typing = (text: string): Move[] =>
   chunks(text).map((chunk) => ({
+    keys: chunk.text.split(''),
     label: '',
-    token: `${textPrefix}${chunk.text}`,
+    runs: false,
     wait: chunk.pause,
   }));
 
-const expandOne = (token: string): Step[] => {
-  if (token === 'reset') {
-    return [];
-  }
+const movesOf = (token: string): Move[] => {
   if (token.startsWith(typePrefix)) {
     return typing(token.slice(typePrefix.length));
   }
-  return [{ label: labels[token] ?? token, token, wait: keyPause }];
+  const keys = keysOf([token]);
+  const runs = token === 'run';
+  if (keys.length === 0 && !runs) {
+    return [];
+  }
+  return [{ keys, label: labels[token] ?? token, runs, wait: keyPause }];
 };
-
-const expand = (tokens: readonly string[]): Step[] => tokens.flatMap((token) => expandOne(token));
 
 const pause = async (time: number): Promise<void> => {
   const { promise, resolve } = Promise.withResolvers<null>();
@@ -82,89 +82,50 @@ const pause = async (time: number): Promise<void> => {
   await promise;
 };
 
-const perform = (tools: Tools, step: Step): void => {
-  if (step.label !== '') {
-    tools.keycap.textContent = step.label;
+const everything = (tools: Tools): Rules => ({ keys: knownKeys, pairs: tools.rules().pairs });
+
+const startOf = (tools: Tools, history: readonly string[]): Buffer =>
+  run(createBuffer(tools.origin), keysOf(history), everything(tools));
+
+const perform = (tools: Tools, state: State, move: Move): void => {
+  if (move.label !== '') {
+    tools.keycap.textContent = move.label;
   }
-  if (step.token === 'run') {
+  if (move.runs) {
     tools.run();
     return;
   }
-  tools.sprite.press(step.token);
+  state.sprite = run(state.sprite, move.keys, everything(tools));
+  tools.desk.showSprite(state.sprite);
 };
 
-const play = async (tools: Tools, state: State, steps: readonly Step[]): Promise<void> => {
+const play = async (tools: Tools, state: State, moves: readonly Move[]): Promise<void> => {
   const mine = state.turn;
-  const [step, ...rest] = steps;
-  if (step === undefined) {
+  const [move, ...rest] = moves;
+  if (move === undefined) {
     tools.keycap.textContent = '';
     return;
   }
-  perform(tools, step);
-  if (step.wait > 0) {
-    await pause(step.wait);
+  perform(tools, state, move);
+  if (move.wait > 0) {
+    await pause(move.wait);
   }
   if (state.turn === mine) {
     await play(tools, state, rest);
   }
 };
 
-const replay = (tools: Tools, tokens: readonly string[]): void => {
-  for (const step of expand(tokens)) {
-    if (step.token !== 'run') {
-      tools.sprite.press(step.token);
-    }
-  }
-};
-
-const rewind = (tools: Tools, history: readonly string[]): void => {
-  tools.sprite.restore(tools.origin);
-  replay(tools, history);
-};
-
 const release = (tools: Tools, state: State): void => {
   state.entered = '';
   if (state.guided !== '') {
     state.guided = '';
-    tools.student.guide(null);
+    tools.desk.setSession({ ...tools.desk.session(), at: 0, path: [] });
   }
 };
 
-interface Turn {
-  readonly beat: string;
-  readonly plan: Plan;
-  readonly state: State;
-  readonly tools: Tools;
-}
-
-const startOf = ({ beat, plan, state, tools }: Turn): Snapshot => {
-  const known = state.starts.get(beat);
-  if (known !== undefined) {
-    return known;
-  }
-  tools.show('sprite');
-  rewind(tools, plan.history);
-  const start = tools.sprite.snapshot();
-  tools.show('student');
-  tools.forget();
-  state.starts.set(beat, start);
-  return start;
-};
-
-const place = (turn: Turn): Snapshot => {
-  const start = startOf(turn);
-  const now = turn.tools.student.snapshot();
-  if (now.text !== start.text || now.cursor !== start.cursor) {
-    turn.tools.student.restore(start);
-  }
-  return start;
-};
-
-const needsStart = ({ plan, state }: Turn): boolean => state.fresh && plan.history.length > 0;
-
-const placeOnce = (turn: Turn): void => {
-  if (needsStart(turn)) {
-    place(turn);
+const placeOnce = (tools: Tools, state: State, plan: Plan): void => {
+  if (state.fresh && plan.history.length > 0) {
+    tools.desk.setSession({ at: 0, buffer: startOf(tools, plan.history), path: [] });
   }
 };
 
@@ -173,12 +134,12 @@ const lead = (tools: Tools, state: State, beat: string): void => {
   if (plan === null || state.guided === beat) {
     return;
   }
-  const turn: Turn = { beat, plan, state, tools };
   if (plan.path.length === 0) {
-    placeOnce(turn);
+    placeOnce(tools, state, plan);
     return;
   }
-  tools.student.guide(plan.path, place(turn));
+  const buffer = startOf(tools, plan.history);
+  tools.desk.setSession({ at: 0, buffer, path: expand(plan.path) });
   state.guided = beat;
 };
 
@@ -209,16 +170,15 @@ const leaveDemo = (tools: Tools, state: State): void => {
   if (state.acting) {
     state.acting = false;
     tools.clear();
-    tools.forget();
   }
-  tools.show('student');
+  tools.desk.showSprite(null);
 };
 
 const rest = (tools: Tools, state: State, beat: string): void => {
   release(tools, state);
   const plan = tools.plan(beat);
   if (plan !== null && plan.path.length === 0) {
-    placeOnce({ beat, plan, state, tools });
+    placeOnce(tools, state, plan);
   }
 };
 
@@ -237,10 +197,10 @@ const settle = (tools: Tools, state: State, stage: Stage): void => {
   tools.arm(stage.focus);
   tools.guided(state.guided !== '');
   if (stage.focus) {
-    tools.student.focus();
+    tools.desk.focus();
     return;
   }
-  tools.student.blur();
+  tools.desk.blur();
 };
 
 const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
@@ -248,12 +208,16 @@ const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
   release(tools, state);
   tools.guided(false);
   tools.arm(false);
-  tools.student.blur();
-  tools.show('sprite');
-  rewind(tools, tools.plan(stage.beat)?.history ?? []);
+  tools.desk.blur();
+  const start = startOf(tools, tools.plan(stage.beat)?.history ?? []);
+  state.sprite = run(start, keysOf(stage.before), everything(tools));
+  tools.desk.showSprite(state.sprite);
   tools.clear();
-  replay(tools, stage.before);
-  void play(tools, state, expand(stage.now));
+  void play(
+    tools,
+    state,
+    stage.now.flatMap((token) => movesOf(token)),
+  );
 };
 
 const createStage = (tools: Tools): ((detail: unknown) => void) => {
@@ -262,7 +226,7 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
     entered: '',
     fresh: tools.fresh,
     guided: '',
-    starts: new Map(),
+    sprite: createBuffer(tools.origin),
     turn: 0,
     turnBeat: '',
   };
@@ -279,4 +243,4 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
   };
 };
 
-export { createStage, type Actor };
+export { createStage };

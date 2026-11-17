@@ -1,24 +1,25 @@
+import { engine } from '@/lib/complete/current';
+import { createBuffer, lastColumn, type Buffer, type Rules } from '@/lib/edit/buffer';
+import { type Pressed } from '@/lib/edit/session';
 import { planOf, starterOf } from '@/units/index';
 
+import { createDesk, type Desk } from './desk';
 import { readDraft, writeDraft } from './draft';
-import { createEditor, forgetVimMemory, type Editor } from './editor';
 import { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf } from './guidance';
-import { type Step } from './guided';
 import { noteRun } from './note';
 import { describe, type View } from './outcome';
 import { type Outcome } from './protocol';
 import { loadedPercent, runProgram, warmUp, watchLoading } from './runner';
-import { createStage, type Actor } from './stage';
+import { createStage } from './stage';
 
 interface Parts {
   readonly button: HTMLButtonElement;
+  readonly desk: Desk;
   readonly fresh: boolean;
-  readonly editor: Editor;
   readonly hint: HTMLElement;
   readonly input: HTMLTextAreaElement;
   readonly output: HTMLElement;
   readonly root: HTMLElement;
-  readonly sprite: Editor;
   readonly status: HTMLElement;
 }
 
@@ -64,7 +65,7 @@ const isArmed = (parts: Parts): boolean => parts.root.dataset.armed === 'true';
 const arm = (parts: Parts, armed: boolean): void => {
   parts.root.dataset.armed = String(armed);
   parts.button.disabled = !armed;
-  parts.editor.setArmed(armed);
+  parts.desk.setArmed(armed);
 };
 
 interface Finished {
@@ -94,15 +95,8 @@ const fail = (parts: Parts, beat: string, error: unknown): void => {
   }
 };
 
-const sourceOf = (parts: Parts, forced: boolean): string => {
-  if (forced) {
-    return parts.sprite.getText();
-  }
-  return parts.editor.getText();
-};
-
 const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<void> => {
-  const source = sourceOf(parts, forced);
+  const source = parts.desk.text(forced);
   const input = parts.input.value;
   const began = performance.now();
   const outcome = await runProgram(source, input);
@@ -142,57 +136,42 @@ const preload = (): void => {
 };
 
 const notTaught = '這個鍵還沒學到，先不能用喔！';
-const normalHint = 'Enter 執行';
+const hints: Readonly<Record<string, string>> = {
+  insert: 'Esc 回到一般模式',
+  normal: 'Enter 執行',
+};
 
-const commandHint = (refused: boolean): string => {
-  if (refused) {
+const rules = (): Rules => ({ keys: engine.keys(), pairs: engine.pairs() });
+
+const freeHint = (pressed: Pressed): string => {
+  if (pressed.verdict === 'refused') {
     return notTaught;
   }
-  return normalHint;
+  return hints[pressed.session.buffer.mode] ?? '';
 };
 
-interface Hooks {
-  readonly run: () => void;
-  readonly step: (step: Step) => void;
-}
+const startBuffer = (root: HTMLElement, parent: HTMLElement): Buffer => {
+  const saved = readDraft(root.dataset.draft ?? '') ?? {
+    cursor: 0,
+    text: parent.dataset.source ?? '',
+  };
+  return createBuffer(saved.text, Math.min(saved.cursor, lastColumn(saved.text, saved.cursor)));
+};
 
-const makeEditor = (root: HTMLElement, { run, step }: Hooks): Editor => {
+const makeDesk = (root: HTMLElement, onPress: (pressed: Pressed) => void): Desk => {
   const parent = find(root, 'editor', HTMLElement);
   const name = root.dataset.draft ?? '';
-  const saved = readDraft(name) ?? { cursor: 0, text: parent.dataset.source ?? '' };
-  parent.replaceChildren();
-  return createEditor({
-    cursor: saved.cursor,
-    onChange: (next) => {
+  return createDesk({
+    onChange: (buffer) => {
       if (name !== '') {
-        writeDraft(name, next);
+        writeDraft(name, { cursor: buffer.cursor, text: buffer.text });
       }
     },
-    onCommand: (refused, key) => {
-      if (!isGuided(root)) {
-        find(root, 'hint', HTMLElement).textContent = commandHint(refused);
-        noteCommand(root, refused, key);
-      }
-    },
-    onRun: run,
-    onStep: step,
+    onPress,
     parent,
-    text: saved.text,
+    rules,
+    start: startBuffer(root, parent),
   });
-};
-
-const makeSprite = (root: HTMLElement): Editor =>
-  createEditor({ cursor: 0, parent: find(root, 'sprite-editor', HTMLElement), text: '' });
-
-const showActor = (root: HTMLElement, actor: Actor): void => {
-  root.dataset.actor = actor;
-  find(root, 'editor', HTMLElement).hidden = actor !== 'student';
-  find(root, 'sprite-editor', HTMLElement).hidden = actor !== 'sprite';
-};
-
-const hints: Record<string, string> = {
-  insert: 'Esc 回到一般模式',
-  normal: normalHint,
 };
 
 const guide = (parts: Parts): void => {
@@ -206,33 +185,24 @@ const guide = (parts: Parts): void => {
     clear: () => {
       show(parts, { state: 'idle', status: '', text: '' });
     },
+    desk: parts.desk,
     entered: (mode) => {
       enterTask(parts, mode);
     },
-    forget: forgetVimMemory,
     fresh: parts.fresh,
     guided: (active) => {
       showGuided(parts, active, hints.normal ?? '');
     },
     keycap: find(parts.root, 'keycap', HTMLElement),
-    origin: { cursor: 0, text: starterOf(unitOf(parts.root)) ?? parts.editor.getText() },
+    origin: starterOf(unitOf(parts.root)) ?? parts.desk.text(false),
     plan: (beat) => planOf(unitOf(parts.root), beat),
+    rules,
     run: () => {
       void execute(parts, true);
     },
-    show: (actor) => {
-      showActor(parts.root, actor);
-    },
-    sprite: parts.sprite,
-    student: parts.editor,
   });
   arm(parts, false);
   parts.hint.textContent = hints.normal ?? '';
-  parts.editor.onMode((mode) => {
-    if (!isGuided(parts.root)) {
-      parts.hint.textContent = hints[mode] ?? '';
-    }
-  });
   parts.root.addEventListener('runner:stage', (event) => {
     if (event instanceof CustomEvent) {
       stage(event.detail);
@@ -240,32 +210,38 @@ const guide = (parts: Parts): void => {
   });
 };
 
-const buildParts = (root: HTMLElement, hooks: Hooks): Parts => ({
+const buildParts = (root: HTMLElement, onPress: (pressed: Pressed) => void): Parts => ({
   button: find(root, 'run', HTMLButtonElement),
-  editor: makeEditor(root, hooks),
+  desk: makeDesk(root, onPress),
   fresh: readDraft(root.dataset.draft ?? '') === null,
   hint: find(root, 'hint', HTMLElement),
   input: find(root, 'stdin', HTMLTextAreaElement),
   output: find(root, 'output', HTMLElement),
   root,
-  sprite: makeSprite(root),
   status: find(root, 'status', HTMLElement),
 });
 
+const report = (parts: Parts, pressed: Pressed): void => {
+  if (isGuided(parts.root)) {
+    showStep(parts, pressed);
+  } else {
+    parts.hint.textContent = freeHint(pressed);
+    noteCommand(parts.root, pressed);
+  }
+  if (pressed.runs) {
+    parts.root.dispatchEvent(new CustomEvent('runner:run'));
+  }
+};
+
 const mountRunner = (root: HTMLElement): void => {
-  const listeners: ((step: Step) => void)[] = [];
-  const parts = buildParts(root, {
-    run: () => {
-      root.dispatchEvent(new CustomEvent('runner:run'));
-    },
-    step: (step) => {
-      for (const listener of listeners) {
-        listener(step);
-      }
-    },
+  const listeners: ((pressed: Pressed) => void)[] = [];
+  const parts = buildParts(root, (pressed) => {
+    for (const listener of listeners) {
+      listener(pressed);
+    }
   });
-  listeners.push((step) => {
-    showStep(parts, step);
+  listeners.push((pressed) => {
+    report(parts, pressed);
   });
   const start = (): void => {
     if (mayRun(parts)) {

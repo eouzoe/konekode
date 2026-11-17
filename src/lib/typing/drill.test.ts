@@ -105,3 +105,36 @@ test('樣板可以從頭打到完', () => {
   const finished = escape(typeAll(template, keys));
   expect(isDone(finished)).toBe(true);
 });
+
+const everyKey = [
+  ...Array.from({ length: 95 }, (_unused, at) => String.fromCodePoint(at + 32)),
+  '\n',
+  'ｉ',
+  '你',
+];
+
+const otherKeys = (right: string): string[] => everyKey.filter((item) => item !== right);
+
+const rightKey = (drill: Drill): string => {
+  if (drill.mode === 'normal') {
+    return 'i';
+  }
+  return expectedChar(drill);
+};
+
+test('at every position of the text, only the expected key moves the drill', () => {
+  let drill = createDrill('int main()\n{\n    a;\n}');
+  while (!isTyped(drill)) {
+    const { mode, position } = drill;
+    for (const key of otherKeys(rightKey(drill))) {
+      expect(press(drill, key)).toMatchObject({ mode, position });
+    }
+    const next = press(drill, rightKey(drill));
+    expect([next.mode, next.position]).not.toEqual([mode, position]);
+    drill = next;
+  }
+  for (const key of everyKey) {
+    expect(press(drill, key)).toMatchObject({ mode: 'insert', position: drill.position });
+  }
+  expect(isDone(escape(drill))).toBe(true);
+});

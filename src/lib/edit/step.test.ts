@@ -3,10 +3,10 @@ import { expect, test } from 'bun:test';
 import { array, assert, constantFrom, property } from 'fast-check';
 
 import { catalog, keys as commandKeys } from '@/lib/complete/catalog';
-import { expand } from '@/lib/run/guide';
 import { checksOf, planOf, starterOf } from '@/units/index';
 
 import { createBuffer, lastColumn, lineStart, type Buffer, type Rules } from './buffer';
+import { keysOf } from './path';
 import { run, step } from './step';
 
 const rules: Rules = {
@@ -21,11 +21,6 @@ const alphabet = [...printable, ...named];
 const searchDepth = 3;
 const gates = checksOf('start');
 const starter = starterOf('start') ?? '';
-
-const keysOf = (tokens: readonly string[]): string[] =>
-  expand(tokens)
-    .filter((item) => item.kind !== 'run')
-    .map((item) => item.key);
 
 const startOf = (gate: string): Buffer =>
   run(createBuffer(starter), keysOf(planOf('start', gate)?.history ?? []), rules);

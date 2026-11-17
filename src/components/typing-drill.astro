@@ -11,16 +11,9 @@ const { target } = Astro.props;
     <pre
       class="drill-code"><span data-role="done" class="is-done" /><span data-role="current" class="is-current" /><span data-role="rest" class="is-rest" /></pre>
     <p class="drill-mode" data-role="mode"></p>
-    <textarea
-      data-role="input"
-      class="drill-input"
-      aria-label="在這裡打字"
-      autocapitalize="off"
-      autocomplete="off"
-      spellcheck="false"></textarea>
+    <div data-role="input" class="drill-input" tabindex="0" aria-label="在這裡打字"></div>
   </div>
   <div class="drill-bottom">
-    <p class="drill-tip">開始前，記得先切換成英文輸入法，而且要是半形呦！</p>
     <p data-role="hint" class="drill-hint" aria-live="polite"></p>
     <div data-role="keyboard" class="keyboard" aria-hidden="true"></div>
   </div>
@@ -74,9 +67,6 @@ const { target } = Astro.props;
   .is-rest :global(.is-auto) {
     color: var(--soft);
   }
-  .drill[data-demo='true'] .drill-tip {
-    visibility: hidden;
-  }
   .drill[data-wrong='true'] .is-current {
     background: var(--bad);
   }
@@ -104,18 +94,8 @@ const { target } = Astro.props;
     width: 100%;
     height: 100%;
     opacity: 0;
-    resize: none;
     border: 0;
     cursor: text;
-  }
-  .drill-tip {
-    margin: 0 0 0.25rem;
-    text-align: center;
-    color: var(--soft);
-    user-select: none;
-  }
-  .drill[data-started='true'] .drill-tip {
-    visibility: hidden;
   }
   .keyboard,
   .drill-hint {

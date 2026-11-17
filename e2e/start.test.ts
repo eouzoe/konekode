@@ -13,8 +13,8 @@ interface Current {
 }
 
 const path = '/learn/start/';
-const studentEditor = '[data-role="editor"] .cm-content';
-const spriteEditor = '[data-role="sprite-editor"] .cm-content';
+const studentEditor = '[data-code-runner] [data-role="editor"][data-actor="student"]';
+const spriteEditor = '[data-code-runner] [data-role="editor"][data-actor="sprite"]';
 const unitName = 'start';
 const seedPath = '/favicon.ico';
 
@@ -372,7 +372,7 @@ test.describe('起步單元', () => {
     const button = page.locator('[data-code-runner] [data-role="run"]');
     const editor = page.locator(studentEditor);
     await expect(button).toBeDisabled();
-    await expect(editor).toHaveAttribute('contenteditable', 'false');
+    await expect(editor).not.toHaveAttribute('tabindex');
     await page.keyboard.press('Enter');
     expect(await currentId(page)).toBe('editor');
     await expect(status(page)).toBeEmpty();
@@ -382,7 +382,7 @@ test.describe('起步單元', () => {
     await open(page, 'task');
     const button = page.locator('[data-code-runner] [data-role="run"]');
     await expect(button).toBeEnabled();
-    await expect(page.locator(studentEditor)).toHaveAttribute('contenteditable', 'true');
+    await expect(page.locator(studentEditor)).toHaveAttribute('tabindex', '0');
     await page.evaluate(() => {
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
@@ -468,28 +468,6 @@ test.describe('起步單元', () => {
     expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
     await page.keyboard.press('Enter');
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
-  });
-
-  test('composing with an input method at a guided gate does not swallow later keys', async ({
-    browserName,
-    page,
-  }) => {
-    test.skip(browserName !== 'chromium', 'only Chromium can drive an input method');
-    const hint = page.locator('[data-code-runner] [data-role="hint"]');
-    const ime = await page.context().newCDPSession(page);
-    await open(page, 'run-cout');
-    await page.keyboard.press('G');
-    await page.keyboard.press('O');
-    await page.keyboard.type('cout << 11;');
-    await page.keyboard.press('Shift');
-    await ime.send('Input.imeSetComposition', { selectionEnd: 1, selectionStart: 1, text: '`' });
-    await ime.send('Input.imeSetComposition', { selectionEnd: 0, selectionStart: 0, text: '' });
-    await ime.send('Input.imeSetComposition', { selectionEnd: 1, selectionStart: 1, text: 'ㄅ' });
-    await ime.send('Input.insertText', { text: '八' });
-    await expect(hint).toHaveText('按 Esc');
-    await page.keyboard.press('Escape');
-    await expect(hint).toHaveText('Enter 執行');
-    expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
   });
 
   test('a guided gate records the entry and every press with its unit', async ({ page }) => {
@@ -685,34 +663,14 @@ test.describe('起步單元', () => {
   test('clicking the drill during a demonstration does not trap the keyboard', async ({ page }) => {
     const input = page.locator('[data-typing-drill] [data-role="input"]');
     await open(page, 'press-i');
-    await expect(input).toBeDisabled();
+    await expect(input).not.toHaveAttribute('tabindex');
     await page.locator('[data-typing-drill]').click();
     await expect(input).not.toBeFocused();
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('insert-is');
     await open(page, 'type-template');
-    await expect(input).toBeEnabled();
+    await expect(input).toHaveAttribute('tabindex', '0');
     await expect(input).toBeFocused();
-  });
-
-  test('full-width input gets its own hint and types nothing', async ({ page }) => {
-    const hint = page.locator('[data-typing-drill] [data-role="hint"]');
-    const mode = page.locator('[data-typing-drill] [data-role="mode"]');
-    const done = page.locator('[data-typing-drill] [data-role="done"]');
-    await open(page, 'type-template');
-    await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
-    await expect(page.locator('[data-typing-drill] .drill-tip')).toContainText('半形');
-    await page.keyboard.insertText('ｉ');
-    await expect(hint).toContainText('全形');
-    await expect(mode).toHaveText('-- NORMAL --');
-    await page.keyboard.press('i');
-    await expect(mode).toHaveText('-- INSERT --');
-    await page.keyboard.insertText('＃');
-    await expect(hint).toContainText('全形');
-    await expect(done).toHaveText('');
-    await page.keyboard.press('#');
-    await expect(done).toHaveText('#');
-    await expect(hint).not.toContainText('全形');
   });
 
   test('小精靈的示範打完時，不會出現稱讚學生的話', async ({ page }) => {

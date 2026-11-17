@@ -4,8 +4,6 @@ import { expectedChar, insertKey, isDone, isTyped, type Drill, type Feedback } f
 import { escapeKey } from './keyboard';
 
 const causes: Readonly<Record<Feedback, string>> = {
-  'full-width': '',
-  ime: '',
   'need-insert': 'need-insert',
   'no-delete': 'no-delete',
   none: 'other',
@@ -13,8 +11,6 @@ const causes: Readonly<Record<Feedback, string>> = {
 };
 
 const verdicts: Readonly<Record<Feedback, string>> = {
-  'full-width': 'full-width',
-  ime: 'ime',
   'need-insert': 'wrong',
   'no-delete': 'wrong',
   none: 'wrong',

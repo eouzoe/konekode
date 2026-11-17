@@ -23,18 +23,20 @@ import {
   type Session,
 } from './steps';
 import { buildKeyboard, findPart, quiet, render, type Parts } from './view';
-import { isFullWidth } from './width';
 
 const deleteKeys = new Set(['Backspace', 'Delete']);
 
-const readInput = (event: InputEvent): string => {
-  if (event.inputType === 'insertLineBreak' || event.inputType === 'insertParagraph') {
+const typedBy = (event: KeyboardEvent): string | null => {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return null;
+  }
+  if (event.key === 'Enter') {
     return '\n';
   }
-  if (event.inputType === 'insertText') {
-    return event.data ?? '';
+  if (event.key.length === 1) {
+    return event.key;
   }
-  return '';
+  return null;
 };
 
 const typeInto = (drill: Drill, text: string): Drill => {
@@ -45,48 +47,39 @@ const typeInto = (drill: Drill, text: string): Drill => {
   return next;
 };
 
-const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
-  if (event.isComposing) {
-    return drill;
-  }
+const judge = (drill: Drill, event: KeyboardEvent): Drill | null => {
+  const typed = typedBy(event);
   if (event.key === escapeKey) {
-    event.preventDefault();
     return escape(drill);
   }
   if (deleteKeys.has(event.key)) {
-    event.preventDefault();
     return remind(drill, 'no-delete');
   }
-  return drill;
+  if (typed === null) {
+    return null;
+  }
+  return press(drill, typed);
 };
 
-const onInput = (drill: Drill, event: InputEvent): Drill => {
+const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
+  const next = judge(drill, event);
+  if (next === null) {
+    return drill;
+  }
   event.preventDefault();
-  if (isFullWidth(event.data ?? '')) {
-    return remind(drill, 'full-width');
-  }
-  if (event.isComposing || event.inputType === 'insertCompositionText') {
-    return remind(drill, 'ime');
-  }
-  return typeInto(drill, readInput(event));
+  return next;
 };
 
-const collectParts = (root: HTMLElement): Parts => {
-  const input = findPart(root, 'input');
-  if (!(input instanceof HTMLTextAreaElement)) {
-    throw new TypeError('輸入框必須是 textarea');
-  }
-  return {
-    current: findPart(root, 'current'),
-    done: findPart(root, 'done'),
-    hint: findPart(root, 'hint'),
-    input,
-    keyboard: findPart(root, 'keyboard'),
-    mode: findPart(root, 'mode'),
-    rest: findPart(root, 'rest'),
-    root,
-  };
-};
+const collectParts = (root: HTMLElement): Parts => ({
+  current: findPart(root, 'current'),
+  done: findPart(root, 'done'),
+  hint: findPart(root, 'hint'),
+  input: findPart(root, 'input'),
+  keyboard: findPart(root, 'keyboard'),
+  mode: findPart(root, 'mode'),
+  rest: findPart(root, 'rest'),
+  root,
+});
 
 const shown = (session: Session): Drill => {
   if (session.demo) {
@@ -99,7 +92,11 @@ const yieldInput = (session: Session, parts: Parts): void => {
   if (session.demo && document.activeElement === parts.input) {
     parts.input.blur();
   }
-  parts.input.disabled = session.demo;
+  if (session.demo) {
+    parts.input.removeAttribute('tabindex');
+    return;
+  }
+  parts.input.tabIndex = 0;
 };
 
 const paint = (session: Session, parts: Parts): void => {
@@ -243,18 +240,13 @@ const advance = (session: Session, parts: Parts, next: Drill): void => {
 };
 
 const listen = (session: Session, parts: Parts): void => {
-  parts.input.addEventListener('beforeinput', (event) => {
-    const next = onInput(session.live, event);
-    record(session, parts, attemptOf(session.live, next, event.data ?? event.inputType));
-    advance(session, parts, next);
-  });
   parts.input.addEventListener('keydown', (event) => {
+    if (session.demo) {
+      return;
+    }
     const next = onKeyDown(session.live, event);
     record(session, parts, attemptOf(session.live, next, event.key));
     advance(session, parts, next);
-  });
-  parts.input.addEventListener('compositionend', () => {
-    parts.input.value = '';
   });
   parts.root.addEventListener('click', () => {
     if (!session.demo) {

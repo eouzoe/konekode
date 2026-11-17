@@ -1,15 +1,7 @@
 import { engine } from '@/lib/complete/current';
 import { autoClosed } from '@/lib/complete/pairs';
 
-import {
-  expectedChar,
-  hasStarted,
-  insertKey,
-  isDone,
-  isTyped,
-  type Drill,
-  type Feedback,
-} from './drill';
+import { expectedChar, hasStarted, insertKey, isDone, isTyped, type Drill } from './drill';
 import { describeNext } from './hint';
 import {
   enterKey,
@@ -27,7 +19,7 @@ interface Parts {
   readonly current: HTMLElement;
   readonly done: HTMLElement;
   readonly hint: HTMLElement;
-  readonly input: HTMLTextAreaElement;
+  readonly input: HTMLElement;
   readonly keyboard: HTMLElement;
   readonly mode: HTMLElement;
   readonly rest: HTMLElement;
@@ -78,16 +70,7 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
   );
 };
 
-const warnings: Partial<Record<Feedback, string>> = {
-  'full-width': messages.fullWidth,
-  ime: messages.ime,
-};
-
 const describeNormal = (drill: Drill): string => {
-  const warning = warnings[drill.feedback];
-  if (warning !== undefined) {
-    return warning;
-  }
   if (drill.feedback === 'need-insert') {
     return messages.needInsert;
   }
@@ -106,10 +89,6 @@ const describeTyped = (drill: Drill): string => {
 
 const describeInsert = (drill: Drill): string => {
   const next = describeNext(expectedChar(drill));
-  const warning = warnings[drill.feedback];
-  if (warning !== undefined) {
-    return warning;
-  }
   if (drill.feedback === 'no-delete') {
     return `${messages.noDelete}${next}`;
   }

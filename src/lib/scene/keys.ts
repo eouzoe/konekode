@@ -10,7 +10,7 @@ const isControl = (target: EventTarget | null): boolean =>
   (target instanceof HTMLElement && target.closest('.cm-editor') !== null);
 
 const isDrillInput = (target: EventTarget | null): boolean =>
-  target instanceof HTMLTextAreaElement && target.dataset.role === 'input';
+  target instanceof HTMLElement && target.dataset.role === 'input';
 
 const hasModifier = (event: KeyboardEvent): boolean =>
   event.ctrlKey || event.metaKey || event.altKey;

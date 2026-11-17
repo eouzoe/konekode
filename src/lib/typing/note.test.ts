@@ -45,14 +45,7 @@ test('each character is its own step, right or mistyped', () => {
   });
 });
 
-test('input method, full-width and delete presses keep their own labels', () => {
-  expect(attemptOf(inserting, remind(inserting, 'ime'), 'Process')).toMatchObject({
-    cause: '',
-    verdict: 'ime',
-  });
-  expect(attemptOf(inserting, remind(inserting, 'full-width'), 'ａ')).toMatchObject({
-    verdict: 'full-width',
-  });
+test('a delete press keeps its own label', () => {
   expect(attemptOf(inserting, remind(inserting, 'no-delete'), 'Backspace')).toMatchObject({
     cause: 'no-delete',
     verdict: 'wrong',

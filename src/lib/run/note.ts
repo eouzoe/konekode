@@ -1,6 +1,6 @@
+import { type Pressed } from '@/lib/edit/session';
 import { track } from '@/lib/record/current';
 
-import { type Step } from './guided';
 import { type Outcome } from './protocol';
 
 interface Place {
@@ -74,7 +74,7 @@ const noteAttempt = (place: Place, attempt: Attempt): void => {
   track('step.tried', { data: { ...attempt }, ref: place.beat, unit: place.unit });
 };
 
-const noteStep = (place: Place, step: Step): void => {
+const noteStep = (place: Place, step: Pressed): void => {
   noteAttempt(place, {
     at: step.at,
     cause: step.cause,

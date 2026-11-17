@@ -72,6 +72,8 @@ const advance = (buffer: Buffer, key: string, rules: Rules): Buffer | null => {
   return basic(buffer, key, rules);
 };
 
+const knownKeys: ReadonlySet<string> = new Set([...commands.keys(), ...prefixes, '.']);
+
 const step = (buffer: Buffer, key: string, rules: Rules): Result => {
   const next = advance(buffer, key, rules);
   if (next === null) {
@@ -88,4 +90,4 @@ const run = (buffer: Buffer, keys: readonly string[], rules: Rules): Buffer => {
   return now;
 };
 
-export { run, step, type Result };
+export { knownKeys, run, step, type Result };

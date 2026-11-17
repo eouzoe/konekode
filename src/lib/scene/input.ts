@@ -37,8 +37,8 @@ const runProgram = (root: HTMLElement): boolean => {
 };
 
 const gateInputs = [
-  '[data-typing-drill] [data-role="input"]:not(:disabled)',
-  '[data-code-runner] .cm-content[contenteditable="true"]',
+  '[data-typing-drill][data-demo="false"] [data-role="input"]',
+  '[data-code-runner][data-armed="true"] [data-role="editor"]',
 ].join(', ');
 const tabKey = 'Tab';
 

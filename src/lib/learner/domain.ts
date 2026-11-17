@@ -1,5 +1,5 @@
 import { keys } from '@/lib/complete/catalog';
-import { expand } from '@/lib/run/guide';
+import { expand } from '@/lib/edit/path';
 import { insertKey } from '@/lib/typing/drill';
 import { pathOf, type Beat, type Task } from '@/lib/unit/format';
 
