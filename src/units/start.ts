@@ -153,11 +153,13 @@ const addCout: Task = {
 
 const addSecond: Task = {
   demo: [
+    { id: 'below-this-time', keys: [] },
     {
       id: 'open-below',
       keys: ['o'],
       teaches: ['key.o'],
     },
+    { id: 'up-and-down', keys: [] },
     {
       id: 'type-second',
       keys: ['type:cout << 22;', 'Esc'],
@@ -215,10 +217,16 @@ const useVariable: Task = {
 const readInput: Task = {
   demo: [
     {
-      id: 'find-char',
-      keys: ['k', '0', 'f1'],
-      teaches: ['key.0', 'key.f'],
+      id: 'line-start',
+      keys: ['k', '0'],
+      teaches: ['key.0'],
     },
+    {
+      id: 'find-char',
+      keys: ['f1'],
+      teaches: ['key.f'],
+    },
+    { id: 'find-point', keys: [] },
     {
       id: 'delete-char',
       keys: ['x', 'x'],
