@@ -470,6 +470,28 @@ test.describe('起步單元', () => {
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
   });
 
+  test('composing with an input method at a guided gate does not swallow later keys', async ({
+    browserName,
+    page,
+  }) => {
+    test.skip(browserName !== 'chromium', 'only Chromium can drive an input method');
+    const hint = page.locator('[data-code-runner] [data-role="hint"]');
+    const ime = await page.context().newCDPSession(page);
+    await open(page, 'run-cout');
+    await page.keyboard.press('G');
+    await page.keyboard.press('O');
+    await page.keyboard.type('cout << 11;');
+    await page.keyboard.press('Shift');
+    await ime.send('Input.imeSetComposition', { selectionEnd: 1, selectionStart: 1, text: '`' });
+    await ime.send('Input.imeSetComposition', { selectionEnd: 0, selectionStart: 0, text: '' });
+    await ime.send('Input.imeSetComposition', { selectionEnd: 1, selectionStart: 1, text: 'ㄅ' });
+    await ime.send('Input.insertText', { text: '八' });
+    await expect(hint).toHaveText('按 Esc');
+    await page.keyboard.press('Escape');
+    await expect(hint).toHaveText('Enter 執行');
+    expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
+  });
+
   test('a guided gate records the entry and every press with its unit', async ({ page }) => {
     const hint = page.locator('[data-code-runner] [data-role="hint"]');
     await open(page, 'run-cout');
