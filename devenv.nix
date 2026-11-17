@@ -7,6 +7,7 @@
     bun
     jujutsu
     just
+    vim
     wrangler
   ];
 
