@@ -25,13 +25,18 @@ const run = async (command: readonly string[], input = ''): Promise<Ran> => {
   return { code, err, out };
 };
 
-const hasContestCompiler = async (): Promise<boolean> => {
+const compilerVersion = async (): Promise<string> => {
   try {
     const { out } = await run([compiler, '--version']);
-    return out.split('\n')[0]?.endsWith(version) ?? false;
+    return out.split('\n')[0] ?? '';
   } catch {
-    return false;
+    return '';
   }
+};
+
+const hasContestCompiler = async (): Promise<boolean> => {
+  const found = await compilerVersion();
+  return found.endsWith(version);
 };
 
 const digestOf = (program: string, input: string): string =>
@@ -57,4 +62,4 @@ const contestOutput = async (program: string, input: string): Promise<string> =>
   return ran.out;
 };
 
-export { contestOutput, digestOf, hasContestCompiler };
+export { compilerVersion, contestOutput, digestOf, hasContestCompiler };

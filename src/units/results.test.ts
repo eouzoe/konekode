@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { knownOutcome } from '@/lib/run/known';
 
-import { contestOutput, digestOf, hasContestCompiler } from './contest';
+import { compilerVersion, contestOutput, digestOf, hasContestCompiler } from './contest';
 import { allChecks } from './index';
 import { results } from './results';
 
@@ -49,8 +49,9 @@ test('any other program or input is not answered from the stored results', () =>
   }
 });
 
-test('continuous integration has the contest compiler', () => {
-  expect(compilerHere || Bun.env.CI === undefined).toBe(true);
+test('continuous integration has the contest compiler', async () => {
+  const wanted = [' 13.3.0', ''][Number(Bun.env.CI === undefined)] ?? '';
+  expect(await compilerVersion()).toContain(wanted);
 });
 
 test.skipIf(!compilerHere)(
