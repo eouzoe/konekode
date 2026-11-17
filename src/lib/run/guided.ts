@@ -178,11 +178,9 @@ const refuseComposition = (holder: Holder, view: EditorView): boolean => {
     return false;
   }
   view.contentDOM.blur();
-  setTimeout(() => {
-    view.focus();
-    endComposition(view);
-    mend(holder, view);
-  }, 0);
+  view.focus();
+  endComposition(view);
+  mend(holder, view);
   return true;
 };
 
