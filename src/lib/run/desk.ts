@@ -77,18 +77,25 @@ interface Inner {
   readonly state: State;
 }
 
+const isElsewhere = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('dialog, input, textarea, select') !== null;
+
 const listen = ({ options, setSession, state }: Inner): void => {
-  options.parent.addEventListener('keydown', (event) => {
-    const key = keyFrom(event, state.session.buffer.mode === 'insert');
-    if (!state.armed || state.sprite !== null || key === null) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const pressed = press(state.session, key, options.rules());
-    setSession(pressed.session);
-    options.onPress(pressed);
-  });
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      const key = keyFrom(event, state.session.buffer.mode === 'insert');
+      if (!state.armed || state.sprite !== null || key === null || isElsewhere(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const pressed = press(state.session, key, options.rules());
+      setSession(pressed.session);
+      options.onPress(pressed);
+    },
+    { capture: true },
+  );
 };
 
 const textOf = (state: State, ofSprite: boolean): string => {

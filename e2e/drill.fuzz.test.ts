@@ -16,7 +16,6 @@ interface Run {
   model: Drill;
   readonly page: Page;
   readonly random: () => number;
-  stray: boolean;
 }
 
 const gate = 'type-template';
@@ -25,8 +24,6 @@ const length = 40;
 const input = '[data-typing-drill] [data-role="input"]';
 const pool = String.raw`abcdefghijklmnopqrstuvwxyzIOX0123456789#<>(){};.-:' `.split('');
 const named = ['Enter', 'Escape', 'Backspace', 'Delete', 'Tab'];
-const returning = new Set(['Enter', 'Tab']);
-
 const wanted = (model: Drill): string => {
   if (isTyped(model)) {
     return 'Escape';
@@ -56,11 +53,7 @@ const after = (model: Drill, key: string): Drill => {
 
 const tap = async (run: Run, key: string): Promise<void> => {
   run.actions.push(`key ${JSON.stringify(key)}`);
-  if (run.stray) {
-    run.stray = key.length > 1 && !returning.has(key);
-  } else {
-    run.model = after(run.model, key);
-  }
+  run.model = after(run.model, key);
   await run.page.keyboard.press(key);
 };
 
@@ -69,7 +62,6 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
     run.actions.push('blur and click back');
     await run.page.locator(input).blur();
     await run.page.locator('[data-typing-drill]').click();
-    run.stray = false;
   },
   right: async (run) => {
     await tap(run, wanted(run.model));
@@ -81,7 +73,6 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
   stray: async (run) => {
     run.actions.push('lose focus');
     await run.page.locator(input).blur();
-    run.stray = true;
   },
   wrong: async (run) => {
     await tap(run, pickFrom(run.random, [...pool, ...named]));
@@ -129,7 +120,6 @@ const expectSettled = async (run: Run, label: string): Promise<void> => {
 
 const finish = async (run: Run, label: string): Promise<void> => {
   await run.page.locator('[data-typing-drill]').click();
-  run.stray = false;
   while (!isDone(run.model)) {
     await tap(run, wanted(run.model));
     if (!isDone(run.model)) {
@@ -153,7 +143,6 @@ test('random input at the typing drill never leaves what the drill describes', a
       model: createDrill(target ?? ''),
       page,
       random: generator(seed),
-      stray: false,
     };
     const label = (): string => `seed ${String(seed)}, actions: ${run.actions.join(' | ')}`;
     for (let count = 0; count < length && !isDone(run.model); count += 1) {

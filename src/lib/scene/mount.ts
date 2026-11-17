@@ -21,7 +21,7 @@ interface Scene {
   readonly reveal: Reveal;
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
-  readonly stdin: HTMLTextAreaElement | null;
+  readonly stdin: HTMLElement | null;
   timer: ReturnType<typeof setTimeout> | null;
   readonly unit: string;
   waiting: boolean;
@@ -53,8 +53,8 @@ const fillInput = (scene: Scene, beat: HTMLElement): void => {
   if (scene.stdin === null || input === undefined) {
     return;
   }
-  scene.stdin.value = input;
-  const field = scene.stdin.closest('label');
+  scene.stdin.textContent = input;
+  const field = scene.stdin.closest<HTMLElement>('[data-role="field"]');
   if (field !== null) {
     field.hidden = false;
   }
@@ -235,7 +235,7 @@ const build = (root: HTMLElement, read: ReadUnit): Scene => {
     reveal: createReveal(),
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
-    stdin: root.querySelector<HTMLTextAreaElement>('[data-role="stdin"]'),
+    stdin: root.querySelector<HTMLElement>('[data-role="stdin"]'),
     timer: null,
     unit,
     waiting: first.matches('blocked'),

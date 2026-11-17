@@ -67,8 +67,17 @@ const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
     return drill;
   }
   event.preventDefault();
+  event.stopPropagation();
   return next;
 };
+
+const isElsewhere = (target: EventTarget | null): boolean =>
+  target instanceof Element && target.closest('dialog, input, textarea, select') !== null;
+
+const isOpen = (session: Session, parts: Parts): boolean =>
+  !session.demo &&
+  parts.input.offsetParent !== null &&
+  parts.root.closest<HTMLElement>('[data-scene]')?.dataset.waiting === 'true';
 
 const collectParts = (root: HTMLElement): Parts => ({
   current: findPart(root, 'current'),
@@ -240,14 +249,18 @@ const advance = (session: Session, parts: Parts, next: Drill): void => {
 };
 
 const listen = (session: Session, parts: Parts): void => {
-  parts.input.addEventListener('keydown', (event) => {
-    if (session.demo) {
-      return;
-    }
-    const next = onKeyDown(session.live, event);
-    record(session, parts, attemptOf(session.live, next, event.key));
-    advance(session, parts, next);
-  });
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (!isOpen(session, parts) || isElsewhere(event.target)) {
+        return;
+      }
+      const next = onKeyDown(session.live, event);
+      record(session, parts, attemptOf(session.live, next, event.key));
+      advance(session, parts, next);
+    },
+    { capture: true },
+  );
   parts.root.addEventListener('click', () => {
     if (!session.demo) {
       parts.input.focus();

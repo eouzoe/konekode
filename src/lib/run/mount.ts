@@ -17,7 +17,7 @@ interface Parts {
   readonly desk: Desk;
   readonly fresh: boolean;
   readonly hint: HTMLElement;
-  readonly input: HTMLTextAreaElement;
+  readonly input: HTMLElement;
   readonly output: HTMLElement;
   readonly root: HTMLElement;
   readonly status: HTMLElement;
@@ -97,7 +97,7 @@ const fail = (parts: Parts, beat: string, error: unknown): void => {
 
 const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<void> => {
   const source = parts.desk.text(forced);
-  const input = parts.input.value;
+  const input = parts.input.textContent;
   const began = performance.now();
   const outcome = await runProgram(source, input);
   const place = { beat, unit: unitOf(parts.root) };
@@ -216,7 +216,7 @@ const buildParts = (root: HTMLElement, onPress: (pressed: Pressed) => void): Par
   desk: makeDesk(root, onPress),
   fresh: readDraft(root.dataset.draft ?? '') === null,
   hint: find(root, 'hint', HTMLElement),
-  input: find(root, 'stdin', HTMLTextAreaElement),
+  input: find(root, 'stdin', HTMLElement),
   output: find(root, 'output', HTMLElement),
   root,
   status: find(root, 'status', HTMLElement),
@@ -254,7 +254,10 @@ const mountRunner = (root: HTMLElement): void => {
       parts.status.textContent = busyStatus(percent);
     }
   });
-  parts.button.addEventListener('click', start);
+  parts.button.addEventListener('click', () => {
+    parts.button.blur();
+    start();
+  });
   root.addEventListener('runner:run', start);
   guide(parts);
 };

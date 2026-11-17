@@ -13,18 +13,10 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   <div class="editor" data-role="editor" data-source={source}>
     <pre set:text={source} />
   </div>
-  <label class="field" hidden={!withInput}>
+  <div class="field" data-role="field" hidden={!withInput}>
     <span>輸入</span>
-    <textarea
-      data-role="stdin"
-      class="stdin"
-      rows="2"
-      autocapitalize="off"
-      autocomplete="off"
-      spellcheck="false"
-      set:text={input}
-    />
-  </label>
+    <pre data-role="stdin" class="stdin" set:text={input} />
+  </div>
   <div class="bar">
     <button type="button" data-role="run">執行</button>
     <span data-role="status" class="status" aria-live="polite"></span>
@@ -60,7 +52,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .editor:focus {
     outline: none;
   }
-  .editor:focus :global(.cm-editor) {
+  .runner[data-armed='true'] .editor :global(.cm-editor) {
     outline: 2px solid var(--accent);
   }
   .editor :global(.mode) {
@@ -86,11 +78,11 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     width: 1ch;
     outline: 1px solid #7aa2f7;
   }
-  .editor:focus :global(.cm-own-normal)::before {
+  .runner[data-armed='true'] .editor :global(.cm-own-normal)::before {
     background: #3d59a1;
     outline: none;
   }
-  .editor:focus :global(.cm-own-insert)::before {
+  .runner[data-armed='true'] .editor :global(.cm-own-insert)::before {
     border-left: 2px solid var(--ink);
     margin-left: -1px;
   }
@@ -101,8 +93,9 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     border-radius: 0.6rem;
     background: var(--panel);
   }
-  textarea {
-    width: 100%;
+  .stdin {
+    min-height: 1.6rem;
+    margin: 0;
     padding: 0.9rem 1rem;
     border: 1px solid var(--line);
     border-radius: 0.6rem;
@@ -111,12 +104,8 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     font-family: var(--mono);
     font-size: 1rem;
     line-height: 1.6;
-    resize: vertical;
-    tab-size: 4;
-  }
-  textarea:focus {
-    outline: 2px solid var(--accent);
-    outline-offset: 1px;
+    white-space: pre-wrap;
+    user-select: none;
   }
   .bar {
     display: flex;
@@ -160,7 +149,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     font-size: 0.875rem;
     user-select: none;
   }
-  .runner:not(:focus-within) .hint {
+  .runner:not([data-armed='true']) .hint {
     visibility: hidden;
   }
   .runner[data-guided='true'] .bar {

@@ -752,6 +752,66 @@ test.describe('起步單元', () => {
       .toBe(programs['run-cout'] ?? '');
   });
 
+  const distractions: Record<string, (page: Page) => Promise<void>> = {
+    'clicking the dialogue': async (page) => {
+      await page.locator('[data-role="dialogue"]').click();
+    },
+    'clicking the output': async (page) => {
+      await page.locator('[data-code-runner] [data-role="output"]').click();
+    },
+    'clicking the page': async (page) => {
+      await page.mouse.click(4, 4);
+    },
+    'losing focus': async (page) => {
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      });
+    },
+  };
+
+  for (const gate of Object.keys(lessons)) {
+    for (const [name, distract] of Object.entries(distractions)) {
+      test(`${gate} still takes every key after ${name}`, async ({ page }) => {
+        await open(page, gate);
+        await expect(page.locator(studentEditor)).toBeVisible();
+        await distract(page);
+        await follow(page, lessons[gate] ?? []);
+        await expect.poll(async () => await currentId(page), { timeout: 150_000 }).not.toBe(gate);
+      });
+    }
+  }
+
+  for (const [name, distract] of Object.entries(distractions)) {
+    test(`the typing drill still takes every key after ${name}`, async ({ page }) => {
+      await open(page, 'type-template');
+      await expect(page.locator('[data-typing-drill]')).toBeVisible();
+      if (name !== 'clicking the output') {
+        await distract(page);
+      }
+      await page.keyboard.type(`i${template}`);
+      await page.keyboard.press('Escape');
+      await expect.poll(async () => (await current(page)).waiting).toBe(false);
+      await page.keyboard.press('Space');
+      expect(await currentId(page)).not.toBe('type-template');
+    });
+  }
+
+  test('the given input is shown, cannot be changed, and takes no keys', async ({ page }) => {
+    await open(page, 'run-cin');
+    const given = page.locator('[data-code-runner] [data-role="stdin"]');
+    await expect(given).toHaveText('42');
+    await given.click();
+    await page.keyboard.type('9');
+    await expect(given).toHaveText('42');
+    await expect(
+      page.locator('textarea, input, select, [contenteditable]:not([contenteditable="false"])'),
+    ).toHaveCount(0);
+    await follow(page, lessons['run-cin'] ?? []);
+    await expect.poll(async () => await currentId(page), { timeout: 150_000 }).not.toBe('run-cin');
+  });
+
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {
     await open(page);
     const seen: string[] = [];
@@ -787,6 +847,19 @@ test.describe('有動態效果時', () => {
     expect(await currentId(page)).toBe('fullscreen-no');
     await expect.poll(async () => (await current(page)).revealing, { timeout: 5000 }).toBe(false);
   });
+});
+
+test.describe('有動態效果時的關卡', () => {
+  for (const gate of Object.keys(lessons)) {
+    test(`${gate} takes the keys as soon as its sentence is shown`, async ({ page }) => {
+      await open(page, gate);
+      expect((await current(page)).revealing).toBe(true);
+      await page.keyboard.press('Space');
+      expect((await current(page)).revealing).toBe(false);
+      await follow(page, lessons[gate] ?? []);
+      await expect.poll(async () => await currentId(page), { timeout: 150_000 }).not.toBe(gate);
+    });
+  }
 });
 
 test.describe('全螢幕', () => {
