@@ -27,7 +27,8 @@ test('a two-key command uses both keys and its argument uses nothing', () => {
 test('a beat shows the keys it is labelled with and the keys the sprite presses', () => {
   expect(start?.shows.get('press-i')).toEqual(['key.i']);
   expect(start?.shows.get('go-end')).toEqual(['key.G']);
-  expect(start?.shows.get('repeat')).toEqual(['key.k', 'key..', 'key.$']);
+  expect(start?.shows.get('go-up')).toEqual(['key.k']);
+  expect(start?.shows.get('repeat')).toEqual(['key..', 'key.$']);
   expect(start?.shows.get('intro')).toEqual([]);
 });
 

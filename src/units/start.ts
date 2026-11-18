@@ -174,6 +174,7 @@ const addSecond: Task = {
 
 const addNewlines: Task = {
   demo: [
+    { id: 'where-newline', keys: [] },
     {
       id: 'line-end',
       keys: ['$'],
@@ -185,9 +186,14 @@ const addNewlines: Task = {
     },
     { id: 'repeat-ask', keys: [] },
     {
+      id: 'go-up',
+      keys: ['k'],
+      teaches: ['key.k'],
+    },
+    {
       id: 'repeat',
-      keys: ['k', '$', '.'],
-      teaches: ['key.k', 'key..'],
+      keys: ['$', '.'],
+      teaches: ['key..'],
     },
     { id: 'repeat-point', keys: [] },
   ],
@@ -199,14 +205,20 @@ const addNewlines: Task = {
 
 const useVariable: Task = {
   demo: [
+    { id: 'old-lines', keys: [] },
     {
       id: 'delete-lines',
       keys: ['dj'],
       teaches: ['key.d', 'key.j'],
     },
+    { id: 'delete-point', keys: [] },
     {
       id: 'retype',
-      keys: ['O', 'type:int a{11};', 'Enter', `type:cout << a << ${newline};`, 'Esc'],
+      keys: ['O', 'type:int a{11};'],
+    },
+    {
+      id: 'next-line',
+      keys: ['Enter', `type:cout << a << ${newline};`, 'Esc'],
     },
   ],
   expect: '11',
@@ -281,6 +293,11 @@ const printing: readonly Part[] = [
   },
   {
     id: 'newline',
+    snippet: printLines,
+    stage: 'run',
+  },
+  {
+    id: 'quote-keys',
     snippet: printLines,
     stage: 'run',
   },

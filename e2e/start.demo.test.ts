@@ -124,7 +124,7 @@ test.describe('起步單元：小精靈的示範', () => {
     ][] = [
       ['type-second', draftAt(first, 'cout << 11;'), second],
       ['repeat', draftAt(second, 'cout << 22;'), third],
-      ['retype', draftAt(third, 'cout << 11'), fourth],
+      ['next-line', draftAt(third, 'cout << 11'), fourth],
       ['add-cin', draftAt(fourth, 'cout << a'), programs['run-cin'] ?? ''],
     ];
     for (const [beat, draft, wanted] of cases) {
