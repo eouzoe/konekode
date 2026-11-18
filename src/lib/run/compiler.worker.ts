@@ -1,9 +1,16 @@
+import { baseFlags, pchMagic, pchName, pchUrl } from './flags';
 import { type CompileMessage, type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
 import type { commands } from '@yowasp/clang';
 
-const flags = ['-std=c++17', '-O1', '-fno-exceptions', '-Iinclude', 'main.cpp', '-o', 'main.wasm'];
+interface Tools {
+  readonly commands: typeof commands;
+  header: Uint8Array | null;
+}
+
+const outputs = ['main.cpp', '-o', 'main.wasm'];
+const headerTrouble = /precompiled header|PCH file/iu;
 
 let reported = -1;
 
@@ -21,19 +28,38 @@ const reportLoading = (done: number, total: number): void => {
   }
 };
 
-const load = async (): Promise<typeof commands> => {
+const isHeader = (bytes: Uint8Array): boolean =>
+  new TextDecoder().decode(bytes.subarray(0, pchMagic.length)) === pchMagic;
+
+const fetchHeader = async (): Promise<Uint8Array | null> => {
+  try {
+    const response = await fetch(pchUrl);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (response.ok && isHeader(bytes)) {
+      return bytes;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const load = async (): Promise<Tools> => {
   const clang = await import('@yowasp/clang');
-  await clang.runLLVM(undefined, undefined, {
-    fetchProgress: ({ doneLength, totalLength }) => {
-      reportLoading(doneLength, totalLength);
-    },
-  });
-  return clang.commands;
+  const [header] = await Promise.all([
+    fetchHeader(),
+    clang.runLLVM(undefined, undefined, {
+      fetchProgress: ({ doneLength, totalLength }) => {
+        reportLoading(doneLength, totalLength);
+      },
+    }),
+  ]);
+  return { commands: clang.commands, header };
 };
 
 let loading: ReturnType<typeof load> | null = null;
 
-const ready = async (): Promise<typeof commands | null> => {
+const ready = async (): Promise<Tools | null> => {
   loading ??= load();
   try {
     return await loading;
@@ -43,15 +69,32 @@ const ready = async (): Promise<typeof commands | null> => {
   }
 };
 
+const flagsFor = (header: Uint8Array | null): string[] => {
+  if (header === null) {
+    return [...baseFlags, ...outputs];
+  }
+  return [...baseFlags, '-include-pch', pchName, ...outputs];
+};
+
+type Files = NonNullable<Parameters<(typeof commands)['clang++']>[1]>;
+
+const treeFor = (source: string, header: Uint8Array | null): Files => {
+  const tree: Files = { include: { bits: { 'stdc++.h': umbrella } }, 'main.cpp': source };
+  if (header !== null) {
+    tree[pchName] = header;
+  }
+  return tree;
+};
+
 const build = async (
-  tools: typeof commands,
+  tools: Tools,
   source: string,
   report: (text: string) => void,
 ): Promise<CompileReply> => {
   const decoder = new TextDecoder();
-  const files = await tools['clang++'](
-    flags,
-    { include: { bits: { 'stdc++.h': umbrella } }, 'main.cpp': source },
+  const files = await tools.commands['clang++'](
+    flagsFor(tools.header),
+    treeFor(source, tools.header),
     {
       stderr: (bytes) => {
         if (bytes !== null) {
@@ -68,11 +111,7 @@ const build = async (
   return { cause: 'compiler', message: 'no output', ok: false };
 };
 
-const compile = async (source: string): Promise<CompileReply> => {
-  const tools = await ready();
-  if (tools === null) {
-    return { cause: 'compiler', message: 'not loaded', ok: false };
-  }
+const attempt = async (tools: Tools, source: string): Promise<CompileReply> => {
   let message = '';
   try {
     return await build(tools, source, (text) => {
@@ -84,6 +123,19 @@ const compile = async (source: string): Promise<CompileReply> => {
     }
     return { cause: 'program', message, ok: false };
   }
+};
+
+const compile = async (source: string): Promise<CompileReply> => {
+  const tools = await ready();
+  if (tools === null) {
+    return { cause: 'compiler', message: 'not loaded', ok: false };
+  }
+  const reply = await attempt(tools, source);
+  if (reply.ok || tools.header === null || !headerTrouble.test(reply.message)) {
+    return reply;
+  }
+  tools.header = null;
+  return attempt(tools, source);
 };
 
 const answer = async (request: CompileRequest): Promise<void> => {

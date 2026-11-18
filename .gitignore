@@ -10,3 +10,4 @@ devenv.local.nix
 *.tsbuildinfo
 test-results/
 playwright-report/
+public/compiler/

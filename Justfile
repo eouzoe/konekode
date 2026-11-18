@@ -1,13 +1,16 @@
-dev:
+pch:
+    bun src/lib/run/pch.build.ts
+
+dev: pch
     bun --bun run dev
 
-edit:
+edit: pch
     PUBLIC_MODE=dev bun --bun run dev
 
-build:
+build: pch
     PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build
 
-build-dev:
+build-dev: pch
     PUBLIC_MODE=dev PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build --outDir dist-dev
     cp -r dev-assets/fonts dist-dev/fonts
 
