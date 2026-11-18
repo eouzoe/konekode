@@ -5,6 +5,8 @@ const second = 1000;
 const testSeconds = 420;
 const serverSeconds = 90;
 const expectSeconds = 10;
+const actionSeconds = 10;
+const pageSeconds = 30;
 
 export default defineConfig({
   expect: { timeout: expectSeconds * second },
@@ -18,7 +20,12 @@ export default defineConfig({
   reporter: 'list',
   testDir: 'e2e',
   timeout: testSeconds * second,
-  use: { baseURL: `http://localhost:${String(port)}`, trace: 'retain-on-failure' },
+  use: {
+    actionTimeout: actionSeconds * second,
+    baseURL: `http://localhost:${String(port)}`,
+    navigationTimeout: pageSeconds * second,
+    trace: 'retain-on-failure',
+  },
   webServer: {
     command: `bun x wrangler d1 migrations apply cp-intake --local && bun x wrangler d1 execute cp-intake --local --command "DELETE FROM intake_usage" && bun x wrangler dev --port ${String(port)}`,
     reuseExistingServer: true,
