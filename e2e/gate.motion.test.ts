@@ -1,6 +1,7 @@
 import { beatsOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { studentEditor } from './gate-view';
+import { frames } from './scene-view';
 import { expect, test, type Page } from './test';
 
 const gate = 'run-cout';
@@ -30,17 +31,6 @@ const watchMotion = async (page: Page): Promise<void> => {
 
 const motion = async (page: Page): Promise<string[]> =>
   ((await page.locator('html').getAttribute('data-motion')) ?? '').split(' ');
-
-const frames = async (page: Page, count: number): Promise<void> => {
-  for (let at = 0; at < count; at += 1) {
-    await page.evaluate(
-      async () =>
-        await new Promise<number>((resolve) => {
-          requestAnimationFrame(resolve);
-        }),
-    );
-  }
-};
 
 test('with motion allowed, a wrong key, a saving command and the waiting key really move', async ({
   page,

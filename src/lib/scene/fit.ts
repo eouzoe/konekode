@@ -18,9 +18,17 @@ const fitStage = (root: HTMLElement): void => {
 };
 
 const watchStage = (root: HTMLElement): void => {
+  let waiting = false;
   fitStage(root);
   const watcher = new ResizeObserver(() => {
-    fitStage(root);
+    if (waiting) {
+      return;
+    }
+    waiting = true;
+    requestAnimationFrame(() => {
+      waiting = false;
+      fitStage(root);
+    });
   });
   for (const part of root.querySelectorAll<HTMLElement>('.run-slot > *, .drill-slot > *')) {
     watcher.observe(part);

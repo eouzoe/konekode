@@ -22,4 +22,15 @@ const current = async (page: Page): Promise<Current> =>
 
 const currentId = async (page: Page): Promise<string> => (await current(page)).id;
 
-export { current, currentId, type Current };
+const frames = async (page: Page, count: number): Promise<void> => {
+  for (let at = 0; at < count; at += 1) {
+    await page.evaluate(
+      async () =>
+        await new Promise<number>((resolve) => {
+          requestAnimationFrame(resolve);
+        }),
+    );
+  }
+};
+
+export { current, currentId, frames, type Current };

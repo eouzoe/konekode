@@ -2,6 +2,7 @@ import { checksOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { arrive, tap } from './gate-support';
 import { studentEditor } from './gate-view';
+import { frames } from './scene-view';
 import { expect, test, type Page } from './test';
 
 interface Box {
@@ -29,8 +30,10 @@ const slack = 1;
 const settledStates = /^(?:ok|error)$/u;
 
 const cursorClass = 'cm-own-line';
+const settling = 2;
 
 const measure = async (page: Page): Promise<Layout> => {
+  await frames(page, settling);
   const found = await page.evaluate((lineClass) => {
     const runner = document.querySelector('[data-code-runner]');
     const dialogue = document.querySelector('[data-role="dialogue"]');
