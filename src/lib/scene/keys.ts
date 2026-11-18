@@ -1,7 +1,7 @@
 type Intent = 'backward' | 'forward' | 'none';
 
-const backwardKeys = new Set(['ArrowLeft', 'ArrowUp']);
-const forwardKeys = new Set(['ArrowDown', 'ArrowRight', 'Enter']);
+const backwardKeys = new Set(['ArrowLeft', 'ArrowUp', 'PageUp']);
+const forwardKeys = new Set(['ArrowDown', 'ArrowRight', 'Enter', 'PageDown']);
 
 const isControl = (target: EventTarget | null): boolean =>
   target instanceof HTMLTextAreaElement ||

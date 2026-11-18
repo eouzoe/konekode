@@ -1,7 +1,7 @@
 import { type Expected } from '@/lib/edit/path';
 import { expectedNow, isGuided as follows, type Pressed } from '@/lib/edit/session';
 import { ui } from '@/lib/text/ui';
-import { describeCommand, describeNext } from '@/lib/typing/hint';
+import { describeCommand, describeNext, needsTelling } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
 
 import { type Desk } from './desk';
@@ -34,7 +34,47 @@ const describeExpected = (expected: Expected | null): string => {
   return named[expected.key] ?? describeCommand(expected.key);
 };
 
-const notTaught = ui['run.notTaught'];
+const describeQuietly = (expected: Expected | null): string => {
+  if (expected?.kind === 'text' && !needsTelling(expected.key)) {
+    return '';
+  }
+  return describeExpected(expected);
+};
+
+const describeWanted = (expected: Expected | null): string => {
+  if (expected?.kind === 'run') {
+    return messages.pressEnter;
+  }
+  return describeExpected(expected);
+};
+
+const reasons: Readonly<Record<string, string>> = {
+  case: ui['guide.case'],
+  'early-leave': ui['guide.earlyLeave'],
+  'early-run': ui['guide.earlyRun'],
+  'need-insert': ui['guide.needInsert'],
+  'no-delete': messages.noDelete,
+};
+
+const leadOf = (pressed: Pressed | null): string => {
+  if (pressed === null) {
+    return ui['guide.earlyRun'];
+  }
+  if (pressed.key.startsWith('Arrow')) {
+    return ui['guide.arrow'];
+  }
+  return reasons[pressed.cause] ?? messages.wrong;
+};
+
+const calmAfter = 2600;
+const calming = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
+const refusalOf = (key: string): string => {
+  if (key.startsWith('Arrow')) {
+    return ui['run.noArrows'];
+  }
+  return ui['run.notTaught'];
+};
 const hints: Readonly<Record<string, string>> = {
   insert: ui['run.hintInsert'],
   normal: ui['typing.runNow'],
@@ -97,28 +137,41 @@ const holdRun = (panel: Panel): void => {
   panel.button.disabled = nextOf(panel)?.kind !== 'run';
 };
 
+const settle = (panel: Panel): void => {
+  clearTimeout(calming.get(panel.root));
+  panel.root.dataset.wrong = 'false';
+  panel.hint.textContent = describeQuietly(nextOf(panel));
+};
+
 const showGuided = (panel: Panel, active: boolean, idle: string): void => {
+  clearTimeout(calming.get(panel.root));
   Object.assign(panel.root.dataset, { guided: String(active), wrong: 'false' });
   showKeys(panel);
   if (active) {
-    panel.hint.textContent = describeExpected(nextOf(panel));
+    panel.hint.textContent = describeQuietly(nextOf(panel));
     holdRun(panel);
     return;
   }
   panel.hint.textContent = idle;
 };
 
-const showWrong = (panel: Panel): void => {
+const showWrong = (panel: Panel, pressed: Pressed | null): void => {
+  clearTimeout(calming.get(panel.root));
   panel.root.dataset.wrong = 'true';
-  panel.hint.textContent = `${messages.wrong}${describeExpected(nextOf(panel))}`;
+  panel.hint.textContent = `${leadOf(pressed)}${describeWanted(nextOf(panel))}`;
+  calming.set(
+    panel.root,
+    setTimeout(() => {
+      settle(panel);
+    }, calmAfter),
+  );
 };
 
 const showStep = (panel: Panel, pressed: Pressed): void => {
   if (pressed.verdict === 'wrong') {
-    showWrong(panel);
+    showWrong(panel, pressed);
   } else {
-    panel.root.dataset.wrong = 'false';
-    panel.hint.textContent = describeExpected(nextOf(panel));
+    settle(panel);
   }
   holdRun(panel);
   showKeys(panel);
@@ -129,7 +182,7 @@ const mayRun = (panel: Panel): boolean => {
   if (!isGuided(panel.root) || nextOf(panel)?.kind === 'run') {
     return true;
   }
-  showWrong(panel);
+  showWrong(panel, null);
   return false;
 };
 
@@ -138,7 +191,7 @@ export {
   hints,
   isGuided,
   mayRun,
-  notTaught,
+  refusalOf,
   noteCommand,
   showGuided,
   showKeys,

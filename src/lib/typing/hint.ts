@@ -15,6 +15,9 @@ const describeNext = (char: string): string => {
   return `${messages.typeChar}${char}`;
 };
 
+const needsTelling = (char: string): boolean =>
+  char === '\n' || char === ' ' || findKey(char)?.shift === true;
+
 const describeCommand = (key: string): string => {
   const found = findKey(key);
   if (found?.shift === true) {
@@ -23,4 +26,4 @@ const describeCommand = (key: string): string => {
   return `${messages.press}${key}`;
 };
 
-export { describeCommand, describeNext };
+export { describeCommand, describeNext, needsTelling };

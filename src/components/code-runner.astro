@@ -191,6 +191,22 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
       animation: key-waits 1.4s ease-in-out infinite;
     }
   }
+  @media (prefers-reduced-motion: no-preference) {
+    .runner[data-wrong='true'] .keys :global(kbd[data-next='true']) {
+      animation: key-nudges 0.35s ease-in-out;
+    }
+  }
+  .runner[data-wrong='true'] .editor :global(.cm-ghost) {
+    opacity: 0.7;
+  }
+  @keyframes key-nudges {
+    25% {
+      transform: translateX(-4px);
+    }
+    75% {
+      transform: translateX(4px);
+    }
+  }
   @keyframes key-arrives {
     from {
       transform: translateY(-0.9rem) scale(1.5);
@@ -212,6 +228,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .editor :global(.cm-ghost) {
     color: var(--ink);
     opacity: 0.38;
+    transition: opacity 0.25s;
   }
   .editor :global(.cm-ghost-line) {
     padding: 0 2px 0 6px;

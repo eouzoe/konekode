@@ -41,21 +41,22 @@ const ignored = new Set([
   'Meta',
   'NumLock',
   'OS',
+  'PageDown',
+  'PageUp',
   'ScrollLock',
   'Shift',
   'Tab',
 ]);
-const arrows = new Set(['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp']);
 const functionKey = /^F\d+$/u;
 
 const isShortcut = (event: KeyboardEvent): boolean =>
   event.ctrlKey || event.metaKey || event.altKey;
 
-const isPassed = (event: KeyboardEvent, inserting: boolean): boolean =>
-  ignored.has(event.key) || functionKey.test(event.key) || (arrows.has(event.key) && !inserting);
+const isPassed = (event: KeyboardEvent): boolean =>
+  ignored.has(event.key) || functionKey.test(event.key);
 
-const keyFrom = (event: KeyboardEvent, inserting: boolean): string | null => {
-  if (isShortcut(event) || isPassed(event, inserting)) {
+const keyFrom = (event: KeyboardEvent): string | null => {
+  if (isShortcut(event) || isPassed(event)) {
     return null;
   }
   return event.key;
@@ -142,7 +143,7 @@ const listen = (inner: Inner): void => {
   document.addEventListener(
     'keydown',
     (event) => {
-      const key = keyFrom(event, state.session.buffer.mode === 'insert');
+      const key = keyFrom(event);
       if (!state.armed || state.sprite !== null || key === null || isElsewhere(event.target)) {
         return;
       }

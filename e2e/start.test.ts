@@ -471,11 +471,29 @@ test.describe('起步單元', () => {
     await page.keyboard.insertText('cout << 11;');
     await page.keyboard.insertText('ｃ');
     expect(await editorText(page)).toBe(before);
-    await expect(hint).toHaveText('按錯囉！要按 G（Shift + g）');
+    const answers: readonly (readonly [key: string, lead: string])[] = [
+      ['x', '按錯囉！要'],
+      ['g', '大小寫不一樣喔！要'],
+      ['Backspace', '不用刪除喔！直接'],
+      ['Enter', '還沒改完喔！要'],
+      ['c', '現在是一般模式，還不能打字喔！要'],
+      ['ArrowDown', '這裡不用方向鍵喔！要'],
+    ];
+    for (const [key, lead] of answers) {
+      await page.keyboard.press(key);
+      await expect(hint).toHaveText(`${lead}按 G（Shift + g）`);
+    }
+    expect(await editorText(page)).toBe(before);
     await page.keyboard.press('G');
     await expect(hint).toHaveText('按 O（Shift + o）');
     await page.keyboard.press('O');
-    await expect(hint).toHaveText('輸入 c');
+    await expect(hint).toBeEmpty();
+    await page.keyboard.press('ArrowLeft');
+    await expect(hint).toHaveText('這裡不用方向鍵喔！要輸入 c');
+    await page.keyboard.press('Escape');
+    await expect(hint).toHaveText('還沒輸入完喔！繼續輸入 c');
+    expect(await currentId(page)).toBe('run-cout');
+    await expect(hint).toBeEmpty({ timeout: 5000 });
     await page.keyboard.type('cout <');
     await expect(hint).toHaveText('輸入 <（Shift + ,）');
     await page.keyboard.press('x');
@@ -484,6 +502,8 @@ test.describe('起步單元', () => {
     await expect(hint).toHaveText('按 Esc');
     await page.keyboard.press('Escape');
     await expect(hint).toHaveText('Enter 執行');
+    await page.keyboard.press('x');
+    await expect(hint).toHaveText('按錯囉！要按 Enter');
     expect(await editorText(page)).toBe(programs['run-cout'] ?? '');
     await page.keyboard.press('Enter');
     await expect.poll(async () => await currentId(page), { timeout: 150_000 }).toBe('saw-output');
@@ -672,7 +692,7 @@ test.describe('起步單元', () => {
     await expect(status(page)).toBeEmpty();
     await expect(output(page)).toBeEmpty();
     await page.keyboard.press('Enter');
-    await expect(page.locator('[data-code-runner] [data-role="hint"]')).toContainText('按錯囉');
+    await expect(page.locator('[data-code-runner] [data-role="hint"]')).toContainText('還沒改完喔');
     await expect(status(page)).toBeEmpty();
     expect(await currentId(page)).toBe('run-cout');
   });
@@ -895,6 +915,18 @@ test.describe('起步單元', () => {
     await expect(note).toBeEmpty();
     await open(page, 'run-cin');
     await expect(page.locator('[data-code-runner] [data-role="expect-field"]')).toBeHidden();
+  });
+
+  test('the free task says why a key does nothing', async ({ page }) => {
+    const hint = page.locator('[data-code-runner] [data-role="hint"]');
+    await open(page, 'task');
+    await page.keyboard.press('ArrowUp');
+    await expect(hint).toHaveText('這裡不用方向鍵喔！用學會的鍵來移動吧！');
+    expect(await currentId(page)).toBe('task');
+    await page.keyboard.press('w');
+    await expect(hint).toHaveText('這個鍵還沒學到，先不能用喔！');
+    await page.keyboard.press('PageUp');
+    expect(await currentId(page)).toBe('two-vars');
   });
 
   test('the given input is shown, cannot be changed, and takes no keys', async ({ page }) => {

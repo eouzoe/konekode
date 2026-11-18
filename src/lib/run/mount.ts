@@ -10,7 +10,7 @@ import {
   hints,
   isGuided,
   mayRun,
-  notTaught,
+  refusalOf,
   noteCommand,
   showGuided,
   showKeys,
@@ -143,7 +143,7 @@ const rules = (): Rules => ({ keys: engine.keys(), pairs: engine.pairs() });
 
 const freeHint = (pressed: Pressed): string => {
   if (pressed.verdict === 'refused') {
-    return notTaught;
+    return refusalOf(pressed.key);
   }
   return hints[pressed.session.buffer.mode] ?? '';
 };
