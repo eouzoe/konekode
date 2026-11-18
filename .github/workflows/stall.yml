@@ -1,0 +1,99 @@
+name: 量測：下載編譯器時主執行緒的空檔
+
+on:
+  push:
+    branches: ['exp/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: 建置
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: nixbuild/nix-quick-install-action@v35
+      - run: nix profile install nixpkgs#devenv
+      - run: devenv version
+      - uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/packed-assets
+          key: packed-assets-${{ hashFiles('bun.lock') }}
+      - run: devenv shell -- just build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 3
+
+  measure-nix:
+    name: 量測（${{ matrix.os }}，${{ matrix.browser }}）
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        browser: [webkit, chromium]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: nixbuild/nix-quick-install-action@v35
+      - run: nix profile install nixpkgs#devenv
+      - run: devenv version
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - name: 下載編譯器，不開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '0'
+        run: devenv shell -- just e2e-run e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=4 --trace off
+      - name: 擋掉編譯器，不開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '1'
+        run: devenv shell -- just e2e-run e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=4 --trace off
+      - name: 下載編譯器，開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '0'
+        run: devenv shell -- just e2e-run e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=2 --trace on
+
+  measure-windows:
+    name: 量測（windows-latest，${{ matrix.browser }}）
+    needs: build
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [webkit, chromium]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun x playwright install ${{ matrix.browser }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - name: 下載編譯器，不開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '0'
+        run: bun x playwright test e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=4 --trace off
+      - name: 擋掉編譯器，不開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '1'
+        run: bun x playwright test e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=4 --trace off
+      - name: 下載編譯器，開追蹤
+        continue-on-error: true
+        env:
+          BLOCK: '0'
+        run: bun x playwright test e2e/stall.probe.test.ts --project=${{ matrix.browser }} --repeat-each=2 --trace on
