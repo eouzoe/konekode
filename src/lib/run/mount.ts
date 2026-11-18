@@ -7,10 +7,10 @@ import { createDesk, type Desk } from './desk';
 import { readDraft, writeDraft } from './draft';
 import {
   enterTask,
-  hints,
+  freeHint,
+  idleHints,
   isGuided,
   mayRun,
-  refusalOf,
   noteCommand,
   showGuided,
   showKeys,
@@ -141,13 +141,6 @@ const preload = (): void => {
 
 const rules = (): Rules => ({ keys: engine.keys(), pairs: engine.pairs() });
 
-const freeHint = (pressed: Pressed): string => {
-  if (pressed.verdict === 'refused') {
-    return refusalOf(pressed.key);
-  }
-  return hints[pressed.session.buffer.mode] ?? '';
-};
-
 const startBuffer = (root: HTMLElement, parent: HTMLElement): Buffer => {
   const saved = readDraft(root.dataset.draft ?? '') ?? {
     cursor: 0,
@@ -189,7 +182,7 @@ const guide = (parts: Parts): void => {
     },
     fresh: parts.fresh,
     guided: (active) => {
-      showGuided(parts, active, hints.normal ?? '');
+      showGuided(parts, active, idleHints.normal ?? '');
     },
     keycap: find(parts.root, 'keycap', HTMLElement),
     origin: starterOf(unitOf(parts.root)) ?? parts.desk.text(false),
@@ -200,7 +193,7 @@ const guide = (parts: Parts): void => {
     },
   });
   arm(parts, false);
-  parts.hint.textContent = hints.normal ?? '';
+  parts.hint.textContent = idleHints.normal ?? '';
   parts.root.addEventListener('runner:stage', (event) => {
     if (event instanceof CustomEvent) {
       stage(event.detail);

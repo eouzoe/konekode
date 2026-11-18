@@ -1,11 +1,11 @@
 import { type Buffer, type Rules } from '@/lib/edit/buffer';
-import { effectOf, type Effect } from '@/lib/edit/effect';
+import { effectOf } from '@/lib/edit/effect';
 import { between, finalText, goalOf } from '@/lib/edit/goal';
 import { press, type Pressed, type Session } from '@/lib/edit/session';
 import { knownKeys, run } from '@/lib/edit/step';
-import { say } from '@/lib/text/ui';
 
 import { createScreen, type Screen } from './screen';
+import { effectText } from './view';
 
 interface Desk {
   readonly blur: () => void;
@@ -89,9 +89,6 @@ const isElsewhere = (target: EventTarget | null): boolean =>
 
 const frameGap = 55;
 
-const describeEffect = (effect: Effect): string =>
-  say(`effect.${effect.kind}`, { count: String(effect.count), keys: String(effect.keys) });
-
 const framesOf = (before: Buffer, rules: Rules): Buffer[] =>
   before.change.map((_key, at) =>
     run(before, before.change.slice(0, at + 1), { keys: knownKeys, pairs: rules.pairs }),
@@ -119,7 +116,7 @@ const celebrate = (inner: Inner, before: Buffer, key: string): void => {
   if (effect === null) {
     return;
   }
-  inner.screen.flash(describeEffect(effect));
+  inner.screen.flash(effectText(effect));
   inner.screen.show(inner.state.session.buffer, goalOf(inner.state.session, inner.options.rules()));
   if (effect.kind === 'repeat') {
     replay(inner, framesOf(before, inner.options.rules()), inner.state.turn);
