@@ -185,6 +185,13 @@ const storedPosition = async (page: Page): Promise<string> => {
   return latest.ref;
 };
 
+const storedSummary = async (page: Page): Promise<string> => {
+  const events = storedEvents.parse(await readStored(page));
+  const faults = events.filter((event) => event.kind.startsWith('storage.')).length;
+  const reached = events.filter((event) => event.kind === 'beat.reached').length;
+  return `${String(events.length)} events stored, ${String(reached)} sentences reached, ${String(faults)} storage faults`;
+};
+
 const recordedAs = async (page: Page, label: string): Promise<number> =>
   storedEvents
     .parse(await readStored(page))
@@ -192,7 +199,11 @@ const recordedAs = async (page: Page, label: string): Promise<number> =>
 
 const writeProgram = async (page: Page, source: string): Promise<void> => {
   const here = await currentId(page);
-  await expect.poll(async () => await storedPosition(page)).toBe(here);
+  try {
+    await expect.poll(async () => await storedPosition(page)).toBe(here);
+  } catch (error) {
+    throw new Error(`${String(error)}\n${await storedSummary(page)}`, { cause: error });
+  }
   await page.evaluate((text) => {
     localStorage.setItem('cp:draft:start', JSON.stringify({ cursor: 0, text }));
   }, source);
@@ -829,7 +840,11 @@ test.describe('起步單元', () => {
     for (const gate of ['type-template', ...Object.keys(programs)]) {
       expect(seen).toContain(gate);
     }
-    await expect.poll(async () => await storedPosition(page)).toBe('done');
+    try {
+      await expect.poll(async () => await storedPosition(page)).toBe('done');
+    } catch (error) {
+      throw new Error(`${String(error)}\n${await storedSummary(page)}`, { cause: error });
+    }
     await page.reload();
     await page.locator('[data-scene][data-ready="true"]').waitFor();
     expect(await currentId(page)).toBe('done');

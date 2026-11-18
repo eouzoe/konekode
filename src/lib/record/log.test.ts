@@ -167,3 +167,14 @@ test('形狀不對的資料不算事件', async () => {
   const log = await createLog(source(memoryPersistence([good, { broken: true }, null])));
   expect(log.events()).toHaveLength(1);
 });
+
+test('the time on events only moves forward, even when the clock steps back or a new visit starts earlier', async () => {
+  const persistence = memoryPersistence();
+  const times = [5000, 5001, 2400, 2401];
+  const first = await createLog({ ...source(persistence), now: () => times.shift() ?? 0 });
+  const stamps = ['one', 'two', 'three', 'four'].map((kind) => first.track(kind).at);
+  expect(stamps).toEqual([5000, 5001, 5002, 5003]);
+  await first.flush();
+  const second = await createLog({ ...source(persistence), now: () => 100 });
+  expect(second.track('five').at).toBe(5004);
+});

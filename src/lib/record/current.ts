@@ -22,12 +22,14 @@ const noteFault = (error: unknown): void => {
   }
 };
 
+const clockOrigin = Date.now() - performance.now();
+
 const start = async (): Promise<Log> => {
   const storage = await browserPersistence();
   const log = await createLog({
     actor: actorId(),
     newId,
-    now: () => Date.now(),
+    now: () => Math.round(clockOrigin + performance.now()),
     onFault: noteFault,
     persistence: storage.persistence,
     session: sessionId(),

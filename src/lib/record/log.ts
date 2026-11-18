@@ -31,6 +31,7 @@ interface Log {
 
 interface State {
   readonly events: LearningEvent[];
+  latest: number;
   readonly listeners: ((event: LearningEvent) => void)[];
   pending: Promise<void>;
   saving: Promise<void>;
@@ -62,11 +63,20 @@ interface Context {
   readonly state: State;
 }
 
+const latestOf = (events: readonly LearningEvent[]): number => {
+  let latest = 0;
+  for (const event of events) {
+    latest = Math.max(latest, event.at);
+  }
+  return latest;
+};
+
 const build = ({ source, state }: Context, kind: string, entry: Entry): LearningEvent => {
   state.seq += 1;
+  state.latest = Math.max(source.now(), state.latest + 1);
   return {
     actor: source.actor,
-    at: source.now(),
+    at: state.latest,
     data: entry.data ?? {},
     id: source.newId(),
     kind,
@@ -119,8 +129,10 @@ const removeLater = (context: Context, ids: readonly string[]): void => {
 };
 
 const createLog = async (source: Source): Promise<Log> => {
+  const events = readEvents(await source.persistence.load());
   const state: State = {
-    events: readEvents(await source.persistence.load()),
+    events,
+    latest: latestOf(events),
     listeners: [],
     pending: Promise.resolve(),
     saving: Promise.resolve(),
