@@ -4,6 +4,7 @@ import { ui } from '@/lib/text/ui';
 import { beatsOf } from '@/units/index';
 
 interface Keys {
+  readonly nudge: () => void;
   readonly show: (next: string, mode: string) => void;
 }
 
@@ -71,6 +72,22 @@ const draw = (row: HTMLElement, order: readonly string[], state: State): void =>
   row.dataset.mode = state.mode;
 };
 
+const shake = [
+  { transform: 'translateX(0)' },
+  { offset: 0.25, transform: 'translateX(-5px)' },
+  { offset: 0.75, transform: 'translateX(5px)' },
+  { transform: 'translateX(0)' },
+];
+const shakeTime = 320;
+
+const nudge = (row: HTMLElement): void => {
+  const still = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const next = row.querySelector<HTMLElement>('kbd[data-next="true"]');
+  if (!still && next !== null) {
+    next.animate(shake, { duration: shakeTime });
+  }
+};
+
 const createKeys = (row: HTMLElement, unit: string): Keys => {
   const order = orderOf(unit);
   const state: State = { fresh: false, mode: 'normal', next: '' };
@@ -85,6 +102,9 @@ const createKeys = (row: HTMLElement, unit: string): Keys => {
   });
   draw(row, order, state);
   return {
+    nudge: () => {
+      nudge(row);
+    },
     show: (next, mode) => {
       Object.assign(state, { mode, next });
       draw(row, order, state);

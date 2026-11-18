@@ -159,6 +159,7 @@ const showWrong = (panel: Panel, pressed: Pressed | null): void => {
   clearTimeout(calming.get(panel.root));
   panel.root.dataset.wrong = 'true';
   panel.hint.textContent = `${leadOf(pressed)}${describeWanted(nextOf(panel))}`;
+  rowOf(panel.root)?.nudge();
   calming.set(
     panel.root,
     setTimeout(() => {
