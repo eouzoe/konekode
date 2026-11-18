@@ -25,6 +25,7 @@
     "src/**/*.ts",
     "src/**/*.astro",
     "worker/**/*.ts",
+    "e2e/**/*.ts",
     "*.config.ts"
   ],
   "exclude": ["dist", "dist-dev"]

@@ -62,6 +62,7 @@ const settled = async (page: Page): Promise<void> => {
 
 test('開場的對話：隨機往前往回，頁面和狀態機每一步都在同一句', async ({ page }, testInfo) => {
   await reset(page);
+  const withoutContext: Omit<Page, 'context'> = page;
   const beats = await readMetas(page);
   const limit = beats.findIndex((beat) => beat.id === boundary);
   expect(limit).toBeGreaterThan(1);
@@ -83,7 +84,7 @@ test('開場的對話：隨機往前往回，頁面和狀態機每一步都在�
     maxCommands: commands,
     numRuns: runs,
     seed: 1,
-    sut: createPlaywrightSut(page, {
+    sut: createPlaywrightSut(withoutContext, {
       events: {
         BACK: async () => {
           await page.keyboard.press('ArrowLeft');
