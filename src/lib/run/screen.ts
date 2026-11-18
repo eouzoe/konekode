@@ -26,6 +26,7 @@ interface Mark {
 
 interface Screen {
   readonly flash: (text: string) => void;
+  readonly hush: () => void;
   readonly show: (buffer: Buffer, hints?: readonly Hint[]) => void;
 }
 
@@ -206,11 +207,16 @@ const createLabel = (parent: HTMLElement, name: string): HTMLElement => {
   return label;
 };
 
-const tell = (effect: HTMLElement, text: string): void => {
-  effect.textContent = text;
+const hush = (effect: HTMLElement): void => {
   for (const running of effect.getAnimations()) {
     running.cancel();
   }
+  effect.textContent = '';
+};
+
+const tell = (effect: HTMLElement, text: string): void => {
+  hush(effect);
+  effect.textContent = text;
   effect.animate(fade, { duration: told, fill: 'forwards' });
 };
 
@@ -235,6 +241,9 @@ const createScreen = (parent: HTMLElement, buffer: Buffer): Screen => {
       pulse.count += 1;
       pulse.due = pulse.count;
       tell(effect, text);
+    },
+    hush: () => {
+      hush(effect);
     },
     show,
   };

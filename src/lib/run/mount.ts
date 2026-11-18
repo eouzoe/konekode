@@ -174,6 +174,7 @@ const guide = (parts: Parts): void => {
       parts.root.dataset.beat = beat;
     },
     clear: () => {
+      parts.desk.hush();
       show(parts, { state: 'idle', status: '', text: '' });
     },
     desk: parts.desk,

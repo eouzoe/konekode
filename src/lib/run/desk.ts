@@ -10,6 +10,7 @@ import { effectText } from './view';
 interface Desk {
   readonly blur: () => void;
   readonly focus: () => void;
+  readonly hush: () => void;
   readonly session: () => Session;
   readonly setArmed: (armed: boolean) => void;
   readonly setSession: (session: Session) => void;
@@ -185,6 +186,9 @@ const createDesk = (options: Options): Desk => {
     },
     focus: () => {
       parent.focus({ preventScroll: true });
+    },
+    hush: () => {
+      screen.hush();
     },
     session: () => state.session,
     setArmed: (armed) => {
