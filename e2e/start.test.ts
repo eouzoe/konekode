@@ -615,7 +615,7 @@ test.describe('起步單元', () => {
     expect(await editorText(page)).not.toContain('cout << 11;');
     await page.keyboard.press('ArrowLeft');
     expect(await currentId(page)).toBe('indent');
-    await expect(sprite).not.toContainText('cout << 11;');
+    expect(await editorText(page, spriteEditor)).not.toContain('cout << 11;');
     for (let step = 0; step < 6 && (await currentId(page)) !== 'run-cout'; step += 1) {
       await page.keyboard.press('Space');
     }
@@ -834,9 +834,9 @@ test.describe('起步單元', () => {
     await open(page, 'run-cin');
     await expect(page.locator(`${studentEditor} .cm-ghost-remove`)).toHaveText('11');
     await expect(ghosts).toHaveText(['    cin >> a;']);
-    await open(page, 'semicolon');
-    await expect(page.locator(`${spriteEditor} .cm-line`).first()).toBeVisible();
-    await expect(page.locator(`${spriteEditor} .cm-ghost`)).toHaveCount(0);
+    await open(page, 'where-it-goes');
+    await expect(page.locator(`${spriteEditor} .cm-ghost`)).toHaveText(['    cout << 11;']);
+    expect(await editorText(page, spriteEditor)).not.toContain('cout << 11;');
   });
 
   test('the keys learned so far are shown in the order taught, and the next one is marked', async ({

@@ -137,10 +137,12 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     width: 1ch;
     outline: 1px solid #7aa2f7;
   }
+  .editor[data-actor='sprite'] :global(.cm-own-normal)::before,
   .runner[data-armed='true'] .editor :global(.cm-own-normal)::before {
     background: #3d59a1;
     outline: none;
   }
+  .editor[data-actor='sprite'] :global(.cm-own-insert)::before,
   .runner[data-armed='true'] .editor :global(.cm-own-insert)::before {
     border-left: 2px solid var(--ink);
     margin-left: -1px;
@@ -254,6 +256,9 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     color: var(--panel);
     font: inherit;
     cursor: pointer;
+  }
+  .runner:not([data-armed='true']) button {
+    visibility: hidden;
   }
   button:disabled {
     opacity: 0.5;

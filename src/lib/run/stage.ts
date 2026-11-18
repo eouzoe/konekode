@@ -19,6 +19,7 @@ interface State {
   acting: boolean;
   entered: string;
   fresh: boolean;
+  goal: string;
   guided: string;
   sprite: Buffer;
   turn: number;
@@ -96,7 +97,7 @@ const perform = (tools: Tools, state: State, move: Move): void => {
     return;
   }
   state.sprite = run(state.sprite, move.keys, everything(tools));
-  tools.desk.showSprite(state.sprite);
+  tools.desk.showSprite(state.sprite, state.goal);
 };
 
 const play = async (tools: Tools, state: State, moves: readonly Move[]): Promise<void> => {
@@ -203,15 +204,21 @@ const settle = (tools: Tools, state: State, stage: Stage): void => {
   tools.desk.blur();
 };
 
+const prepare = (tools: Tools, state: State, stage: Stage): void => {
+  const plan = tools.plan(stage.beat);
+  const start = startOf(tools, plan?.history ?? []);
+  state.goal = run(start, keysOf(plan?.path ?? []), everything(tools)).text;
+  state.sprite = run(start, keysOf(stage.before), everything(tools));
+  tools.desk.showSprite(state.sprite, state.goal);
+};
+
 const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
   state.acting = true;
   release(tools, state);
   tools.guided(false);
   tools.arm(false);
   tools.desk.blur();
-  const start = startOf(tools, tools.plan(stage.beat)?.history ?? []);
-  state.sprite = run(start, keysOf(stage.before), everything(tools));
-  tools.desk.showSprite(state.sprite);
+  prepare(tools, state, stage);
   tools.clear();
   void play(
     tools,
@@ -225,6 +232,7 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
     acting: false,
     entered: '',
     fresh: tools.fresh,
+    goal: '',
     guided: '',
     sprite: createBuffer(tools.origin),
     turn: 0,

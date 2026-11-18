@@ -13,7 +13,7 @@ interface Desk {
   readonly session: () => Session;
   readonly setArmed: (armed: boolean) => void;
   readonly setSession: (session: Session) => void;
-  readonly showSprite: (buffer: Buffer | null) => void;
+  readonly showSprite: (buffer: Buffer | null, goal?: string) => void;
   readonly text: (ofSprite: boolean) => string;
 }
 
@@ -194,13 +194,13 @@ const createDesk = (options: Options): Desk => {
       allowFocus(parent, armed);
     },
     setSession,
-    showSprite: (buffer) => {
+    showSprite: (buffer, goal) => {
       state.sprite = buffer;
       parent.dataset.actor = actorOf(buffer);
       if (buffer === null) {
         screen.show(state.session.buffer, goalOf(state.session, options.rules()));
       } else {
-        screen.show(buffer);
+        screen.show(buffer, between(buffer.text, goal ?? buffer.text));
       }
     },
     text: (ofSprite) => textOf(state, ofSprite),
