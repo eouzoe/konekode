@@ -248,7 +248,15 @@ const editorText = async (page: Page, owner = studentEditor): Promise<string> =>
   await page.evaluate(
     (selector) =>
       [...document.querySelectorAll(`${selector} .cm-line`)]
-        .map((line) => line.textContent ?? '')
+        .map((line) => {
+          const copy = line.cloneNode(true);
+          if (copy instanceof Element) {
+            for (const ghost of copy.querySelectorAll('.cm-ghost')) {
+              ghost.remove();
+            }
+          }
+          return copy.textContent ?? '';
+        })
         .join('\n'),
     owner,
   );
@@ -660,7 +668,7 @@ test.describe('起步單元', () => {
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('run-cout');
     await expect(page.locator(studentEditor)).toBeFocused();
-    await expect(page.locator(studentEditor)).not.toContainText('cout << 11;');
+    expect(await editorText(page)).not.toContain('cout << 11;');
     await expect(status(page)).toBeEmpty();
     await expect(output(page)).toBeEmpty();
     await page.keyboard.press('Enter');
@@ -808,6 +816,28 @@ test.describe('起步單元', () => {
       expect(await currentId(page)).not.toBe('type-template');
     });
   }
+
+  test('a guided gate draws what is still to do in place, and nothing is left when it is done', async ({
+    page,
+  }) => {
+    const ghosts = page.locator(`${studentEditor} .cm-ghost`);
+    await open(page, 'run-cout');
+    await expect(ghosts).toHaveText(['    cout << 11;']);
+    for (const key of ['G', 'O']) {
+      await page.keyboard.press(key);
+    }
+    await page.keyboard.type('cout <');
+    await expect(ghosts).toHaveText(['< 11;']);
+    expect(await editorText(page)).toContain('    cout <\n');
+    await page.keyboard.type('< 11;');
+    await expect(ghosts).toHaveCount(0);
+    await open(page, 'run-cin');
+    await expect(page.locator(`${studentEditor} .cm-ghost-remove`)).toHaveText('11');
+    await expect(ghosts).toHaveText(['    cin >> a;']);
+    await open(page, 'semicolon');
+    await expect(page.locator(`${spriteEditor} .cm-line`).first()).toBeVisible();
+    await expect(page.locator(`${spriteEditor} .cm-ghost`)).toHaveCount(0);
+  });
 
   test('the given input is shown, cannot be changed, and takes no keys', async ({ page }) => {
     await open(page, 'run-cin');

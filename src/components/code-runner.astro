@@ -88,6 +88,19 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     border-left: 2px solid var(--ink);
     margin-left: -1px;
   }
+  .editor :global(.cm-ghost) {
+    color: var(--ink);
+    opacity: 0.38;
+  }
+  .editor :global(.cm-ghost-line) {
+    padding: 0 2px 0 6px;
+    white-space: pre;
+  }
+  .editor :global(.cm-ghost-drop),
+  .editor :global(.cm-ghost-remove) {
+    opacity: 0.45;
+    text-decoration: line-through;
+  }
   .editor pre {
     margin: 0;
     padding: 0.9rem 1rem;

@@ -1,4 +1,5 @@
 import { type Buffer, type Rules } from '@/lib/edit/buffer';
+import { goalOf } from '@/lib/edit/goal';
 import { press, type Pressed, type Session } from '@/lib/edit/session';
 
 import { createScreen } from './screen';
@@ -119,7 +120,7 @@ const createDesk = (options: Options): Desk => {
     const changed = session.buffer !== state.session.buffer;
     state.session = session;
     if (state.sprite === null) {
-      screen.show(session.buffer);
+      screen.show(session.buffer, goalOf(session, options.rules()));
     }
     if (changed) {
       options.onChange(session.buffer);
@@ -142,7 +143,11 @@ const createDesk = (options: Options): Desk => {
     showSprite: (buffer) => {
       state.sprite = buffer;
       parent.dataset.actor = actorOf(buffer);
-      screen.show(buffer ?? state.session.buffer);
+      if (buffer === null) {
+        screen.show(state.session.buffer, goalOf(state.session, options.rules()));
+      } else {
+        screen.show(buffer);
+      }
     },
     text: (ofSprite) => textOf(state, ofSprite),
   };
