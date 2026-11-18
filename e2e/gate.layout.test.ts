@@ -1,9 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
-
 import { checksOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { arrive, tap } from './gate-support';
 import { studentEditor } from './gate-view';
+import { expect, test, type Page } from './test';
 
 interface Box {
   readonly bottom: number;

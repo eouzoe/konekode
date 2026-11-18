@@ -1,10 +1,9 @@
-import { expect, test } from '@playwright/test';
-
 import { expectedNow, type Session } from '../src/lib/edit/session';
 import { checksOf, planOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { arrive, expectSame, tap } from './gate-support';
 import { studentEditor } from './gate-view';
+import { expect, test } from './test';
 
 const gates = checksOf('start').filter((gate) => (planOf('start', gate.id)?.path.length ?? 0) > 0);
 const never = '~';

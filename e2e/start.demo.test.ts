@@ -1,0 +1,150 @@
+import { ui } from '../src/lib/text/ui';
+import { studentEditor } from './gate-view';
+import { currentId } from './scene-view';
+import { open, status, output, programs, draftAt, editorText, spriteEditor } from './start-support';
+import { expect, test } from './test';
+
+test.describe('起步單元：小精靈的示範', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('不是輪到學生時不能執行也不能改，Enter 就是下一句', async ({ page }) => {
+    await open(page, 'do-things');
+    const button = page.locator('[data-code-runner] [data-role="run"]');
+    const editor = page.locator(studentEditor);
+    await expect(button).toBeDisabled();
+    await expect(editor).not.toHaveAttribute('tabindex');
+    await page.keyboard.press('Enter');
+    expect(await currentId(page)).toBe('editor');
+    await expect(status(page)).toBeEmpty();
+  });
+
+  test('小精靈在自己的編輯器裡示範，學生的編輯器沒有被動過', async ({ page }) => {
+    await open(page, 'semicolon');
+    const sprite = page.locator(spriteEditor);
+    const student = page.locator(studentEditor);
+    await expect(sprite).toBeVisible();
+    await expect(student).toBeHidden();
+    await expect
+      .poll(async () => (await editorText(page, spriteEditor)).split('\n'), { timeout: 15_000 })
+      .toContain('    cout << 11;');
+    expect(await editorText(page)).not.toContain('cout << 11;');
+    await page.keyboard.press('ArrowLeft');
+    expect(await currentId(page)).toBe('indent');
+    expect(await editorText(page, spriteEditor)).not.toContain('cout << 11;');
+    for (let step = 0; step < 6 && (await currentId(page)) !== 'run-cout'; step += 1) {
+      await page.keyboard.press('Space');
+    }
+    expect(await currentId(page)).toBe('run-cout');
+    await expect(student).toBeVisible();
+    await expect(sprite).toBeHidden();
+    await expect(student).toBeFocused();
+    expect(await editorText(page)).not.toContain('cout << 11;');
+  });
+
+  test('示範時會依序顯示小精靈按的每一個鍵', async ({ page }) => {
+    await page.addInitScript(() => {
+      const shown: string[] = [];
+      Object.assign(globalThis, { shownKeys: shown });
+      document.addEventListener('DOMContentLoaded', () => {
+        const keycap = document.querySelector('[data-code-runner] [data-role="keycap"]');
+        if (keycap === null) {
+          return;
+        }
+        const note = (): void => {
+          const text = keycap.textContent ?? '';
+          if (text !== '') {
+            shown.push(text);
+          }
+        };
+        note();
+        new MutationObserver(note).observe(keycap, {
+          characterData: true,
+          childList: true,
+          subtree: true,
+        });
+      });
+    });
+    await open(page, 'go-end');
+    const read = async (): Promise<string> =>
+      await page.evaluate(() => {
+        const keys: unknown = Reflect.get(globalThis, 'shownKeys');
+        if (!Array.isArray(keys)) {
+          return '';
+        }
+        return keys.join('');
+      });
+    await expect.poll(read, { timeout: 15_000 }).toBe('G');
+    await expect(page.locator('[data-code-runner] [data-role="keycap"]')).toBeEmpty();
+  });
+
+  test('小精靈示範的執行結果不會被算成學生過關', async ({ page }) => {
+    await open(page, 'what-run');
+    await expect(status(page)).not.toBeEmpty({ timeout: 30_000 });
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('run-cout');
+    await expect(page.locator(studentEditor)).toBeFocused();
+    expect(await editorText(page)).not.toContain('cout << 11;');
+    await expect(status(page)).toBeEmpty();
+    await expect(output(page)).toBeEmpty();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('[data-code-runner] [data-role="hint"]')).toContainText(
+      ui['guide.earlyRun'],
+    );
+    await expect(status(page)).toBeEmpty();
+    expect(await currentId(page)).toBe('run-cout');
+  });
+
+  test('小精靈的示範打完時，不會出現稱讚學生的話', async ({ page }) => {
+    const hint = page.locator('[data-typing-drill] [data-role="hint"]');
+    await open(page, 'type-template');
+    await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
+    await page.keyboard.press('ArrowLeft');
+    expect(await currentId(page)).toBe('press-esc');
+    await expect(page.locator('[data-typing-drill] [data-role="mode"]')).toHaveText(
+      '-- NORMAL --',
+      {
+        timeout: 15_000,
+      },
+    );
+    await expect(hint).toBeEmpty();
+    await page.keyboard.press('ArrowRight');
+    expect(await currentId(page)).toBe('type-template');
+    await expect(hint).toHaveText(ui['typing.begin']);
+  });
+
+  test('小精靈每一段示範做出來的程式，和要學生做的一模一樣', async ({ page }) => {
+    const first = programs['run-cout'] ?? '';
+    const second = programs['run-two'] ?? '';
+    const third = programs['run-newline'] ?? '';
+    const fourth = programs['run-int'] ?? '';
+    const cases: readonly [
+      beat: string,
+      draft: { cursor: number; text: string },
+      wanted: string,
+    ][] = [
+      ['type-second', draftAt(first, 'cout << 11;'), second],
+      ['repeat', draftAt(second, 'cout << 22;'), third],
+      ['retype', draftAt(third, 'cout << 11'), fourth],
+      ['add-cin', draftAt(fourth, 'cout << a'), programs['run-cin'] ?? ''],
+    ];
+    for (const [beat, draft, wanted] of cases) {
+      await open(page, beat, { draft, unlocked: ['pair.paren', 'pair.brace'] });
+      await expect
+        .poll(async () => await editorText(page, spriteEditor), { message: beat, timeout: 30_000 })
+        .toBe(wanted);
+    }
+  });
+
+  test('a demonstration starts from the unit text, whatever the learner has', async ({ page }) => {
+    const mine = programs['run-two'] ?? '';
+    await open(page, 'semicolon', { draft: draftAt(mine, 'cout << 22;') });
+    await expect
+      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
+      .toBe(programs['run-cout'] ?? '');
+    await page.reload();
+    await page.locator('[data-scene][data-ready="true"]').waitFor();
+    await expect
+      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
+      .toBe(programs['run-cout'] ?? '');
+  });
+});

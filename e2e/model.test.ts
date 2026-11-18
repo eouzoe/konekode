@@ -1,10 +1,10 @@
-import { expect, test, type Page } from '@playwright/test';
 import { propertyTest, testCoverageToJSON } from '@xstate/test';
 import { createPlaywrightSut } from '@xstate/test/playwright';
 import { constant } from 'fast-check';
 import { array } from 'zod';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
+import { expect, test, type Page } from './test';
 
 const path = '/learn/start/';
 const boundary = 'line-main';

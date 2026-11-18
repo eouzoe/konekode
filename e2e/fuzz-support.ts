@@ -21,7 +21,7 @@ const pickFrom = <Item>(random: () => number, items: readonly Item[]): Item => {
   return item;
 };
 
-const openAt = async (page: Page, beat: string, focus: string): Promise<void> => {
+const openAnywhere = async (page: Page, beat: string): Promise<void> => {
   visits += 1;
   await page.goto(`/favicon.ico?fuzz=${String(visits)}`);
   await page.evaluate(async (ref) => {
@@ -39,6 +39,10 @@ const openAt = async (page: Page, beat: string, focus: string): Promise<void> =>
   }, beat);
   await page.goto('/learn/start/');
   await page.locator('[data-scene][data-ready="true"]').waitFor();
+};
+
+const openAt = async (page: Page, beat: string, focus: string): Promise<void> => {
+  await openAnywhere(page, beat);
   await expect(page.locator(focus)).toBeFocused();
 };
 
@@ -56,4 +60,4 @@ const slowEveryOtherRound = async (
   }
 };
 
-export { generator, openAt, pickFrom, slowEveryOtherRound };
+export { generator, openAnywhere, openAt, pickFrom, slowEveryOtherRound };

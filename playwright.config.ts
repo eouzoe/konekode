@@ -32,5 +32,5 @@ export default defineConfig({
     timeout: serverSeconds * second,
     url: `http://localhost:${String(port)}/learn/start/`,
   },
-  workers: 1,
+  workers: 2,
 });

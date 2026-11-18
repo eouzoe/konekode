@@ -1,5 +1,3 @@
-import { expect, test, type Page } from '@playwright/test';
-
 import {
   createDrill,
   escape,
@@ -10,6 +8,7 @@ import {
   type Drill,
 } from '../src/lib/typing/drill';
 import { generator, openAt, pickFrom, slowEveryOtherRound } from './fuzz-support';
+import { expect, test, type Page } from './test';
 
 interface Run {
   readonly actions: string[];

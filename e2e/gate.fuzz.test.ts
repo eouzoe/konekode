@@ -1,10 +1,9 @@
-import { test } from '@playwright/test';
-
 import { expectedNow, press } from '../src/lib/edit/session';
 import { checksOf } from '../src/units/index';
 import { generator, openAt, pickFrom } from './fuzz-support';
 import { arrive, expectSame, tap, type Walk } from './gate-support';
 import { studentEditor } from './gate-view';
+import { test } from './test';
 
 const rounds = 3;
 const length = 50;

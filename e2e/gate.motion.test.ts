@@ -1,8 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
-
 import { beatsOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { studentEditor } from './gate-view';
+import { expect, test, type Page } from './test';
 
 const gate = 'run-cout';
 const teaches = 'open-below';
