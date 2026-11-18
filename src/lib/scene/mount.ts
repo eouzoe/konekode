@@ -4,7 +4,7 @@ import { ui } from '@/lib/text/ui';
 
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
-import { fitStage } from './fit';
+import { fitStage, watchStage } from './fit';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { grantUnlocks, readMeta } from './meta';
@@ -257,7 +257,7 @@ const mountScene = (root: HTMLElement, read: ReadUnit): void => {
   root.dataset.ready = 'true';
   show(scene);
   startReveal(scene);
-  fitStage(scene.root);
+  watchStage(scene.root);
 };
 
 const mountScenes = async (): Promise<void> => {

@@ -775,8 +775,8 @@ test.describe('起步單元', () => {
     'clicking the dialogue': async (page) => {
       await page.locator('[data-role="dialogue"]').click();
     },
-    'clicking the output': async (page) => {
-      await page.locator('[data-code-runner] [data-role="output"]').click();
+    'clicking the learned keys': async (page) => {
+      await page.locator('[data-code-runner] [data-role="keys"]').click();
     },
     'clicking the page': async (page) => {
       await page.mouse.click(4, 4);
@@ -806,7 +806,7 @@ test.describe('起步單元', () => {
     test(`the typing drill still takes every key after ${name}`, async ({ page }) => {
       await open(page, 'type-template');
       await expect(page.locator('[data-typing-drill]')).toBeVisible();
-      if (name !== 'clicking the output') {
+      if (name !== 'clicking the learned keys') {
         await distract(page);
       }
       await page.keyboard.type(`i${template}`);
@@ -837,6 +837,43 @@ test.describe('起步單元', () => {
     await open(page, 'semicolon');
     await expect(page.locator(`${spriteEditor} .cm-line`).first()).toBeVisible();
     await expect(page.locator(`${spriteEditor} .cm-ghost`)).toHaveCount(0);
+  });
+
+  test('the keys learned so far are shown in the order taught, and the next one is marked', async ({
+    page,
+  }) => {
+    const row = page.locator('[data-code-runner] [data-role="keys"]');
+    await open(page, 'run-cout');
+    await expect(row.locator('kbd')).toHaveText(['i', 'G', 'O']);
+    await expect(row.locator('kbd[data-next="true"]')).toHaveText('G');
+    await page.keyboard.press('G');
+    await expect(row.locator('kbd[data-next="true"]')).toHaveText('O');
+    await page.keyboard.press('O');
+    await expect(row).toHaveAttribute('data-mode', 'insert');
+    await expect(row.locator('kbd[data-next="true"]')).toHaveCount(0);
+    await open(page, 'run-cin');
+    await expect(row.locator('kbd')).toHaveText('iGOo$k.dj0fx'.split(''));
+  });
+
+  test('a command that saves work says what it did', async ({ page }) => {
+    const effect = page.locator('[data-code-runner] [data-role="effect"]');
+    await open(page, 'run-cout');
+    await expect(effect).toBeEmpty();
+    await page.keyboard.press('G');
+    await expect(effect).toHaveText('按 1 個鍵，跳了 6 行');
+    await open(page, 'run-newline');
+    await follow(page, [
+      ['keys', '$ i'],
+      ['type', String.raw` << '\n'`],
+      ['keys', 'Escape k $ .'],
+    ]);
+    await expect(effect).toHaveText('按 1 個鍵，重做了 10 個鍵！');
+    await expect
+      .poll(async () => await editorText(page))
+      .toContain(String.raw`    cout << 11 << '\n';`);
+    await open(page, 'run-int');
+    await follow(page, [['keys', 'd j']]);
+    await expect(effect).toHaveText('按 2 個鍵，刪掉了 2 行');
   });
 
   test('the given input is shown, cannot be changed, and takes no keys', async ({ page }) => {

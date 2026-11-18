@@ -13,6 +13,7 @@ import {
   notTaught,
   noteCommand,
   showGuided,
+  showKeys,
   showStep,
   unitOf,
 } from './guidance';
@@ -222,6 +223,7 @@ const report = (parts: Parts, pressed: Pressed): void => {
     showStep(parts, pressed);
   } else {
     parts.hint.textContent = freeHint(pressed);
+    showKeys(parts);
     noteCommand(parts.root, pressed);
   }
   if (pressed.runs) {

@@ -20,16 +20,34 @@ import { tokyoNight } from './theme';
 interface Mark {
   readonly at: number;
   readonly hints: readonly Hint[];
+  readonly landed: number;
   readonly mode: Mode;
 }
 
 interface Screen {
+  readonly flash: (text: string) => void;
   readonly show: (buffer: Buffer, hints?: readonly Hint[]) => void;
 }
 
 type Placed = ReturnType<Decoration['range']>;
 
 const farBefore = 1000;
+const landings = 2;
+
+const landing = (count: number): string => {
+  if (count === 0) {
+    return '';
+  }
+  return ` cm-own-landed-${String(count % landings)}`;
+};
+
+const told = 2600;
+const fade = [
+  { opacity: 0, transform: 'translateY(0.3rem)' },
+  { offset: 0.12, opacity: 1, transform: 'translateY(0)' },
+  { offset: 0.8, opacity: 1 },
+  { opacity: 0 },
+];
 
 const tagOf = (block: boolean): 'div' | 'span' => {
   if (block) {
@@ -75,7 +93,7 @@ const labels: Readonly<Record<Mode, string>> = {
 const setMark = StateEffect.define<Mark>();
 
 const markField = StateField.define<Mark>({
-  create: () => ({ at: 0, hints: [], mode: 'normal' }),
+  create: () => ({ at: 0, hints: [], landed: 0, mode: 'normal' }),
   update: (mark, transaction) =>
     transaction.effects.find((item) => item.is(setMark))?.value ?? mark,
 });
@@ -126,7 +144,7 @@ const marks = EditorView.decorations.compute([markField], (state): DecorationSet
   const line = state.doc.lineAt(Math.min(mark.at, state.doc.length));
   const column = mark.at - line.from;
   const attributes = {
-    class: `cm-own-line cm-own-${mark.mode}`,
+    class: `cm-own-line cm-own-${mark.mode}${landing(mark.landed)}`,
     style: `--column: ${String(column + pushed(mark, line.number - 1, column))}`,
   };
   const usable = mark.hints.filter((hint) => hint.kind === 'line' || hint.line < state.doc.lines);
@@ -180,23 +198,46 @@ const createView = (parent: HTMLElement, text: string): EditorView =>
     parent,
   });
 
+const createLabel = (parent: HTMLElement, name: string): HTMLElement => {
+  const label = document.createElement('p');
+  label.className = name;
+  label.dataset.role = name;
+  parent.append(label);
+  return label;
+};
+
+const tell = (effect: HTMLElement, text: string): void => {
+  effect.textContent = text;
+  for (const running of effect.getAnimations()) {
+    running.cancel();
+  }
+  effect.animate(fade, { duration: told, fill: 'forwards' });
+};
+
 const createScreen = (parent: HTMLElement, buffer: Buffer): Screen => {
   const view = createView(parent, buffer.text);
-  const mode = document.createElement('p');
-  mode.className = 'mode';
-  mode.dataset.role = 'mode';
-  parent.append(mode);
+  const mode = createLabel(parent, 'mode');
+  const effect = createLabel(parent, 'effect');
+  const pulse = { count: 0, due: 0 };
   const show = (next: Buffer, hints: readonly Hint[] = []): void => {
     view.dispatch({
       changes: changeTo(view.state.doc.toString(), next.text),
-      effects: setMark.of({ at: next.cursor, hints, mode: next.mode }),
+      effects: setMark.of({ at: next.cursor, hints, landed: pulse.due, mode: next.mode }),
       scrollIntoView: true,
       selection: { anchor: next.cursor },
     });
     mode.textContent = labels[next.mode];
+    pulse.due = 0;
   };
   show(buffer);
-  return { show };
+  return {
+    flash: (text) => {
+      pulse.count += 1;
+      pulse.due = pulse.count;
+      tell(effect, text);
+    },
+    show,
+  };
 };
 
 export { createScreen, type Screen };

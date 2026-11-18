@@ -165,7 +165,8 @@ const codeLines = template.split('\n');
     background: color-mix(in oklch, var(--accent) 12%, transparent);
     font-size: 1.125rem;
   }
-  .snippet:empty {
+  .snippet:empty,
+  .run-slot:has([data-code-runner][data-guided='true'][data-armed='true']) .snippet {
     display: none;
   }
   .dialogue {

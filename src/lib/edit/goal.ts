@@ -201,13 +201,14 @@ const linesStill = (hints: readonly Hint[]): Hint[] => {
   );
 };
 
+const between = (text: string, final: string): Hint[] =>
+  linesStill(compare(text.split(newline), final.split(newline)));
+
 const goalOf = (session: Session, rules: Rules): Hint[] => {
   if (session.path.length === 0) {
     return [];
   }
-  const old = session.buffer.text.split(newline);
-  const next = finalText(session, rules).split(newline);
-  return linesStill(compare(old, next));
+  return between(session.buffer.text, finalText(session, rules));
 };
 
 const rewrite = (text: string, hints: readonly Hint[]): string => {
@@ -247,4 +248,4 @@ const fulfil = (text: string, hints: readonly Hint[]): string => {
   return result.join(newline);
 };
 
-export { finalText, fulfil, goalOf, type Hint };
+export { between, finalText, fulfil, goalOf, type Hint };

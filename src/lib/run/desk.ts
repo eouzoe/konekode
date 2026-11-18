@@ -1,8 +1,11 @@
 import { type Buffer, type Rules } from '@/lib/edit/buffer';
-import { goalOf } from '@/lib/edit/goal';
+import { effectOf, type Effect } from '@/lib/edit/effect';
+import { between, finalText, goalOf } from '@/lib/edit/goal';
 import { press, type Pressed, type Session } from '@/lib/edit/session';
+import { knownKeys, run } from '@/lib/edit/step';
+import { say } from '@/lib/text/ui';
 
-import { createScreen } from './screen';
+import { createScreen, type Screen } from './screen';
 
 interface Desk {
   readonly blur: () => void;
@@ -26,6 +29,7 @@ interface State {
   armed: boolean;
   session: Session;
   sprite: Buffer | null;
+  turn: number;
 }
 
 const ignored = new Set([
@@ -74,6 +78,7 @@ const actorOf = (sprite: Buffer | null): string => {
 
 interface Inner {
   readonly options: Options;
+  readonly screen: Screen;
   readonly setSession: (session: Session) => void;
   readonly state: State;
 }
@@ -81,7 +86,59 @@ interface Inner {
 const isElsewhere = (target: EventTarget | null): boolean =>
   target instanceof Element && target.closest('dialog, input, textarea, select') !== null;
 
-const listen = ({ options, setSession, state }: Inner): void => {
+const frameGap = 55;
+
+const describeEffect = (effect: Effect): string =>
+  say(`effect.${effect.kind}`, { count: String(effect.count), keys: String(effect.keys) });
+
+const framesOf = (before: Buffer, rules: Rules): Buffer[] =>
+  before.change.map((_key, at) =>
+    run(before, before.change.slice(0, at + 1), { keys: knownKeys, pairs: rules.pairs }),
+  );
+
+const replay = (inner: Inner, frames: readonly Buffer[], turn: number): void => {
+  const [frame, ...rest] = frames;
+  const { session } = inner.state;
+  if (frame === undefined || inner.state.turn !== turn) {
+    return;
+  }
+  const final = finalText(session, inner.options.rules());
+  if (rest.length === 0) {
+    inner.screen.show(session.buffer, goalOf(session, inner.options.rules()));
+    return;
+  }
+  inner.screen.show(frame, between(frame.text, final));
+  setTimeout(() => {
+    replay(inner, rest, turn);
+  }, frameGap);
+};
+
+const celebrate = (inner: Inner, before: Buffer, key: string): void => {
+  const effect = effectOf(before, inner.state.session.buffer, key);
+  if (effect === null) {
+    return;
+  }
+  inner.screen.flash(describeEffect(effect));
+  inner.screen.show(inner.state.session.buffer, goalOf(inner.state.session, inner.options.rules()));
+  if (effect.kind === 'repeat') {
+    replay(inner, framesOf(before, inner.options.rules()), inner.state.turn);
+  }
+};
+
+const handle = (inner: Inner, event: KeyboardEvent, key: string): void => {
+  const { options, setSession, state } = inner;
+  const before = state.session.buffer;
+  event.preventDefault();
+  event.stopPropagation();
+  const pressed = press(state.session, key, options.rules());
+  state.turn += 1;
+  setSession(pressed.session);
+  celebrate(inner, before, key);
+  options.onPress(pressed);
+};
+
+const listen = (inner: Inner): void => {
+  const { state } = inner;
   document.addEventListener(
     'keydown',
     (event) => {
@@ -89,11 +146,7 @@ const listen = ({ options, setSession, state }: Inner): void => {
       if (!state.armed || state.sprite !== null || key === null || isElsewhere(event.target)) {
         return;
       }
-      event.preventDefault();
-      event.stopPropagation();
-      const pressed = press(state.session, key, options.rules());
-      setSession(pressed.session);
-      options.onPress(pressed);
+      handle(inner, event, key);
     },
     { capture: true },
   );
@@ -112,6 +165,7 @@ const createDesk = (options: Options): Desk => {
     armed: false,
     session: { at: 0, buffer: options.start, path: [] },
     sprite: null,
+    turn: 0,
   };
   parent.replaceChildren();
   parent.dataset.actor = actorOf(null);
@@ -126,7 +180,7 @@ const createDesk = (options: Options): Desk => {
       options.onChange(session.buffer);
     }
   };
-  listen({ options, setSession, state });
+  listen({ options, screen, setSession, state });
   return {
     blur: () => {
       parent.blur();

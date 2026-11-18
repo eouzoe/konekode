@@ -5,6 +5,7 @@ import { describeCommand, describeNext } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
 
 import { type Desk } from './desk';
+import { createKeys, type Keys } from './keys';
 import { noteEntry, noteRefusal, noteStep, type Place } from './note';
 
 interface Panel {
@@ -57,6 +58,31 @@ const nextOf = (panel: Panel): Expected | null => {
   return expectedNow(session);
 };
 
+const rows = new WeakMap<HTMLElement, Keys>();
+
+const rowOf = (root: HTMLElement): Keys | null => {
+  const known = rows.get(root);
+  const element = root.querySelector<HTMLElement>('[data-role="keys"]');
+  if (known !== undefined || element === null) {
+    return known ?? null;
+  }
+  const made = createKeys(element, unitOf(root));
+  rows.set(root, made);
+  return made;
+};
+
+const nextCommand = (panel: Panel): string => {
+  const next = nextOf(panel);
+  if (next?.kind === 'command' && next.key.length === 1) {
+    return next.key;
+  }
+  return '';
+};
+
+const showKeys = (panel: Panel): void => {
+  rowOf(panel.root)?.show(nextCommand(panel), panel.desk.session().buffer.mode);
+};
+
 const enterTask = (panel: Panel, mode: string): void => {
   noteEntry(placeOf(panel.root), mode, panel.desk.text(false));
 };
@@ -73,6 +99,7 @@ const holdRun = (panel: Panel): void => {
 
 const showGuided = (panel: Panel, active: boolean, idle: string): void => {
   Object.assign(panel.root.dataset, { guided: String(active), wrong: 'false' });
+  showKeys(panel);
   if (active) {
     panel.hint.textContent = describeExpected(nextOf(panel));
     holdRun(panel);
@@ -94,6 +121,7 @@ const showStep = (panel: Panel, pressed: Pressed): void => {
     panel.hint.textContent = describeExpected(nextOf(panel));
   }
   holdRun(panel);
+  showKeys(panel);
   noteStep(placeOf(panel.root), pressed);
 };
 
@@ -105,4 +133,15 @@ const mayRun = (panel: Panel): boolean => {
   return false;
 };
 
-export { enterTask, hints, isGuided, mayRun, notTaught, noteCommand, showGuided, showStep, unitOf };
+export {
+  enterTask,
+  hints,
+  isGuided,
+  mayRun,
+  notTaught,
+  noteCommand,
+  showGuided,
+  showKeys,
+  showStep,
+  unitOf,
+};
