@@ -3,7 +3,19 @@ import { createActor } from 'xstate';
 import { sceneMachine } from '../src/lib/scene/machine';
 import { current, currentId } from './scene-view';
 import { open, readMetas } from './start-support';
-import { expect, test } from './test';
+import { expect, test, type Page } from './test';
+
+const noteNextKey = async (page: Page, name: string): Promise<void> => {
+  await page.evaluate((as) => {
+    globalThis.addEventListener(
+      'keydown',
+      (event) => {
+        document.documentElement.dataset[as] = String(event.defaultPrevented);
+      },
+      { once: true },
+    );
+  }, name);
+};
 
 test.describe('起步單元：對話', () => {
   test.use({ reducedMotion: 'reduce' });
@@ -49,6 +61,20 @@ test.describe('起步單元：對話', () => {
         await page.keyboard.press(key);
       }
     }
+    expect(await currentId(page)).toBe('fullscreen-ask');
+  });
+
+  test('Backspace outside a gate is kept from the browser and does not turn the sentence', async ({
+    page,
+  }) => {
+    await open(page);
+    await noteNextKey(page, 'unfocused');
+    await page.keyboard.press('Backspace');
+    await expect(page.locator('html')).toHaveAttribute('data-unfocused', 'true');
+    await page.locator('[data-role="back"]').focus();
+    await noteNextKey(page, 'button');
+    await page.keyboard.press('Backspace');
+    await expect(page.locator('html')).toHaveAttribute('data-button', 'true');
     expect(await currentId(page)).toBe('fullscreen-ask');
   });
 

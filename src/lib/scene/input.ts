@@ -1,7 +1,7 @@
 import { object, string, type infer as Infer } from 'zod';
 
 import { watchFullScreen } from './conditions';
-import { readIntent, type Intent } from './keys';
+import { readIntent, wouldLeave, type Intent } from './keys';
 import { type Check } from './machine';
 
 interface Handlers {
@@ -73,9 +73,17 @@ const keepInGate = (root: HTMLElement, event: KeyboardEvent): boolean => {
   return true;
 };
 
+const keepOnPage = (event: KeyboardEvent): boolean => {
+  if (!wouldLeave(event)) {
+    return false;
+  }
+  event.preventDefault();
+  return true;
+};
+
 const onKey = (root: HTMLElement, handlers: Handlers, event: KeyboardEvent): void => {
   const intent = readIntent(event);
-  if (keepInGate(root, event) || intent === 'none') {
+  if (keepOnPage(event) || keepInGate(root, event) || intent === 'none') {
     return;
   }
   event.preventDefault();

@@ -9,6 +9,14 @@ const isControl = (target: EventTarget | null): boolean =>
   target instanceof HTMLButtonElement ||
   (target instanceof HTMLElement && target.closest('.cm-editor') !== null);
 
+const writesText = (target: EventTarget | null): boolean =>
+  target instanceof HTMLTextAreaElement ||
+  target instanceof HTMLInputElement ||
+  (target instanceof HTMLElement && target.isContentEditable);
+
+const wouldLeave = (event: KeyboardEvent): boolean =>
+  event.key === 'Backspace' && !writesText(event.target);
+
 const isDrillInput = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement && target.dataset.role === 'input';
 
@@ -44,4 +52,4 @@ const readIntent = (event: KeyboardEvent): Intent => {
   return intent;
 };
 
-export { readIntent, type Intent };
+export { readIntent, wouldLeave, type Intent };
