@@ -87,6 +87,7 @@ const finish = (parts: Parts, { beat, forced, outcome }: Finished): void => {
 };
 
 const begin = (parts: Parts): void => {
+  parts.root.dispatchEvent(new CustomEvent('run:begin', { bubbles: true }));
   parts.button.disabled = true;
   show(parts, { state: 'busy', status: busyStatus(loadedPercent()), text: '' });
 };

@@ -876,6 +876,27 @@ test.describe('起步單元', () => {
     await expect(effect).toHaveText('按 2 個鍵，刪掉了 2 行');
   });
 
+  test('the free task shows what to print, says what is wrong, and compiles with the prepared header', async ({
+    page,
+  }) => {
+    const header = page.waitForResponse((response) => response.url().endsWith('/compiler/std.pch'));
+    const note = page.locator('[data-role="note"]');
+    await open(page, 'task');
+    await expect(page.locator('[data-code-runner] [data-role="expect"]')).toHaveText('5 3');
+    await page.keyboard.press('Enter');
+    await expect(status(page)).toHaveText('執行完成', { timeout: 150_000 });
+    expect((await header).status()).toBe(200);
+    await expect(note).toHaveText('應該要輸出 2 行，目前只輸出了 1 行。');
+    await page.keyboard.press('o');
+    await page.keyboard.type('cout << b;');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Enter');
+    await expect(status(page)).toHaveText('編譯沒有過', { timeout: 150_000 });
+    await expect(note).toBeEmpty();
+    await open(page, 'run-cin');
+    await expect(page.locator('[data-code-runner] [data-role="expect-field"]')).toBeHidden();
+  });
+
   test('the given input is shown, cannot be changed, and takes no keys', async ({ page }) => {
     await open(page, 'run-cin');
     const given = page.locator('[data-code-runner] [data-role="stdin"]');

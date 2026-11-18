@@ -1,6 +1,6 @@
 import { createActor, type Actor, type SnapshotFrom } from 'xstate';
 
-import { ui } from '@/lib/text/ui';
+import { diagnose } from '@/lib/run/diagnose';
 
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
@@ -16,6 +16,7 @@ type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 interface Scene {
   readonly actor: Actor<typeof sceneMachine>;
   readonly beats: readonly HTMLElement[];
+  readonly expect: HTMLElement | null;
   index: number;
   readonly lines: readonly HTMLElement[];
   readonly note: HTMLElement | null;
@@ -30,7 +31,6 @@ interface Scene {
 }
 
 const forward = 1;
-const mismatchNote = ui['run.mismatch'];
 const markLines = (scene: Scene, beat: HTMLElement): void => {
   const marked = new Set((beat.dataset.lines ?? '').split(','));
   for (const line of scene.lines) {
@@ -61,6 +61,26 @@ const fillInput = (scene: Scene, beat: HTMLElement): void => {
     field.hidden = false;
   }
 };
+
+const fillExpect = (scene: Scene, beat: HTMLElement): void => {
+  const field = scene.expect?.closest<HTMLElement>('[data-role="expect-field"]');
+  if (scene.expect === null || field === null || field === undefined) {
+    return;
+  }
+  scene.expect.textContent = beat.dataset.expect ?? '';
+  field.hidden = beat.dataset.expect === undefined;
+};
+
+const fillBoxes = (scene: Scene, beat: HTMLElement): void => {
+  fillInput(scene, beat);
+  fillExpect(scene, beat);
+};
+
+const mismatchNote = (scene: Scene): string =>
+  diagnose(
+    scene.beats[scene.index]?.dataset.expect ?? '',
+    scene.root.querySelector('[data-role="output"]')?.textContent ?? '',
+  );
 
 const setNote = (scene: Scene, text: string): void => {
   if (scene.note !== null) {
@@ -116,7 +136,7 @@ const show = (scene: Scene): void => {
   direct(scene.root, scene.beats, scene.index);
   schedule(scene, beat);
   showStage(scene, beat);
-  fillInput(scene, beat);
+  fillBoxes(scene, beat);
   focusTyping(scene, beat);
 };
 
@@ -173,7 +193,7 @@ const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void =
   speak(scene, snapshot.matches('revealing'), enter(scene, index));
   fitStage(scene.root);
   if (mismatch) {
-    setNote(scene, mismatchNote);
+    setNote(scene, mismatchNote(scene));
     return;
   }
   setNote(scene, '');
@@ -187,6 +207,9 @@ const isCurrent = (scene: Scene, beat: string): boolean =>
   scene.beats[scene.index]?.dataset.id === beat;
 
 const listen = (scene: Scene): void => {
+  scene.root.addEventListener('run:begin', () => {
+    setNote(scene, '');
+  });
   listenInput(scene.root, {
     back: () => {
       step(scene, 'BACK');
@@ -230,6 +253,7 @@ const build = (root: HTMLElement, read: ReadUnit): Scene => {
   return {
     actor,
     beats,
+    expect: root.querySelector<HTMLElement>('[data-role="expect"]'),
     index: first.context.index,
     lines: [...root.querySelectorAll<HTMLElement>('[data-line]')],
     note: root.querySelector<HTMLElement>('[data-role="note"]'),
