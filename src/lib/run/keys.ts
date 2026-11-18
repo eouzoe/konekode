@@ -9,7 +9,7 @@ interface Keys {
 }
 
 interface State {
-  fresh: boolean;
+  readonly fresh: Set<string>;
   mode: string;
   next: string;
 }
@@ -53,8 +53,9 @@ const forget = (present: ReadonlyMap<string, HTMLElement>, learned: readonly str
   }
 };
 
-const added = (row: HTMLElement, key: string, fresh: boolean): HTMLElement => {
-  const element = cap(key, fresh);
+const added = (row: HTMLElement, key: string, state: State): HTMLElement => {
+  const element = cap(key, state.fresh.has(key));
+  state.fresh.delete(key);
   row.append(element);
   return element;
 };
@@ -65,7 +66,7 @@ const draw = (row: HTMLElement, order: readonly string[], state: State): void =>
   labelled(row);
   forget(present, learned);
   for (const key of learned) {
-    const element = present.get(key) ?? added(row, key, state.fresh);
+    const element = present.get(key) ?? added(row, key, state);
     element.dataset.next = String(key === state.next);
   }
   row.hidden = learned.length === 0;
@@ -90,13 +91,12 @@ const nudge = (row: HTMLElement): void => {
 
 const createKeys = (row: HTMLElement, unit: string): Keys => {
   const order = orderOf(unit);
-  const state: State = { fresh: false, mode: 'normal', next: '' };
+  const state: State = { fresh: new Set(), mode: 'normal', next: '' };
   onRecorded((event) => {
-    if (event.kind === 'item.unlocked') {
+    if (event.kind === 'item.unlocked' && event.ref.startsWith(prefix)) {
+      state.fresh.add(event.ref.slice(prefix.length));
       queueMicrotask(() => {
-        state.fresh = true;
         draw(row, order, state);
-        state.fresh = false;
       });
     }
   });
