@@ -2,6 +2,7 @@ import { ordered, type LearningEvent } from '@/lib/record/event';
 
 import { bktExpect, bktUpdate, defaultParams } from './bkt';
 import { type UnitDomain } from './domain';
+import { dayLength, dueAt, recall, remember, type Evidence, type Memory } from './memory';
 
 type Standing = 'done' | 'shown' | 'unseen';
 
@@ -9,6 +10,7 @@ interface Tally {
   completed: number;
   estimate: number;
   firstRight: number;
+  memory: Memory | null;
   opportunities: number;
   shown: number;
   unsettled: boolean;
@@ -26,6 +28,7 @@ interface Observation {
   readonly component: string;
   readonly opportunity: number;
   readonly predicted: number;
+  readonly remembered: number | null;
   readonly right: boolean;
   readonly session: string;
   readonly step: number;
@@ -35,11 +38,13 @@ interface Observation {
 }
 
 interface Entry {
+  readonly helped: boolean;
   last: number;
   readonly steps: Map<number, boolean>;
 }
 
 interface Mark {
+  readonly evidence: Evidence;
   readonly first: boolean;
   readonly right: boolean;
   readonly step: number;
@@ -64,6 +69,7 @@ const tallyOf = (fold: Fold, id: string): Tally => {
     completed: 0,
     estimate: defaultParams.pL0,
     firstRight: 0,
+    memory: null,
     opportunities: 0,
     shown: 0,
     unsettled: false,
@@ -86,27 +92,44 @@ const reach: Handle = (fold, event, domain) => {
 const entryKey = (event: LearningEvent): string => `${event.session}|${event.unit}|${event.ref}`;
 
 const enter: Handle = (fold, event) => {
-  fold.entries.set(entryKey(event), { last: event.at, steps: new Map() });
+  fold.entries.set(entryKey(event), {
+    helped: event.data.mode !== 'free',
+    last: event.at,
+    steps: new Map(),
+  });
 };
 
-const score = (tally: Tally, first: boolean, right: boolean): void => {
-  if (first) {
-    tally.opportunities += 1;
-    tally.estimate = bktUpdate(tally.estimate, defaultParams, { correct: right });
-    tally.unsettled = !right;
+const evidenceOf = (helped: boolean, right: boolean): Evidence => {
+  if (!right) {
+    return 'wrong';
   }
-  if (first && right) {
+  if (helped) {
+    return 'helped';
+  }
+  return 'unaided';
+};
+
+const score = (tally: Tally, mark: Mark, at: number): void => {
+  if (mark.first) {
+    tally.opportunities += 1;
+    tally.estimate = bktUpdate(tally.estimate, defaultParams, { correct: mark.right });
+    tally.memory = remember(tally.memory, at, mark.evidence);
+    tally.unsettled = !mark.right;
+  }
+  if (mark.first && mark.right) {
     tally.firstRight += 1;
   }
-  if (right) {
+  if (mark.right) {
     tally.completed += 1;
   }
 };
 
 const markOf = (entry: Entry, event: LearningEvent, step: number): Mark => {
+  const right = event.data.verdict === 'right';
   const mark: Mark = {
+    evidence: evidenceOf(entry.helped, right),
     first: !entry.steps.has(step),
-    right: event.data.verdict === 'right',
+    right,
     step,
     waited: event.at - entry.last,
   };
@@ -117,6 +140,13 @@ const markOf = (entry: Entry, event: LearningEvent, step: number): Mark => {
   return mark;
 };
 
+const rememberedAt = (memory: Memory | null, at: number): number | null => {
+  if (memory === null) {
+    return null;
+  }
+  return recall(memory, at);
+};
+
 const observed = (
   event: LearningEvent,
   mark: Mark,
@@ -125,6 +155,7 @@ const observed = (
   at: event.at,
   opportunity: tally.opportunities + 1,
   predicted: bktExpect(tally.estimate, defaultParams),
+  remembered: rememberedAt(tally.memory, event.at),
   right: mark.right,
   session: event.session,
   step: mark.step,
@@ -145,7 +176,7 @@ const attempt: Handle = (fold, event, domain) => {
     if (mark.first) {
       fold.observations.push({ component, ...observed(event, mark, tally) });
     }
-    score(tally, mark.first, mark.right);
+    score(tally, mark, event.at);
   }
 };
 
@@ -192,6 +223,7 @@ const unseen: Component = {
   completed: 0,
   estimate: defaultParams.pL0,
   firstRight: 0,
+  memory: null,
   opportunities: 0,
   shown: 0,
   standing: 'unseen',
@@ -200,7 +232,35 @@ const unseen: Component = {
 
 const componentOf = (model: Model, id: string): Component => model.get(id) ?? unseen;
 
-const reviewDue = (): readonly string[] => [];
+const dueOf = (model: Model, at: number): [string, number][] =>
+  [...model].flatMap(([id, { memory }]): [string, number][] => {
+    if (memory === null || dueAt(memory) > at) {
+      return [];
+    }
+    return [[id, dueAt(memory)]];
+  });
+
+const reviewDue = (model: Model, at: number): readonly string[] =>
+  dueOf(model, at)
+    .toSorted(([first, firstDue], [second, secondDue]) => {
+      if (firstDue !== secondDue) {
+        return firstDue - secondDue;
+      }
+      return first.localeCompare(second);
+    })
+    .map(([id]) => id);
+
+interface Recollection {
+  readonly daysLeft: number;
+  readonly recall: number;
+}
+
+const recollect = ({ memory }: Component, at: number): Recollection | null => {
+  if (memory === null) {
+    return null;
+  }
+  return { daysLeft: (dueAt(memory) - at) / dayLength, recall: recall(memory, at) };
+};
 
 const handledKinds: readonly string[] = Object.keys(handles);
 
@@ -209,6 +269,7 @@ export {
   handledKinds,
   learnerModel,
   observe,
+  recollect,
   reviewDue,
   type Component,
   type Domains,

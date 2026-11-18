@@ -1,5 +1,5 @@
 import { components } from '@/lib/learner/domain';
-import { componentOf, learnerModel } from '@/lib/learner/model';
+import { componentOf, learnerModel, recollect, type Component } from '@/lib/learner/model';
 import { unitState } from '@/lib/learner/progress';
 import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
@@ -110,12 +110,40 @@ const columns = [
   '做到了',
   '最近一次第一下錯',
   'BKT（只記錄）',
+  '還記得的機率（只記錄）',
+  '下次確認',
 ];
 const marks: Record<string, string> = { false: '', true: '是' };
 const digits = 3;
 
+const hoursInDay = 24;
+const minutesInHour = 60;
+
+const checkIn = (days: number): string => {
+  const hours = days * hoursInDay;
+  if (days <= 0) {
+    return '到期了';
+  }
+  if (days >= 1) {
+    return `${days.toFixed(1)} 天後`;
+  }
+  if (hours >= 1) {
+    return `${hours.toFixed(1)} 小時後`;
+  }
+  return `${String(Math.ceil(hours * minutesInHour))} 分鐘後`;
+};
+
+const memoryCells = (item: Component, at: number): string[] => {
+  const view = recollect(item, at);
+  if (view === null) {
+    return ['', ''];
+  }
+  return [view.recall.toFixed(digits), checkIn(view.daysLeft)];
+};
+
 const modelRows = (): HTMLTableRowElement[] => {
   const model = learnerModel(recorded(), allDomains());
+  const at = Date.now();
   return components.map((id) => {
     const item = componentOf(model, id);
     const row = make('tr');
@@ -128,6 +156,7 @@ const modelRows = (): HTMLTableRowElement[] => {
       item.completed,
       marks[String(item.unsettled)],
       item.estimate.toFixed(digits),
+      ...memoryCells(item, at),
     ];
     row.append(...cells.map((value) => make('td', String(value))));
     return row;
@@ -145,7 +174,10 @@ const modelSheet = (): HTMLDialogElement => {
     body.replaceChildren(...modelRows());
   });
   sheet.append(
-    make('strong', '學生模型（由事件紀錄算出來；第一版只有指令鍵；BKT 只記錄、不決定任何事）'),
+    make(
+      'strong',
+      '學生模型（由事件紀錄算出來；第一版只有指令鍵；BKT 與記憶都只記錄、不決定任何事）',
+    ),
     table,
   );
   return sheet;

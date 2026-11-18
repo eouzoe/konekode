@@ -22,6 +22,7 @@
     "@rrweb/record": "2.2.2",
     "@yowasp/clang": "^22.0.0-git20542-10",
     "astro": "^7.4.11",
+    "ts-fsrs": "6.0.0",
     "xstate": "6.0.0-beta.3",
     "zod": "^4.6.7"
   },

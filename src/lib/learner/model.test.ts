@@ -6,11 +6,21 @@ import { type LearningEvent } from '@/lib/record/event';
 import { allDomains } from '@/units/index';
 
 import { components } from './domain';
-import { componentOf, learnerModel, observe, reviewDue, type Component, type Model } from './model';
+import { dayLength } from './memory';
+import {
+  componentOf,
+  learnerModel,
+  observe,
+  recollect,
+  reviewDue,
+  type Component,
+  type Model,
+} from './model';
 
 interface Sketch {
   readonly at: number;
   readonly kind: string;
+  readonly mode: string;
   readonly ref: string;
   readonly session: string;
   readonly step: number;
@@ -21,7 +31,7 @@ interface Sketch {
 const make = (sketch: Partial<Sketch>, seq: number): LearningEvent => ({
   actor: 'me',
   at: sketch.at ?? seq,
-  data: { at: sketch.step ?? 0, verdict: sketch.verdict ?? 'right' },
+  data: { at: sketch.step ?? 0, mode: sketch.mode ?? 'guided', verdict: sketch.verdict ?? 'right' },
   id: `event-${String(seq)}`,
   kind: sketch.kind ?? 'step.tried',
   ref: sketch.ref ?? 'run-cout',
@@ -54,6 +64,7 @@ test('nothing recorded means nothing seen', () => {
     completed: 0,
     estimate: 0.2,
     firstRight: 0,
+    memory: null,
     opportunities: 0,
     shown: 0,
     standing: 'unseen',
@@ -194,8 +205,107 @@ test('a key stays unsettled until a later opportunity is right the first time', 
   expect(componentOf(read(slipped), 'key.O').unsettled).toBe(false);
 });
 
-test('nothing is due for review yet', () => {
-  expect(reviewDue()).toEqual([]);
+const day = dayLength;
+const minute = 60_000;
+
+test('nothing practised means nothing to review, however long it has been', () => {
+  expect(reviewDue(read([]), 400 * day)).toEqual([]);
+  const shown = read(build([{ kind: 'beat.reached', ref: 'go-end' }]));
+  expect(reviewDue(shown, 400 * day)).toEqual([]);
+});
+
+test('a key pressed right with the answer on screen comes back the next day', () => {
+  const model = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0 },
+    ]),
+  );
+  expect(reviewDue(model, 200)).toEqual([]);
+  expect(reviewDue(model, 200 + day / 4)).toEqual([]);
+  expect(reviewDue(model, 200 + day)).toEqual(['key.G']);
+});
+
+test('how well a key is remembered and how long until its check can be read at any moment', () => {
+  const model = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0 },
+    ]),
+  );
+  const fresh = recollect(componentOf(model, 'key.G'), 200);
+  const stale = recollect(componentOf(model, 'key.G'), 200 + 2 * day);
+  expect(recollect(componentOf(model, 'key.O'), 200)).toBeNull();
+  expect(fresh?.daysLeft).toBeCloseTo(0.6, 1);
+  expect(fresh?.recall).toBeGreaterThan(0.99);
+  expect(stale?.daysLeft).toBeCloseTo(-1.4, 1);
+  expect(stale?.recall).toBeLessThan(0.9);
+});
+
+test('a key pressed right without help is left alone for days', () => {
+  const model = read(
+    build([
+      { at: 100, kind: 'task.entered', mode: 'free' },
+      { at: 200, step: 0 },
+    ]),
+  );
+  expect(reviewDue(model, 200 + 3 * day)).toEqual([]);
+  expect(reviewDue(model, 200 + 6 * day)).toEqual(['key.G']);
+});
+
+test('a key missed on its first press is due at once', () => {
+  const model = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0, verdict: 'wrong' },
+      { at: 300, step: 0 },
+    ]),
+  );
+  expect(reviewDue(model, 300 + minute)).toEqual(['key.G']);
+});
+
+test('only the first press of a step reaches the memory', () => {
+  const once = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0, verdict: 'wrong' },
+    ]),
+  );
+  const corrected = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0, verdict: 'wrong' },
+      { at: 300, step: 0 },
+    ]),
+  );
+  expect(componentOf(corrected, 'key.G').memory).toEqual(componentOf(once, 'key.G').memory);
+});
+
+test('what is most overdue comes first', () => {
+  const model = read(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0 },
+      { at: 300, step: 1, verdict: 'wrong' },
+    ]),
+  );
+  expect(reviewDue(model, 300 + minute)).toEqual(['key.O']);
+  expect(reviewDue(model, 300 + day)).toEqual(['key.O', 'key.G']);
+});
+
+test('each opportunity carries the recall expected just before it', () => {
+  const { observations } = observe(
+    build([
+      { at: 100, kind: 'task.entered' },
+      { at: 200, step: 0 },
+      { at: 200 + day, kind: 'task.entered' },
+      { at: 300 + day, step: 0 },
+    ]),
+    domains,
+  );
+  expect(observations[0]?.remembered).toBeNull();
+  expect(observations[1]?.remembered).toBeGreaterThan(0.8);
+  expect(observations[1]?.remembered).toBeLessThan(0.9);
 });
 
 const sketch: Arbitrary<Partial<Sketch>> = record({
@@ -208,6 +318,26 @@ const sketch: Arbitrary<Partial<Sketch>> = record({
 });
 
 const sketches = array(sketch, { maxLength: 40 });
+
+test('whatever is due has been practised, and stays due until it is practised again', () => {
+  assert(
+    property(
+      sketches,
+      integer({ max: 400, min: 0 }),
+      integer({ max: 400, min: 0 }),
+      (list, wait, more) => {
+        const model = read(build(list));
+        const sooner = reviewDue(model, wait * day);
+        const later = reviewDue(model, (wait + more) * day);
+        for (const id of sooner) {
+          expect(componentOf(model, id).opportunities).toBeGreaterThan(0);
+          expect(later).toContain(id);
+        }
+        expect(new Set(later).size).toBe(later.length);
+      },
+    ),
+  );
+});
 
 test('the same events give the same model in any order, with repeats', () => {
   assert(
