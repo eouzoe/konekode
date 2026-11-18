@@ -1,21 +1,23 @@
+import { ui } from '@/lib/text/ui';
+
 const messages = {
-  begin: '按 i 進入輸入模式',
-  done: '完成囉！真棒！',
-  extraKey: '已經打完囉！按 Esc 回到一般模式',
+  begin: ui['typing.begin'],
+  done: ui['typing.done'],
+  extraKey: ui['typing.extraKey'],
   modeInsert: '-- INSERT --',
   modeNormal: '-- NORMAL --',
-  needInsert: '現在是一般模式，還不能打字喔！要先按 i 進入輸入模式',
-  noDelete: '不用刪除喔！直接',
-  press: '按 ',
-  pressEnter: '按 Enter',
-  pressEsc: '按 Esc',
-  pressEscape: '打完了！按 Esc 回到一般模式',
-  pressSpace: '按空白鍵',
-  resume: '按 Esc 是離開輸入模式呦！請按 i 回到輸入模式',
-  runNow: 'Enter 執行',
-  typeChar: '輸入 ',
-  withShift: 'Shift + ',
-  wrong: '按錯囉！要',
+  needInsert: ui['typing.needInsert'],
+  noDelete: ui['typing.noDelete'],
+  press: ui['typing.press'],
+  pressEnter: ui['typing.pressEnter'],
+  pressEsc: ui['typing.pressEsc'],
+  pressEscape: ui['typing.pressEscape'],
+  pressSpace: ui['typing.pressSpace'],
+  resume: ui['typing.resume'],
+  runNow: ui['typing.runNow'],
+  typeChar: ui['typing.typeChar'],
+  withShift: ui['typing.withShift'],
+  wrong: ui['typing.wrong'],
 };
 
 export { messages };

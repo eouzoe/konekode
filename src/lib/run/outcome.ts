@@ -1,3 +1,5 @@
+import { say, ui } from '@/lib/text/ui';
+
 import { explain } from './explain';
 import { type Outcome } from './protocol';
 
@@ -9,7 +11,7 @@ interface View {
 
 type Finished = Extract<Outcome, { kind: 'finished' }>;
 
-const retry = '編譯器沒有準備好，再執行一次試試看。';
+const retry = ui['run.retry'];
 
 const failures: {
   readonly [Kind in Exclude<Outcome['kind'], 'finished'>]: (
@@ -18,20 +20,35 @@ const failures: {
 } = {
   'compile-error': (outcome) => ({
     state: 'error',
-    status: '編譯沒有過',
+    status: ui['run.compileError'],
     text: explain(outcome.message),
   }),
-  crashed: (outcome) => ({ state: 'error', status: '執行時出錯', text: outcome.message }),
-  timeout: () => ({ state: 'error', status: '跑太久，已經停下來', text: '' }),
-  unavailable: () => ({ state: 'error', status: '執行不了', text: retry }),
+  crashed: (outcome) => ({ state: 'error', status: ui['run.crashed'], text: outcome.message }),
+  timeout: () => ({ state: 'error', status: ui['run.timeout'], text: '' }),
+  unavailable: () => ({ state: 'error', status: ui['run.unavailable'], text: retry }),
 };
 
 const describeFinished = (outcome: Finished): View => {
   if (outcome.exitCode !== 0) {
-    return { state: 'error', status: '程式中途結束', text: outcome.output };
+    return { state: 'error', status: ui['run.stopped'], text: outcome.output };
   }
-  return { state: 'ok', status: '執行完成', text: outcome.output };
+  return { state: 'ok', status: ui['run.finished'], text: outcome.output };
 };
+
+const complete = 100;
+
+const busyStatus = (percent: number): string => {
+  if (percent < complete) {
+    return say('run.loading', { percent: String(percent) });
+  }
+  return ui['run.running'];
+};
+
+const failed = (error: unknown): View => ({
+  state: 'error',
+  status: ui['run.unavailable'],
+  text: String(error),
+});
 
 const describe = (outcome: Outcome): View => {
   if (outcome.kind === 'finished') {
@@ -49,4 +66,4 @@ const describe = (outcome: Outcome): View => {
   return failures.unavailable(outcome);
 };
 
-export { describe, type View };
+export { busyStatus, describe, failed, type View };

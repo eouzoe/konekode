@@ -3,9 +3,10 @@ import { componentOf, learnerModel } from '@/lib/learner/model';
 import { unitState } from '@/lib/learner/progress';
 import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
+import { ui } from '@/lib/text/ui';
 import { allDomains, beatsOf } from '@/units/index';
 
-import { textEditor } from './edit';
+import { textEditor, type Editor } from './edit';
 import { jumpTo, skipFrom, type Entry } from './jump';
 import { lookButton } from './looks';
 
@@ -166,11 +167,37 @@ const skipButton = (unit: string): HTMLButtonElement => {
   return skip;
 };
 
+const uiEntry = (
+  editor: Editor,
+  list: HTMLDialogElement,
+  entry: readonly [string, string],
+): HTMLElement => {
+  const [id, text] = entry;
+  const item = make('li');
+  const button = make('button');
+  button.append(make('code', id), text);
+  button.addEventListener('click', () => {
+    list.close();
+    editor.openFor({ id, text, unit: 'ui' });
+  });
+  item.append(button);
+  return item;
+};
+
+const uiSheet = (editor: Editor): HTMLDialogElement => {
+  const sheet = make('dialog', '', 'dev-sheet');
+  const list = make('ol');
+  list.append(...Object.entries(ui).map((entry) => uiEntry(editor, sheet, entry)));
+  sheet.append(make('strong', '畫面上的字（提示、狀態、按鈕；點一句來改）'), list);
+  return sheet;
+};
+
 const editButton = (unit: string): HTMLElement[] => {
   const editor = textEditor(unit);
   const button = make('button', '改這句（F2）');
+  const others = uiSheet(editor);
   button.addEventListener('click', editor.open);
-  return [button, editor.sheet];
+  return [button, opener('畫面上的字', others), editor.sheet, others];
 };
 
 const sheets = (unit: string): HTMLElement[] => {

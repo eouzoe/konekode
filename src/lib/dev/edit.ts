@@ -46,22 +46,35 @@ const build = (): Parts => {
   return { field, sheet, status, where };
 };
 
-const open = (parts: Parts, unit: string): void => {
-  const id = currentBeat();
-  const beat = beatsOf(unit).find((other) => other.id === id);
-  if (beat === undefined || parts.sheet.open) {
+interface Target {
+  readonly id: string;
+  readonly text: string;
+  readonly unit: string;
+}
+
+const openFor = (parts: Parts, target: Target): void => {
+  if (parts.sheet.open) {
     return;
   }
-  parts.where.textContent = id;
-  parts.field.value = beat.say;
+  parts.sheet.dataset.unit = target.unit;
+  parts.where.textContent = target.id;
+  parts.field.value = target.text;
   parts.status.textContent = '';
   parts.sheet.showModal();
   parts.field.select();
 };
 
-const save = async (parts: Parts, unit: string): Promise<void> => {
+const open = (parts: Parts, unit: string): void => {
+  const id = currentBeat();
+  const beat = beatsOf(unit).find((other) => other.id === id);
+  if (beat !== undefined) {
+    openFor(parts, { id, text: beat.say, unit });
+  }
+};
+
+const save = async (parts: Parts): Promise<void> => {
   const text = parts.field.value.trim();
-  const problem = await send(unit, parts.where.textContent, text);
+  const problem = await send(parts.sheet.dataset.unit ?? '', parts.where.textContent, text);
   if (problem !== '') {
     parts.status.textContent = problem;
     return;
@@ -72,12 +85,18 @@ const save = async (parts: Parts, unit: string): Promise<void> => {
   }, reloadAfter);
 };
 
-const textEditor = (unit: string): { open: () => void; sheet: HTMLDialogElement } => {
+interface Editor {
+  readonly open: () => void;
+  readonly openFor: (target: Target) => void;
+  readonly sheet: HTMLDialogElement;
+}
+
+const textEditor = (unit: string): Editor => {
   const parts = build();
   parts.field.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && !event.isComposing) {
       event.preventDefault();
-      void save(parts, unit);
+      void save(parts);
     }
   });
   document.addEventListener(
@@ -94,8 +113,11 @@ const textEditor = (unit: string): { open: () => void; sheet: HTMLDialogElement 
     open: () => {
       open(parts, unit);
     },
+    openFor: (target) => {
+      openFor(parts, target);
+    },
     sheet: parts.sheet,
   };
 };
 
-export { textEditor };
+export { textEditor, type Editor };

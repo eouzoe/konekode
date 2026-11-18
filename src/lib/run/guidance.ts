@@ -1,5 +1,6 @@
 import { type Expected } from '@/lib/edit/path';
 import { expectedNow, isGuided as follows, type Pressed } from '@/lib/edit/session';
+import { ui } from '@/lib/text/ui';
 import { describeCommand, describeNext } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
 
@@ -30,6 +31,12 @@ const describeExpected = (expected: Expected | null): string => {
     return describeNext(expected.key);
   }
   return named[expected.key] ?? describeCommand(expected.key);
+};
+
+const notTaught = ui['run.notTaught'];
+const hints: Readonly<Record<string, string>> = {
+  insert: ui['run.hintInsert'],
+  normal: ui['typing.runNow'],
 };
 
 const isGuided = (root: HTMLElement): boolean => root.dataset.guided === 'true';
@@ -98,4 +105,4 @@ const mayRun = (panel: Panel): boolean => {
   return false;
 };
 
-export { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf };
+export { enterTask, hints, isGuided, mayRun, notTaught, noteCommand, showGuided, showStep, unitOf };

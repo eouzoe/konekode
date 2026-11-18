@@ -5,9 +5,19 @@ import { planOf, starterOf } from '@/units/index';
 
 import { createDesk, type Desk } from './desk';
 import { readDraft, writeDraft } from './draft';
-import { enterTask, isGuided, mayRun, noteCommand, showGuided, showStep, unitOf } from './guidance';
+import {
+  enterTask,
+  hints,
+  isGuided,
+  mayRun,
+  notTaught,
+  noteCommand,
+  showGuided,
+  showStep,
+  unitOf,
+} from './guidance';
 import { noteRun } from './note';
-import { describe, type View } from './outcome';
+import { busyStatus, describe, failed, type View } from './outcome';
 import { type Outcome } from './protocol';
 import { isKnown, loadedPercent, runProgram, warmUp, watchLoading } from './runner';
 import { createStage } from './stage';
@@ -24,15 +34,6 @@ interface Parts {
 }
 
 const firstTouch = ['pointerdown', 'keydown'];
-const complete = 100;
-
-const busyStatus = (percent: number): string => {
-  if (percent < complete) {
-    return `正在下載編譯器（${String(percent)}%），只有第一次需要等`;
-  }
-  return '執行中';
-};
-
 const find = <Kind extends HTMLElement>(
   root: Element,
   role: string,
@@ -91,7 +92,7 @@ const begin = (parts: Parts): void => {
 
 const fail = (parts: Parts, beat: string, error: unknown): void => {
   if (attending(parts) === beat) {
-    show(parts, { state: 'error', status: '執行不了', text: String(error) });
+    show(parts, failed(error));
   }
 };
 
@@ -134,12 +135,6 @@ const preload = (): void => {
       { signal },
     );
   }
-};
-
-const notTaught = '這個鍵還沒學到，先不能用喔！';
-const hints: Readonly<Record<string, string>> = {
-  insert: 'Esc 回到一般模式',
-  normal: 'Enter 執行',
 };
 
 const rules = (): Rules => ({ keys: engine.keys(), pairs: engine.pairs() });

@@ -1,5 +1,6 @@
 import { engine } from '@/lib/complete/current';
 import { autoClosed } from '@/lib/complete/pairs';
+import { ui } from '@/lib/text/ui';
 
 import { expectedChar, hasStarted, insertKey, isDone, isTyped, type Drill } from './drill';
 import { describeNext } from './hint';
@@ -66,7 +67,7 @@ const buildKeyboard = (keyboard: HTMLElement): void => {
     makeRow(upper),
     makeRow([...home, makeKey(enterKey, 'Enter', true)]),
     makeRow([makeKey(shiftKey, 'Shift', true), ...lower, makeKey(shiftKey, 'Shift', true)]),
-    makeRow([makeKey(spaceKey, '空白鍵', true)]),
+    makeRow([makeKey(spaceKey, ui['keyboard.space'], true)]),
   );
 };
 

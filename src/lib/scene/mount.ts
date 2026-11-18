@@ -1,5 +1,7 @@
 import { createActor, type Actor, type SnapshotFrom } from 'xstate';
 
+import { ui } from '@/lib/text/ui';
+
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
 import { fitStage } from './fit';
@@ -28,7 +30,7 @@ interface Scene {
 }
 
 const forward = 1;
-const mismatchNote = '印出來的東西和要的不一樣，請再檢查一次。';
+const mismatchNote = ui['run.mismatch'];
 const markLines = (scene: Scene, beat: HTMLElement): void => {
   const marked = new Set((beat.dataset.lines ?? '').split(','));
   for (const line of scene.lines) {

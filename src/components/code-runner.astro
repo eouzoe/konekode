@@ -1,4 +1,6 @@
 ---
+import { ui } from '@/lib/text/ui';
+
 interface Props {
   source: string;
   input?: string;
@@ -14,11 +16,11 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     <pre set:text={source} />
   </div>
   <div class="field" data-role="field" hidden={!withInput}>
-    <span>輸入</span>
+    <span>{ui['page.input']}</span>
     <pre data-role="stdin" class="stdin" set:text={input} />
   </div>
   <div class="bar">
-    <button type="button" data-role="run">執行</button>
+    <button type="button" data-role="run">{ui['page.run']}</button>
     <span data-role="status" class="status" aria-live="polite"></span>
     <kbd data-role="keycap" class="keycap" aria-hidden="true"></kbd>
     <span data-role="hint" class="hint"></span>

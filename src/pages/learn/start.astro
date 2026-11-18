@@ -2,13 +2,14 @@
 import CodeRunner from '@/components/code-runner.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
+import { ui } from '@/lib/text/ui';
 import { beats, starter, template } from '@/units/start';
 
 const codeLines = template.split('\n');
 ---
 
 <Base title="起步" full>
-  <p class="needs-keyboard">這個單元會用到實體鍵盤，請改用電腦開啟喔！</p>
+  <p class="needs-keyboard">{ui['page.needsKeyboard']}</p>
   <section class="scene" data-scene data-unit="start">
     <div class="stage">
       <div class="code" data-show="code">
@@ -24,7 +25,7 @@ const codeLines = template.split('\n');
     </div>
 
     <div class="dialogue" data-role="dialogue">
-      <span class="who">小精靈</span>
+      <span class="who">{ui['page.who']}</span>
       <div class="words">
         {
           beats.map((beat) => (
@@ -52,12 +53,12 @@ const codeLines = template.split('\n');
       </div>
       <p class="note" data-role="note" aria-live="polite"></p>
       <div class="tools">
-        <button class="back" type="button" data-role="back">上一句</button>
-        <button class="back" type="button" data-role="restart">從頭開始</button>
+        <button class="back" type="button" data-role="back">{ui['page.back']}</button>
+        <button class="back" type="button" data-role="restart">{ui['page.restart']}</button>
       </div>
       <span class="more" aria-hidden="true">
-        <span class="by-key">按任意鍵繼續</span>
-        <span class="by-tap">點一下繼續</span>
+        <span class="by-key">{ui['page.moreByKey']}</span>
+        <span class="by-tap">{ui['page.moreByTap']}</span>
         ▼
       </span>
     </div>

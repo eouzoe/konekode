@@ -1,4 +1,6 @@
 ---
+import { ui } from '@/lib/text/ui';
+
 interface Props {
   target: string;
 }
@@ -11,7 +13,7 @@ const { target } = Astro.props;
     <pre
       class="drill-code"><span data-role="done" class="is-done" /><span data-role="current" class="is-current" /><span data-role="rest" class="is-rest" /></pre>
     <p class="drill-mode" data-role="mode"></p>
-    <div data-role="input" class="drill-input" tabindex="0" aria-label="在這裡打字"></div>
+    <div data-role="input" class="drill-input" tabindex="0" aria-label={ui['page.typeHere']}></div>
   </div>
   <div class="drill-bottom">
     <p data-role="hint" class="drill-hint" aria-live="polite"></p>

@@ -1,6 +1,7 @@
 import { flatten, tasksOf, type Beat, type Line, type Part, type Task } from '@/lib/unit/format';
 
 import text from './text/zh-TW/start.json' with { type: 'json' };
+import ui from './text/zh-TW/ui.json' with { type: 'json' };
 
 const template = `#include <bits/stdc++.h>
 using namespace std;
@@ -22,7 +23,7 @@ cout << a << '\n';`;
 const listen = String.raw`int a{};
 cin >> a;
 cout << a << '\n';`;
-const task = '輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。';
+const task = ui['start.task'];
 const swapped = String.raw`int a{};
 int b{};
 cin >> a >> b;
