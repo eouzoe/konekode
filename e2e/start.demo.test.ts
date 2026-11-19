@@ -51,7 +51,7 @@ test.describe('起步單元：小精靈的示範', () => {
           return;
         }
         const note = (): void => {
-          const text = keycap.textContent ?? '';
+          const text = keycap.textContent;
           if (text !== '') {
             shown.push(text);
           }

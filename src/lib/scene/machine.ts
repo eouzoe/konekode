@@ -1,4 +1,5 @@
 import { createMachine, type EventFromLogic } from 'xstate';
+
 import {
   array,
   boolean,
@@ -8,7 +9,7 @@ import {
   object,
   string,
   type infer as Infer,
-} from 'zod';
+} from '@/lib/zod';
 
 const checkSchema = literal(['', 'drill', 'run']);
 const whenSchema = literal(['', 'fullscreen', 'windowed']);

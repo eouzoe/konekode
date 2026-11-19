@@ -78,9 +78,14 @@ const within = (value: string | null, allowed: ReadonlySet<string>): string | nu
   return value;
 };
 
+const digits = /^\d{1,10}$/u;
+
 const whole = (value: string | null): number | null => {
-  const parsed = Number(value ?? '');
-  if (value === null || !Number.isInteger(parsed) || parsed < 0 || parsed > seqLimit) {
+  if (value === null || !digits.test(value)) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (parsed > seqLimit) {
     return null;
   }
   return parsed;
@@ -144,11 +149,16 @@ const readOrigin = (request: Request): Origin => {
 
 const retryLater = 60;
 
+const plainHeaders = { 'x-content-type-options': 'nosniff' };
+
 const reply = (code: number, retryAfter: number | null = null): Response => {
   if (retryAfter === null) {
-    return new Response(null, { status: code });
+    return new Response(null, { headers: plainHeaders, status: code });
   }
-  return new Response(null, { headers: { 'retry-after': String(retryAfter) }, status: code });
+  return new Response(null, {
+    headers: { ...plainHeaders, 'retry-after': String(retryAfter) },
+    status: code,
+  });
 };
 
 const refusal = (request: Request, url: URL): number | null => {

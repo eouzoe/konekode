@@ -1,7 +1,7 @@
 ---
 import '@/styles/base.css';
 
-import { absolute, indexable, robotsMeta, site, type Page } from '@/lib/site/pages';
+import { absolute, indexable, robotsMeta, scriptJson, site, type Page } from '@/lib/site/pages';
 
 interface Props {
   page: Page;
@@ -13,7 +13,7 @@ const { page, data, full = false } = Astro.props;
 const origin = Astro.site ?? Astro.url;
 const address = absolute(origin, page.path);
 const robots = robotsMeta(indexable(import.meta.env.PUBLIC_INDEX));
-const structured = JSON.stringify(data).replaceAll('<', String.raw`<`);
+const structured = scriptJson(data);
 ---
 
 <html lang="zh-TW">
@@ -33,9 +33,6 @@ const structured = JSON.stringify(data).replaceAll('<', String.raw`<`);
     <meta name="twitter:card" content="summary" />
     <title>{page.title}</title>
     <script type="application/ld+json" is:inline set:html={structured} />
-    <script is:inline>
-      document.documentElement.classList.add('js');
-    </script>
     <script>
       import { startDev } from '@/lib/dev/start';
       import { startIntake } from '@/lib/intake/mount';

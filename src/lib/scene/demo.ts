@@ -1,4 +1,4 @@
-import { array, string } from 'zod';
+import { array, string } from '@/lib/zod';
 
 const demoStart = (beats: readonly HTMLElement[], index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && (beat.dataset.demo ?? '').startsWith('reset'));
@@ -38,7 +38,7 @@ interface Detail {
 
 const startsSequence = (beat: HTMLElement): boolean => {
   const keys = readKeys(beat);
-  return keys !== null && keys[0] === 'reset';
+  return keys?.[0] === 'reset';
 };
 
 const keysBefore = (beats: readonly HTMLElement[], index: number): string[] => {

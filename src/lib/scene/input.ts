@@ -1,4 +1,4 @@
-import { object, string, type infer as Infer } from 'zod';
+import { object, string, type infer as Infer } from '@/lib/zod';
 
 import { watchFullScreen } from './conditions';
 import { readIntent, wouldLeave, type Intent } from './keys';

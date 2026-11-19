@@ -1,4 +1,4 @@
-import { number, object, string, type infer as Infer } from 'zod';
+import { number, object, string, type infer as Infer } from '@/lib/zod';
 
 const prefix = 'cp:draft:';
 const draftSchema = object({ cursor: number(), text: string() });

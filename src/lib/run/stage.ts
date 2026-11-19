@@ -1,10 +1,9 @@
-import { array, boolean, object, string, type infer as Infer } from 'zod';
-
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand, keysOf } from '@/lib/edit/path';
 import { knownKeys, run } from '@/lib/edit/step';
 import { chunks } from '@/lib/perform/rhythm';
 import { type Plan } from '@/lib/unit/format';
+import { array, boolean, object, string, type infer as Infer } from '@/lib/zod';
 
 import { type Desk } from './desk';
 
@@ -178,7 +177,7 @@ const leaveDemo = (tools: Tools, state: State): void => {
 const rest = (tools: Tools, state: State, beat: string): void => {
   release(tools, state);
   const plan = tools.plan(beat);
-  if (plan !== null && plan.path.length === 0) {
+  if (plan?.path.length === 0) {
     placeOnce(tools, state, plan);
   }
 };

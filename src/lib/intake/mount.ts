@@ -1,7 +1,6 @@
-import { number, object, record, string, type ZodType } from 'zod';
-
 import { keptKinds } from '@/lib/learner/kinds';
 import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
+import { number, object, record, string, type ZodType } from '@/lib/zod';
 
 import { environment, replayWanted, siteVersion } from './environment';
 import { noteFingerprint } from './fingerprint';

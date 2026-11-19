@@ -8,11 +8,19 @@ import {
   pages,
   robotsMeta,
   robotsText,
+  scriptJson,
   sitemapXml,
   websiteData,
 } from './pages';
 
 const origin = 'https://example.test';
+
+test('structured data cannot close its script element, and still reads back the same', () => {
+  const data = { name: '</script><script>alert(1)</script>', nested: ['<!--', '<b>'] };
+  const text = scriptJson(data);
+  expect(text).not.toContain('<');
+  expect(JSON.parse(text)).toEqual(data);
+});
 
 test('only an explicit flag opens the site to search engines', () => {
   expect(indexable('true')).toBe(true);

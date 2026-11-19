@@ -80,6 +80,34 @@
   "ignorePatterns": ["dist", "dist-dev", ".astro", "node_modules", "src/legacy"],
   "overrides": [
     {
+      "files": ["src/**/*.ts", "src/**/*.astro"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "zod",
+                "message": "Import from @/lib/zod, which turns off zod's eval probe that the content security policy blocks."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/lib/zod.ts", "src/**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/**/*.test.ts", "worker/**/*.test.ts", "**/*.build.ts", "src/units/contest.ts"],
+      "globals": {
+        "Bun": "readonly"
+      }
+    },
+    {
       "files": ["*.test.ts"],
       "rules": {
         "typescript/no-explicit-any": "off",

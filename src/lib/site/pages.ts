@@ -76,6 +76,11 @@ const lessonData = (origin: URL | string, page: Page): Readonly<Record<string, u
   url: absolute(origin, page.path),
 });
 
+const reverseSolidus = 92;
+const escapedLessThan = `${String.fromCodePoint(reverseSolidus)}u003c`;
+
+const scriptJson = (data: unknown): string => JSON.stringify(data).replaceAll('<', escapedLessThan);
+
 export {
   absolute,
   indexable,
@@ -85,6 +90,7 @@ export {
   repository,
   robotsMeta,
   robotsText,
+  scriptJson,
   site,
   sitemapXml,
   websiteData,

@@ -84,8 +84,10 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   .plain a {
     color: var(--accent);
   }
-  :global(.js) .plain {
-    display: none;
+  @media (scripting: enabled) {
+    .plain {
+      display: none;
+    }
   }
   .needs-keyboard {
     display: none;
@@ -112,8 +114,10 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   .scene[data-ready='true'] {
     height: 100dvh;
   }
-  :global(.js) .scene:not([data-ready='true']) {
-    visibility: hidden;
+  @media (scripting: enabled) {
+    .scene:not([data-ready='true']) {
+      visibility: hidden;
+    }
   }
   .stage {
     display: grid;

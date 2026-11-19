@@ -8,7 +8,7 @@ import {
   string,
   union,
   type infer as Infer,
-} from 'zod';
+} from '@/lib/zod';
 
 const currentVersion = 2;
 const legacyVersion = 1;

@@ -97,6 +97,10 @@ test('a ticket with any malformed field is refused', () => {
     { seq: '-1' },
     { seq: '1.5' },
     { seq: 'x' },
+    { seq: '1e3' },
+    { seq: '0x10' },
+    { seq: ' 7' },
+    { seq: '' },
     { site: 'UPPER CASE' },
   ];
   for (const changes of broken) {
@@ -192,6 +196,13 @@ test('anything but a same-origin POST with a body is refused before storing', as
   expect(await statusOf(malformed, malformedUrl, database)).toBe(400);
   expect(await statusOf(huge, hugeUrl, database)).toBe(413);
   expect(rows).toEqual([]);
+});
+
+test('every answer from the intake tells the browser not to guess its type', async () => {
+  const { database } = recording();
+  const [request, url] = post(query());
+  const response = await acceptIntake(request, url, database);
+  expect(response.headers.get('x-content-type-options')).toBe('nosniff');
 });
 
 test('a missing or failing database answers 503 so the browser retries later', async () => {

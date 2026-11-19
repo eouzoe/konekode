@@ -21,6 +21,7 @@ const servePacked = async (request: Request, env: Env, kind: string): Promise<Re
       'cache-control': 'public, max-age=31536000, immutable',
       'content-encoding': 'br',
       'content-type': types[kind] ?? 'application/octet-stream',
+      'x-content-type-options': 'nosniff',
     },
   };
   return new Response(stored.body, init);
