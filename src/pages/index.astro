@@ -1,8 +1,120 @@
 ---
 import Base from '@/layouts/base.astro';
+import { pages, repository, site, websiteData } from '@/lib/site/pages';
+
+const data = websiteData(Astro.site ?? Astro.url);
 ---
 
-<Base title="首頁">
-  <h1>Konekode 貓貓競程</h1>
-  <p>內容重寫中。<a href="/learn/start/">起步</a></p>
+<Base page={pages.home} data={data}>
+  <header class="top">
+    <p class="brand">{site.name}</p>
+    <h1>{site['home.heading']}</h1>
+    <p class="lead">{site['home.lead']}</p>
+    <a class="enter" href={pages.start.path}>{site['home.enter']}</a>
+    <p class="aside">{site['home.enterNote']}</p>
+  </header>
+
+  <section>
+    <h2>{site['home.howHeading']}</h2>
+    <ul class="points">
+      <li><strong>{site['home.how1Lead']}</strong>{site['home.how1']}</li>
+      <li><strong>{site['home.how2Lead']}</strong>{site['home.how2']}</li>
+      <li><strong>{site['home.how3Lead']}</strong>{site['home.how3']}</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>{site['home.whereHeading']}</h2>
+    <p>{site['home.where1']}</p>
+    <p>{site['home.where2']}</p>
+  </section>
+
+  <section>
+    <h2>{site['home.nowHeading']}</h2>
+    <p>{site['home.now']}</p>
+  </section>
+
+  <footer class="foot">
+    <p>
+      <a href={repository} rel="noopener">{site['home.source']}</a>{site['home.author']}
+    </p>
+  </footer>
 </Base>
+
+<style>
+  .top {
+    margin-bottom: 3.5rem;
+  }
+  .brand {
+    margin: 0 0 1rem;
+    color: var(--soft);
+    font-size: 0.9375rem;
+    letter-spacing: 0.04em;
+  }
+  h1 {
+    margin-bottom: 1.25rem;
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    text-wrap: balance;
+  }
+  .lead {
+    margin: 0 0 2rem;
+    font-size: 1.1875rem;
+  }
+  .enter {
+    display: inline-block;
+    padding: 0.8rem 1.6rem;
+    border-radius: 0.6rem;
+    background: var(--accent);
+    color: var(--page);
+    font-size: 1.125rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .enter:hover,
+  .enter:focus-visible {
+    filter: brightness(1.12);
+  }
+  .enter:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .aside {
+    margin: 1rem 0 0;
+    color: var(--soft);
+    font-size: 0.9375rem;
+  }
+  section {
+    margin-bottom: 2.75rem;
+  }
+  h2 {
+    margin: 0 0 0.9rem;
+    font-size: 1.3125rem;
+    line-height: 1.4;
+  }
+  p {
+    margin: 0 0 0.9rem;
+  }
+  .points {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .points li {
+    margin-bottom: 0.9rem;
+    padding-left: 1rem;
+    border-left: 3px solid var(--line);
+  }
+  .points strong {
+    display: block;
+  }
+  .foot {
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--soft);
+    font-size: 0.9375rem;
+  }
+  .foot a {
+    color: var(--accent);
+  }
+</style>

@@ -2,13 +2,16 @@
 import CodeRunner from '@/components/code-runner.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
+import { lessonData, pages, site } from '@/lib/site/pages';
 import { ui } from '@/lib/text/ui';
 import { beats, starter, template } from '@/units/start';
 
 const codeLines = template.split('\n');
+const data = lessonData(Astro.site ?? Astro.url, pages.start);
 ---
 
-<Base title="起步" full>
+<Base page={pages.start} data={data} full>
+  <p class="plain">{site['start.plain']} <a href={pages.home.path}>{site.name}</a></p>
   <p class="needs-keyboard">{ui['page.needsKeyboard']}</p>
   <section class="scene" data-scene data-unit="start">
     <div class="stage">
@@ -72,6 +75,18 @@ const codeLines = template.split('\n');
 </script>
 
 <style>
+  .plain {
+    margin: 0;
+    padding: 1rem;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .plain a {
+    color: var(--accent);
+  }
+  :global(.js) .plain {
+    display: none;
+  }
   .needs-keyboard {
     display: none;
     margin: 0;

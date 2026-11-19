@@ -1,21 +1,38 @@
 ---
 import '@/styles/base.css';
 
+import { absolute, indexable, robotsMeta, site, type Page } from '@/lib/site/pages';
+
 interface Props {
-  title: string;
+  page: Page;
+  data: Readonly<Record<string, unknown>>;
   full?: boolean;
 }
 
-const { title, full = false } = Astro.props;
+const { page, data, full = false } = Astro.props;
+const origin = Astro.site ?? Astro.url;
+const address = absolute(origin, page.path);
+const robots = robotsMeta(indexable(import.meta.env.PUBLIC_INDEX));
+const structured = JSON.stringify(data).replaceAll('<', String.raw`<`);
 ---
 
 <html lang="zh-TW">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
+    <meta name="robots" content={robots} />
+    <meta name="description" content={page.description} />
+    <link rel="canonical" href={address} />
     <link rel="icon" href="/favicon.ico" />
-    <title>{title}｜Konekode 貓貓競程</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:locale" content="zh_TW" />
+    <meta property="og:title" content={page.title} />
+    <meta property="og:description" content={page.description} />
+    <meta property="og:url" content={address} />
+    <meta name="twitter:card" content="summary" />
+    <title>{page.title}</title>
+    <script type="application/ld+json" is:inline set:html={structured} />
     <script is:inline>
       document.documentElement.classList.add('js');
     </script>

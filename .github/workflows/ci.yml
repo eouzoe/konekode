@@ -26,6 +26,8 @@ jobs:
           path: node_modules/.cache/packed-assets
           key: packed-assets-${{ hashFiles('bun.lock') }}
       - run: devenv shell -- just check
+        env:
+          PUBLIC_INDEX: ${{ github.ref_name == 'main' }}
       - uses: actions/upload-artifact@v7
         with:
           name: dist
