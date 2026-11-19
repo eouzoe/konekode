@@ -16,5 +16,12 @@
     "newlinesBetween": true
   },
   "sortPackageJson": true,
-  "ignorePatterns": ["node_modules", "dist", "dist-dev", ".astro", ".wrangler"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "dist-dev",
+    ".astro",
+    ".wrangler",
+    "public/google*.html"
+  ]
 }
