@@ -10,16 +10,18 @@ import {
   type infer as Infer,
 } from '@/lib/zod';
 
-const currentVersion = 2;
+const currentVersion = 3;
+const unlabelledVersion = 2;
 const legacyVersion = 1;
 const legacySession = 'legacy';
+const unknownContent = '';
 
 const valueSchema = union([boolean(), number(), string()]);
 const dataSchema = record(string(), valueSchema);
 const moment = int();
 const name = string().min(1);
 
-const eventSchema = object({
+const shared = {
   actor: string(),
   at: moment,
   data: dataSchema,
@@ -29,8 +31,16 @@ const eventSchema = object({
   seq: moment,
   session: string(),
   unit: string(),
+};
+
+const eventSchema = object({
+  ...shared,
+  content: string(),
+  site: string(),
   version: literal(currentVersion),
 });
+
+const unlabelledSchema = object({ ...shared, version: literal(unlabelledVersion) });
 
 const legacySchema = object({
   at: moment,
@@ -45,23 +55,35 @@ const legacySchema = object({
 type LearningEvent = Infer<typeof eventSchema>;
 type Data = Infer<typeof dataSchema>;
 
-const upgrade = (old: Infer<typeof legacySchema>): LearningEvent => ({
-  actor: old.device,
-  at: old.at,
-  data: {},
-  id: old.id,
-  kind: old.kind,
-  ref: old.ref,
-  seq: 0,
-  session: legacySession,
-  unit: old.unit,
+const label = (event: Infer<typeof unlabelledSchema>): LearningEvent => ({
+  ...event,
+  content: unknownContent,
+  site: unknownContent,
   version: currentVersion,
 });
+
+const upgrade = (old: Infer<typeof legacySchema>): LearningEvent =>
+  label({
+    actor: old.device,
+    at: old.at,
+    data: {},
+    id: old.id,
+    kind: old.kind,
+    ref: old.ref,
+    seq: 0,
+    session: legacySession,
+    unit: old.unit,
+    version: unlabelledVersion,
+  });
 
 const readEvent = (value: unknown): LearningEvent | null => {
   const current = eventSchema.safeParse(value);
   if (current.success) {
     return current.data;
+  }
+  const unlabelled = unlabelledSchema.safeParse(value);
+  if (unlabelled.success) {
+    return label(unlabelled.data);
   }
   const legacy = legacySchema.safeParse(value);
   if (legacy.success) {
@@ -70,8 +92,28 @@ const readEvent = (value: unknown): LearningEvent | null => {
   return null;
 };
 
-const readEvents = (values: readonly unknown[]): LearningEvent[] =>
-  values.map((value) => readEvent(value)).filter((event) => event !== null);
+interface Reading {
+  readonly events: LearningEvent[];
+  readonly unlabelled: number;
+  readonly unreadable: number;
+}
+
+const readCounted = (values: readonly unknown[]): Reading => {
+  const events: LearningEvent[] = [];
+  let unreadable = 0;
+  for (const value of values) {
+    const event = readEvent(value);
+    if (event === null) {
+      unreadable += 1;
+    } else {
+      events.push(event);
+    }
+  }
+  const unlabelled = events.filter((event) => event.content === unknownContent).length;
+  return { events, unlabelled, unreadable };
+};
+
+const readEvents = (values: readonly unknown[]): LearningEvent[] => readCounted(values).events;
 
 const byTime = (left: LearningEvent, right: LearningEvent): number => {
   if (left.at !== right.at) {
@@ -86,4 +128,14 @@ const byTime = (left: LearningEvent, right: LearningEvent): number => {
 const ordered = (events: readonly LearningEvent[]): LearningEvent[] =>
   [...new Map(events.map((event) => [event.id, event])).values()].toSorted(byTime);
 
-export { currentVersion, ordered, readEvent, readEvents, type Data, type LearningEvent };
+export {
+  currentVersion,
+  ordered,
+  readCounted,
+  readEvent,
+  readEvents,
+  unknownContent,
+  type Data,
+  type LearningEvent,
+  type Reading,
+};

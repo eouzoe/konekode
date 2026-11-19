@@ -12,14 +12,16 @@ const now = 10_000_000;
 const event = (seq: number, at: number, text = ''): LearningEvent => ({
   actor,
   at,
+  content: 'test-content',
   data: { text },
   id: `${session}-${String(seq)}`,
   kind: 'input.unusual',
   ref: '',
   seq,
   session,
+  site: 'test',
   unit: '',
-  version: 2,
+  version: 3,
 });
 
 const many = (count: number, at: number, text = ''): LearningEvent[] =>

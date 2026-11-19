@@ -4,7 +4,7 @@ import { unitState } from '@/lib/learner/progress';
 import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
 import { ui } from '@/lib/text/ui';
-import { allDomains, beatsOf } from '@/units/index';
+import { allDomains, beatsOf, shownAt } from '@/units/index';
 
 import { textEditor, type Editor } from './edit';
 import { jumpTo, skipFrom, type Entry } from './jump';
@@ -46,7 +46,8 @@ const apply = async (unit: string, entries: readonly Entry[]): Promise<void> => 
     return;
   }
   for (const entry of entries) {
-    track(entry.kind, { data: { dev: true }, ref: entry.ref, unit });
+    const shows = shownAt(unit, entry.ref).join(',');
+    track(entry.kind, { data: { dev: true, shows }, ref: entry.ref, unit });
   }
   clearDraft(unit);
   await flushLog();

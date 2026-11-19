@@ -11,14 +11,16 @@ const make = (kind: string, ref: string, at: number): LearningEvent => {
   return {
     actor: 'test',
     at,
+    content: 'test-content',
     data: {},
     id: `event-${String(counter)}`,
     kind,
     ref,
     seq: counter,
     session: 'test',
+    site: 'test',
     unit: 'start',
-    version: 2,
+    version: 3,
   };
 };
 

@@ -8,6 +8,7 @@ const source = (persistence: Persistence, faults: unknown[] = []): Source => {
   let count = 0;
   return {
     actor: 'someone',
+    content: 'content-a',
     newId: () => {
       count += 1;
       return `id-${String(count)}`;
@@ -21,6 +22,7 @@ const source = (persistence: Persistence, faults: unknown[] = []): Source => {
     },
     persistence,
     session: 'session-a',
+    site: 'site-a',
   };
 };
 
@@ -134,38 +136,60 @@ test('舊格式的事件會被升級成新格式', () => {
   expect(readEvent(old)).toEqual({
     actor: 'old-device',
     at: 5,
+    content: '',
     data: {},
     id: 'e1',
     kind: 'beat.reached',
     ref: 'intro',
     seq: 0,
     session: 'legacy',
+    site: '',
     unit: 'start',
-    version: 2,
+    version: 3,
   });
 });
 
+const good: LearningEvent = {
+  actor: 'a',
+  at: 1,
+  content: 'c',
+  data: {},
+  id: 'e1',
+  kind: 'k',
+  ref: '',
+  seq: 1,
+  session: 's',
+  site: 'v',
+  unit: '',
+  version: 3,
+};
+
 test('形狀不對的資料不算事件', async () => {
-  const good: LearningEvent = {
-    actor: 'a',
-    at: 1,
-    data: {},
-    id: 'e1',
-    kind: 'k',
-    ref: '',
-    seq: 1,
-    session: 's',
-    unit: '',
-    version: 2,
-  };
   expect(readEvent(good)).toEqual(good);
   expect(readEvent(null)).toBeNull();
   expect(readEvent({ ...good, at: 1.5 })).toBeNull();
   expect(readEvent({ ...good, kind: '' })).toBeNull();
-  expect(readEvent({ ...good, version: 3 })).toBeNull();
+  expect(readEvent({ ...good, version: 4 })).toBeNull();
   expect(readEvent({ ...good, data: { nested: {} } })).toBeNull();
   const log = await createLog(source(memoryPersistence([good, { broken: true }, null])));
   expect(log.events()).toHaveLength(1);
+});
+
+test('events from before contents were labelled are read, marked unlabelled, and counted with the unreadable', async () => {
+  const unlabelled = Object.fromEntries(
+    Object.entries({ ...good, id: 'e2', version: 2 }).filter(
+      ([field]) => field !== 'content' && field !== 'site',
+    ),
+  );
+  expect(readEvent(unlabelled)).toEqual({ ...good, content: '', id: 'e2', site: '' });
+  const log = await createLog(source(memoryPersistence([good, unlabelled, { broken: true }])));
+  expect(log.events().map((event) => event.id)).toEqual(['e1', 'e2']);
+  expect(log.loaded).toEqual({ unlabelled: 1, unreadable: 1 });
+});
+
+test('every new event carries the content and the site it was recorded under', async () => {
+  const log = await createLog(source(memoryPersistence()));
+  expect(log.track('one')).toMatchObject({ content: 'content-a', site: 'site-a', version: 3 });
 });
 
 test('the time on events only moves forward, even when the clock steps back or a new visit starts earlier', async () => {

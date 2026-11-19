@@ -11,14 +11,16 @@ const second = '33333333-3333-4333-8333-333333333333';
 const event = (session: string, seq: number): LearningEvent => ({
   actor,
   at: 1000 + seq,
+  content: 'test-content',
   data: {},
   id: `${session}-${String(seq)}`,
   kind: 'beat.reached',
   ref: 'intro',
   seq,
   session,
+  site: 'test',
   unit: 'start',
-  version: 2,
+  version: 3,
 });
 
 test('events that were never acknowledged are batched per session in order', () => {

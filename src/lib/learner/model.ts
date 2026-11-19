@@ -1,8 +1,9 @@
 import { ordered, type LearningEvent } from '@/lib/record/event';
 
 import { bktExpect, bktUpdate, defaultParams } from './bkt';
+import { described, shownBy, usedBy, type Count } from './describe';
 import { type UnitDomain } from './domain';
-import { dayLength, dueAt, recall, remember, type Evidence, type Memory } from './memory';
+import { recall, remember, type Evidence, type Memory } from './memory';
 
 type Standing = 'done' | 'shown' | 'unseen';
 
@@ -51,14 +52,14 @@ interface Mark {
   readonly waited: number;
 }
 
-interface Fold {
+interface Fold extends Count {
   readonly entries: Map<string, Entry>;
   readonly observations: Observation[];
   readonly seen: Set<string>;
   readonly tallies: Map<string, Tally>;
 }
 
-type Handle = (fold: Fold, event: LearningEvent, domain: UnitDomain) => void;
+type Handle = (fold: Fold, event: LearningEvent, domain: UnitDomain | undefined) => void;
 
 const tallyOf = (fold: Fold, id: string): Tally => {
   const known = fold.tallies.get(id);
@@ -84,7 +85,8 @@ const reach: Handle = (fold, event, domain) => {
     return;
   }
   fold.seen.add(key);
-  for (const id of domain.shows.get(event.ref) ?? []) {
+  const shown = described(fold, event.data.shows, () => shownBy(domain, event.ref));
+  for (const id of shown) {
     tallyOf(fold, id).shown += 1;
   }
 };
@@ -164,6 +166,22 @@ const observed = (
   waited: mark.waited,
 });
 
+interface Credit {
+  readonly event: LearningEvent;
+  readonly mark: Mark;
+  readonly used: readonly string[];
+}
+
+const credit = (fold: Fold, { event, mark, used }: Credit): void => {
+  for (const component of used) {
+    const tally = tallyOf(fold, component);
+    if (mark.first) {
+      fold.observations.push({ component, ...observed(event, mark, tally) });
+    }
+    score(tally, mark, event.at);
+  }
+};
+
 const attempt: Handle = (fold, event, domain) => {
   const entry = fold.entries.get(entryKey(event));
   const { at: step } = event.data;
@@ -171,13 +189,8 @@ const attempt: Handle = (fold, event, domain) => {
     return;
   }
   const mark = markOf(entry, event, step);
-  for (const component of domain.uses.get(event.ref)?.[step] ?? []) {
-    const tally = tallyOf(fold, component);
-    if (mark.first) {
-      fold.observations.push({ component, ...observed(event, mark, tally) });
-    }
-    score(tally, mark, event.at);
-  }
+  const used = described(fold, event.data.uses, () => usedBy(domain, event.ref, step));
+  credit(fold, { event, mark, used });
 };
 
 const handles: Readonly<Record<string, Handle>> = {
@@ -197,23 +210,35 @@ const standingOf = (tally: Tally): Standing => {
 };
 
 interface Reading {
+  readonly legacy: number;
   readonly model: Model;
   readonly observations: readonly Observation[];
+  readonly unread: number;
 }
 
+const own = <Value>(table: Readonly<Record<string, Value>>, key: string): Value | undefined => {
+  if (Object.hasOwn(table, key)) {
+    return table[key];
+  }
+  return undefined;
+};
+
 const observe = (events: readonly LearningEvent[], domains: Domains): Reading => {
-  const fold: Fold = { entries: new Map(), observations: [], seen: new Set(), tallies: new Map() };
+  const fold: Fold = {
+    entries: new Map(),
+    legacy: 0,
+    observations: [],
+    seen: new Set(),
+    tallies: new Map(),
+    unread: 0,
+  };
   for (const event of ordered(events)) {
-    const domain = domains[event.unit];
-    const handle = handles[event.kind];
-    if (domain !== undefined && handle !== undefined) {
-      handle(fold, event, domain);
-    }
+    own(handles, event.kind)?.(fold, event, own(domains, event.unit));
   }
   const model: Model = new Map(
     [...fold.tallies].map(([id, tally]) => [id, { ...tally, standing: standingOf(tally) }]),
   );
-  return { model, observations: fold.observations };
+  return { legacy: fold.legacy, model, observations: fold.observations, unread: fold.unread };
 };
 
 const learnerModel = (events: readonly LearningEvent[], domains: Domains): Model =>
@@ -232,45 +257,15 @@ const unseen: Component = {
 
 const componentOf = (model: Model, id: string): Component => model.get(id) ?? unseen;
 
-const dueOf = (model: Model, at: number): [string, number][] =>
-  [...model].flatMap(([id, { memory }]): [string, number][] => {
-    if (memory === null || dueAt(memory) > at) {
-      return [];
-    }
-    return [[id, dueAt(memory)]];
-  });
-
-const reviewDue = (model: Model, at: number): readonly string[] =>
-  dueOf(model, at)
-    .toSorted(([first, firstDue], [second, secondDue]) => {
-      if (firstDue !== secondDue) {
-        return firstDue - secondDue;
-      }
-      return first.localeCompare(second);
-    })
-    .map(([id]) => id);
-
-interface Recollection {
-  readonly daysLeft: number;
-  readonly recall: number;
-}
-
-const recollect = ({ memory }: Component, at: number): Recollection | null => {
-  if (memory === null) {
-    return null;
-  }
-  return { daysLeft: (dueAt(memory) - at) / dayLength, recall: recall(memory, at) };
-};
-
 const handledKinds: readonly string[] = Object.keys(handles);
+
+export { recollect, reviewDue } from './review';
 
 export {
   componentOf,
   handledKinds,
   learnerModel,
   observe,
-  recollect,
-  reviewDue,
   type Component,
   type Domains,
   type Model,

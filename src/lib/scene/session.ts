@@ -1,6 +1,7 @@
 import { unitState, type UnitState } from '@/lib/learner/progress';
 import { flushLog, openLog, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
+import { shownAt } from '@/units/index';
 
 type ReadUnit = (unit: string) => UnitState;
 
@@ -10,7 +11,7 @@ const openSession = async (): Promise<ReadUnit> => {
 };
 
 const noteReached = (unit: string, beat: string): void => {
-  track('beat.reached', { ref: beat, unit });
+  track('beat.reached', { data: { shows: shownAt(unit, beat).join(',') }, ref: beat, unit });
 };
 
 const noteCheck = (unit: string, beat: string): void => {

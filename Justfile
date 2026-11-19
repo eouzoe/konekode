@@ -7,11 +7,13 @@ dev: pch
 edit: pch
     PUBLIC_MODE=dev bun --bun run dev
 
+version := `git rev-parse --short HEAD` + `test -z "$(git status --porcelain)" || printf %s -dirty`
+
 build: pch
-    PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build
+    PUBLIC_SITE_VERSION="{{ version }}" bun --bun run build
 
 build-dev: pch
-    PUBLIC_MODE=dev PUBLIC_SITE_VERSION="$(git rev-parse --short HEAD)" bun --bun run build --outDir dist-dev
+    PUBLIC_MODE=dev PUBLIC_SITE_VERSION="{{ version }}" bun --bun run build --outDir dist-dev
     cp -r dev-assets/fonts dist-dev/fonts
 
 serve-dev: build-dev

@@ -1,4 +1,4 @@
-import { currentVersion, readEvents, type Data, type LearningEvent } from './event';
+import { currentVersion, readCounted, type Data, type LearningEvent } from './event';
 
 interface Persistence {
   readonly append: (events: readonly LearningEvent[]) => Promise<void>;
@@ -14,17 +14,25 @@ interface Entry {
 
 interface Source {
   readonly actor: string;
+  readonly content: string;
   readonly newId: () => string;
   readonly now: () => number;
   readonly onFault?: (error: unknown) => void;
   readonly persistence: Persistence;
   readonly session: string;
+  readonly site: string;
+}
+
+interface Loaded {
+  readonly unlabelled: number;
+  readonly unreadable: number;
 }
 
 interface Log {
   readonly events: () => readonly LearningEvent[];
   readonly flush: () => Promise<void>;
   readonly forget: (ids: readonly string[]) => void;
+  readonly loaded: Loaded;
   readonly subscribe: (listener: (event: LearningEvent) => void) => void;
   readonly track: (kind: string, entry?: Entry) => LearningEvent;
 }
@@ -77,12 +85,14 @@ const build = ({ source, state }: Context, kind: string, entry: Entry): Learning
   return {
     actor: source.actor,
     at: state.latest,
+    content: source.content,
     data: entry.data ?? {},
     id: source.newId(),
     kind,
     ref: entry.ref ?? '',
     seq: state.seq,
     session: source.session,
+    site: source.site,
     unit: entry.unit ?? '',
     version: currentVersion,
   };
@@ -129,7 +139,7 @@ const removeLater = (context: Context, ids: readonly string[]): void => {
 };
 
 const createLog = async (source: Source): Promise<Log> => {
-  const events = readEvents(await source.persistence.load());
+  const { events, unlabelled, unreadable } = readCounted(await source.persistence.load());
   const state: State = {
     events,
     latest: latestOf(events),
@@ -148,6 +158,7 @@ const createLog = async (source: Source): Promise<Log> => {
     forget: (ids) => {
       removeLater({ source, state }, ids);
     },
+    loaded: { unlabelled, unreadable },
     subscribe: (listener) => {
       state.listeners.push(listener);
     },
@@ -164,4 +175,12 @@ const createLog = async (source: Source): Promise<Log> => {
   };
 };
 
-export { createLog, memoryPersistence, type Entry, type Log, type Persistence, type Source };
+export {
+  createLog,
+  memoryPersistence,
+  type Entry,
+  type Loaded,
+  type Log,
+  type Persistence,
+  type Source,
+};

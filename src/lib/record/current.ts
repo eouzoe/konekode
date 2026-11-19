@@ -1,4 +1,6 @@
 import { actorId, newId, sessionId } from '@/lib/identity/actor';
+import { siteVersion } from '@/lib/site/version';
+import { contentId } from '@/units/content';
 
 import { browserPersistence } from './browser';
 import { type LearningEvent } from './event';
@@ -24,15 +26,24 @@ const noteFault = (error: unknown): void => {
 
 const clockOrigin = Date.now() - performance.now();
 
+const noteLoaded = (log: Log): void => {
+  const { unlabelled, unreadable } = log.loaded;
+  if (unlabelled > 0 || unreadable > 0) {
+    log.track('record.opened', { data: { unlabelled, unreadable } });
+  }
+};
+
 const start = async (): Promise<Log> => {
-  const storage = await browserPersistence();
+  const [storage, content] = await Promise.all([browserPersistence(), contentId()]);
   const log = await createLog({
     actor: actorId(),
+    content,
     newId,
     now: () => Math.round(clockOrigin + performance.now()),
     onFault: noteFault,
     persistence: storage.persistence,
     session: sessionId(),
+    site: siteVersion(),
   });
   for (const listener of listeners) {
     log.subscribe(listener);
@@ -41,6 +52,7 @@ const start = async (): Promise<Log> => {
   if (!storage.durable) {
     log.track('storage.unavailable', { data: { reason: storage.reason.slice(0, reasonLimit) } });
   }
+  noteLoaded(log);
   return log;
 };
 

@@ -1,5 +1,6 @@
 import { type Pressed } from '@/lib/edit/session';
 import { track } from '@/lib/record/current';
+import { usedAt } from '@/units/index';
 
 import { type Outcome } from './protocol';
 
@@ -73,7 +74,8 @@ interface Attempt {
 }
 
 const noteAttempt = (place: Place, attempt: Attempt): void => {
-  track('step.tried', { data: { ...attempt }, ref: place.beat, unit: place.unit });
+  const uses = usedAt(place.unit, place.beat, attempt.at).join(',');
+  track('step.tried', { data: { ...attempt, uses }, ref: place.beat, unit: place.unit });
 };
 
 const noteStep = (place: Place, step: Pressed): void => {

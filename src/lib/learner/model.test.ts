@@ -31,14 +31,16 @@ interface Sketch {
 const make = (sketch: Partial<Sketch>, seq: number): LearningEvent => ({
   actor: 'me',
   at: sketch.at ?? seq,
+  content: 'test-content',
   data: { at: sketch.step ?? 0, mode: sketch.mode ?? 'guided', verdict: sketch.verdict ?? 'right' },
   id: `event-${String(seq)}`,
   kind: sketch.kind ?? 'step.tried',
   ref: sketch.ref ?? 'run-cout',
   seq,
   session: sketch.session ?? 'one',
+  site: 'test',
   unit: sketch.unit ?? 'start',
-  version: 2,
+  version: 3,
 });
 
 const build = (sketches: readonly Partial<Sketch>[]): LearningEvent[] =>

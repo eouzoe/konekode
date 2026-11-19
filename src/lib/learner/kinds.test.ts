@@ -34,14 +34,16 @@ const sketches = array(
 const make = (sketch: Sketch, seq: number): LearningEvent => ({
   actor: 'me',
   at: sketch.at,
+  content: 'test-content',
   data: { at: sketch.step, verdict: sketch.verdict },
   id: `event-${String(seq)}`,
   kind: sketch.kind,
   ref: sketch.ref,
   seq,
   session: 'one',
+  site: 'test',
   unit: 'start',
-  version: 2,
+  version: 3,
 });
 
 test('the model reads exactly the kinds it declares', () => {

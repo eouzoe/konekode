@@ -45,12 +45,20 @@ const writeStored = (key: string, value: unknown): boolean => {
   }
 };
 
+const siteOf = (state: State, batch: Batch): string => {
+  const atTheTime = batch.events[0]?.site ?? '';
+  if (atTheTime === '') {
+    return state.site;
+  }
+  return atTheTime;
+};
+
 const ticketOf = (state: State, batch: Batch): Ticket => ({
   actor: batch.actor,
   kind: 'events',
   seq: batch.seq,
   session: batch.session,
-  site: state.site,
+  site: siteOf(state, batch),
 });
 
 const noteHold = (answer: Answer, hold: Hold, now: number): void => {

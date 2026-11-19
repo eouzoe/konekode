@@ -1,17 +1,7 @@
 import { siteMode } from '@/lib/mode';
 import { type Data } from '@/lib/record/event';
 import { isFullScreen } from '@/lib/scene/conditions';
-
-const versionPattern = /^[0-9a-z.-]{1,40}$/u;
-const unknownVersion = 'dev';
-
-const siteVersion = (): string => {
-  const declared: unknown = import.meta.env.PUBLIC_SITE_VERSION;
-  if (typeof declared === 'string' && versionPattern.test(declared)) {
-    return declared;
-  }
-  return unknownVersion;
-};
+import { unknownVersion } from '@/lib/site/version';
 
 const compilerVersion = (): string => {
   const declared: unknown = import.meta.env.PUBLIC_COMPILER;
@@ -56,4 +46,6 @@ const environment = (site: string): Data => ({
   viewportWidth: globalThis.innerWidth,
 });
 
-export { environment, replayWanted, siteVersion };
+export { siteVersion } from '@/lib/site/version';
+
+export { environment, replayWanted };

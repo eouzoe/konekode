@@ -15,14 +15,16 @@ const stops: readonly Stop[] = [
 const event = (kind: string, ref: string, seq: number): LearningEvent => ({
   actor: 'me',
   at: 1000,
+  content: 'test-content',
   data: {},
   id: `e${String(seq)}`,
   kind,
   ref,
   seq,
   session: 's',
+  site: 'test',
   unit: 'u',
-  version: 2,
+  version: 3,
 });
 
 test('jumping back to a gate that was passed makes it a gate to do again', () => {
