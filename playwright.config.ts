@@ -27,7 +27,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `bun x wrangler d1 migrations apply cp-intake --local && bun x wrangler d1 execute cp-intake --local --command "DELETE FROM intake_usage" && bun x wrangler dev --port ${String(port)}`,
+    command: `bun x wrangler d1 migrations apply cp-intake --local && bun x wrangler d1 execute cp-intake --local --command "DELETE FROM intake_usage; DELETE FROM intake_actor_usage" && bun x wrangler dev --port ${String(port)}`,
     reuseExistingServer: true,
     timeout: serverSeconds * second,
     url: `http://localhost:${String(port)}/learn/start/`,

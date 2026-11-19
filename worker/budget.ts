@@ -8,15 +8,28 @@ interface Usage {
   readonly bytes: number;
 }
 
-const dayLimits: Usage = { batches: 8000, bytes: 64_000_000 };
+interface Limits {
+  readonly actor: Usage;
+  readonly network: Usage;
+}
+
+const dayLimits: Limits = {
+  actor: { batches: 1000, bytes: 16_000_000 },
+  network: { batches: 10_000, bytes: 64_000_000 },
+};
 const groups = 8;
 const prefixGroups = 4;
 const hex = 16;
 const dayLength = 10;
+const dayMillis = 86_400_000;
+const millis = 1000;
 
 const readUsage = 'SELECT bytes, batches FROM intake_usage WHERE network = ? AND day = ?';
 const addUsage = `INSERT INTO intake_usage (network, day, bytes, batches) VALUES (?, ?, ?, 1)
 ON CONFLICT (network, day) DO UPDATE SET bytes = bytes + excluded.bytes, batches = batches + 1`;
+const readActorUsage = 'SELECT bytes, batches FROM intake_actor_usage WHERE actor = ? AND day = ?';
+const addActorUsage = `INSERT INTO intake_actor_usage (actor, day, bytes, batches) VALUES (?, ?, ?, 1)
+ON CONFLICT (actor, day) DO UPDATE SET bytes = bytes + excluded.bytes, batches = batches + 1`;
 
 const parts = (text: string): string[] => text.split(':').filter((part) => part !== '');
 
@@ -61,7 +74,24 @@ const usageOf = (row: unknown): Usage => {
   return { batches: amount(row, 'batches'), bytes: amount(row, 'bytes') };
 };
 
-const hasRoom = (used: Usage, size: number, limits: Usage = dayLimits): boolean =>
+const hasRoom = (used: Usage, size: number, limits: Usage): boolean =>
   used.batches < limits.batches && used.bytes + size <= limits.bytes;
 
-export { accountOf, addUsage, dayLimits, hasRoom, networkOf, readUsage, usageOf, type Account };
+const secondsToNextDay = (now: number): number =>
+  Math.max(1, Math.ceil((dayMillis - (now % dayMillis)) / millis));
+
+export {
+  accountOf,
+  addActorUsage,
+  addUsage,
+  dayLimits,
+  hasRoom,
+  networkOf,
+  readActorUsage,
+  readUsage,
+  secondsToNextDay,
+  usageOf,
+  type Account,
+  type Limits,
+  type Usage,
+};

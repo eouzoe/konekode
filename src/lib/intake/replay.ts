@@ -1,7 +1,10 @@
+import { type record as recorder } from '@rrweb/record';
+
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
 import { isOverfull } from './backlog';
+import { byteLength } from './plan';
 import {
   bodyLimit,
   keepaliveLimit,
@@ -87,7 +90,7 @@ const lastFrames = (tape: Tape): void => {
     return;
   }
   const text = JSON.stringify(tape.frames);
-  if (text.length <= keepaliveLimit && uploadLast(ticketFor(tape), text)) {
+  if (byteLength(text) <= keepaliveLimit && uploadLast(ticketFor(tape), text)) {
     tape.frames = [];
     tape.chunk += 1;
   }
@@ -102,8 +105,21 @@ const keep = (tape: Tape, frame: unknown, startOver: () => void): void => {
   }
 };
 
+const loadRecorder = async (): Promise<typeof recorder | null> => {
+  try {
+    const { record } = await import('@rrweb/record');
+    return record;
+  } catch (error) {
+    track('replay.failed', { data: { reason: String(error) } });
+    return null;
+  }
+};
+
 const startReplay = async (site: string): Promise<void> => {
-  const { record } = await import('@rrweb/record');
+  const record = await loadRecorder();
+  if (record === null) {
+    return;
+  }
   const tape: Tape = { busy: false, chunk: 0, frames: [], site };
   record({
     emit: (frame) => {

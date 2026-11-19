@@ -21,6 +21,8 @@ const compilerVersion = (): string => {
   return unknownVersion;
 };
 
+const replayWanted = (): boolean => import.meta.env.PUBLIC_REPLAY === 'on';
+
 const matches = (query: string): boolean => globalThis.matchMedia(query).matches;
 
 const colourScheme = (): string => {
@@ -44,6 +46,7 @@ const environment = (site: string): Data => ({
   pixelRatio: globalThis.devicePixelRatio,
   reducedMotion: matches('(prefers-reduced-motion: reduce)'),
   referrer: document.referrer,
+  replay: replayWanted(),
   screenHeight: globalThis.screen.height,
   screenWidth: globalThis.screen.width,
   site,
@@ -53,4 +56,4 @@ const environment = (site: string): Data => ({
   viewportWidth: globalThis.innerWidth,
 });
 
-export { environment, siteVersion };
+export { environment, replayWanted, siteVersion };

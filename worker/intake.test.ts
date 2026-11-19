@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { accountOf, dayLimits, networkOf } from './budget';
+import { accountOf, dayLimits, networkOf, secondsToNextDay } from './budget';
 import { acceptIntake, bodyLimit, intakePath, readTicket, type Database } from './intake';
 
 const actor = '11111111-1111-4111-8111-111111111111';
@@ -23,7 +23,13 @@ interface Fake {
   readonly rows: unknown[][];
 }
 
-const recording = (used: unknown = null): Fake => {
+const recording = (used: unknown = null, actorUsed: unknown = null): Fake => {
+  const usageFor = (text: string): unknown => {
+    if (text.includes('intake_actor_usage')) {
+      return actorUsed;
+    }
+    return used;
+  };
   const rows: unknown[][] = [];
   const pending = new Map<object, readonly unknown[]>();
   const database: Database = {
@@ -39,7 +45,7 @@ const recording = (used: unknown = null): Fake => {
           pending.set(statement, [text, ...values]);
           return statement;
         },
-        first: () => Promise.resolve(used),
+        first: () => Promise.resolve(usageFor(text)),
       };
       return statement;
     },
@@ -107,19 +113,20 @@ test('a valid batch is stored once with where it came from', async () => {
     headers: { 'cf-connecting-ip': '203.0.113.9', origin, 'user-agent': 'probe' },
   });
   expect(await statusOf(request, url, database)).toBe(204);
-  expect(rows).toHaveLength(2);
-  const [row, charge] = rows;
+  expect(rows).toHaveLength(3);
+  const [row, charge, own] = rows;
   expect(row?.slice(2, 9)).toEqual(['events', actor, session, 7, '8141515', 'gzip', '203.0.113.9']);
   expect(row?.at(-2)).toBe('probe');
   expect(decoded(row?.at(-1))).toBe('payload');
   expect(charge?.[1]).toBe('203.0.113.9');
   expect(charge?.[2]).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
   expect(charge?.at(-1)).toBe('payload'.length);
+  expect(own?.slice(1)).toEqual([actor, charge?.[2], 'payload'.length]);
 });
 
 test('a network that has used up its day is refused and nothing is stored', async () => {
-  const full = recording({ batches: dayLimits.batches, bytes: 0 });
-  const heavy = recording({ batches: 1, bytes: dayLimits.bytes });
+  const full = recording({ batches: dayLimits.network.batches, bytes: 0 });
+  const heavy = recording({ batches: 1, bytes: dayLimits.network.bytes });
   const light = recording({ batches: 1, bytes: 1 });
   const [first, firstUrl] = post(query());
   const [second, secondUrl] = post(query());
@@ -127,7 +134,40 @@ test('a network that has used up its day is refused and nothing is stored', asyn
   expect(await statusOf(first, firstUrl, full.database)).toBe(429);
   expect(await statusOf(second, secondUrl, heavy.database)).toBe(429);
   expect(await statusOf(third, thirdUrl, light.database)).toBe(204);
-  expect([full.rows.length, heavy.rows.length, light.rows.length]).toEqual([0, 0, 2]);
+  expect([full.rows.length, heavy.rows.length, light.rows.length]).toEqual([0, 0, 3]);
+});
+
+test('one browser that has used up its own day is refused while its network still has room', async () => {
+  const spent = recording({ batches: 1, bytes: 1 }, { batches: dayLimits.actor.batches, bytes: 0 });
+  const large = recording({ batches: 1, bytes: 1 }, { batches: 1, bytes: dayLimits.actor.bytes });
+  const [first, firstUrl] = post(query());
+  const [second, secondUrl] = post(query());
+  expect(await statusOf(first, firstUrl, spent.database)).toBe(429);
+  expect(await statusOf(second, secondUrl, large.database)).toBe(429);
+  expect([spent.rows.length, large.rows.length]).toEqual([0, 0]);
+});
+
+test('a refusal says how long until the day turns over', async () => {
+  const full = recording({ batches: dayLimits.network.batches, bytes: 0 });
+  const [request, url] = post(query());
+  const response = await acceptIntake(request, url, full.database);
+  const wait = Number(response.headers.get('retry-after'));
+  expect(wait).toBeGreaterThanOrEqual(1);
+  expect(wait).toBeLessThanOrEqual(86_400);
+  expect(secondsToNextDay(Date.UTC(2026, 10, 20, 23, 59, 59))).toBe(1);
+  expect(secondsToNextDay(Date.UTC(2026, 10, 20, 0, 0, 0))).toBe(86_400);
+  expect(secondsToNextDay(Date.UTC(2026, 10, 20, 16, 0, 0))).toBe(8 * 3600);
+});
+
+test('a class of forty on one address for two hours, at the busiest pace measured, is never refused', () => {
+  const busiest = { batches: 55, bytes: 600_000 };
+  const learners = 40;
+  const lesson = 2;
+  const schoolDay = 8;
+  expect(learners * lesson * busiest.batches).toBeLessThan(dayLimits.network.batches);
+  expect(learners * lesson * busiest.bytes).toBeLessThan(dayLimits.network.bytes);
+  expect(schoolDay * busiest.batches).toBeLessThan(dayLimits.actor.batches);
+  expect(schoolDay * busiest.bytes).toBeLessThan(dayLimits.actor.bytes);
 });
 
 test('the budget is kept per address, or per /64 for the newer kind of address', () => {
@@ -158,5 +198,7 @@ test('a missing or failing database answers 503 so the browser retries later', a
   const [first, firstUrl] = post(query());
   const [second, secondUrl] = post(query());
   expect(await statusOf(first, firstUrl)).toBe(503);
-  expect(await statusOf(second, secondUrl, failing)).toBe(503);
+  const failed = await acceptIntake(second, secondUrl, failing);
+  expect(failed.status).toBe(503);
+  expect(failed.headers.get('retry-after')).toBe('60');
 });

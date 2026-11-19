@@ -1,55 +1,48 @@
-import { number, record, string } from 'zod';
+import { number, object, record, string, type ZodType } from 'zod';
 
 import { keptKinds } from '@/lib/learner/kinds';
 import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
 
-import { environment, siteVersion } from './environment';
+import { environment, replayWanted, siteVersion } from './environment';
 import { noteFingerprint } from './fingerprint';
 import { acknowledge, pendingBatches, settled, type Acked, type Batch } from './pending';
+import { fitBytes, free, holdAfter, isDue, isHeld, prefixBatch, timing, type Hold } from './plan';
 import { startReplay } from './replay';
-import { keepaliveLimit, upload, uploadLast, type Ticket } from './send';
+import { stored, upload, uploadNow, type Answer, type Ticket } from './send';
 import { watchPage } from './watch';
 
 interface State {
   acked: Acked;
   busy: boolean;
-  failures: number;
   readonly forgotten: Set<string>;
+  hold: Hold;
   readonly site: string;
 }
 
 const ackedKey = 'cp:intake:acked';
+const holdKey = 'cp:intake:hold';
 const ackedSchema = record(string(), number());
-const batchSize = 200;
-const firstDelay = 2000;
-const period = 20_000;
+const holdSchema = object({ failures: number(), until: number() });
+const checkEvery = 15_000;
 
-const readAcked = (): Acked => {
+const readStored = <Value>(key: string, schema: ZodType<Value>, fallback: Value): Value => {
   try {
-    const stored: unknown = JSON.parse(localStorage.getItem(ackedKey) ?? '{}');
-    const parsed = ackedSchema.safeParse(stored);
+    const parsed = schema.safeParse(JSON.parse(localStorage.getItem(key) ?? 'null'));
     if (parsed.success) {
       return parsed.data;
     }
   } catch {
-    return {};
+    return fallback;
   }
-  return {};
+  return fallback;
 };
 
-const writeAcked = (acked: Acked): boolean => {
+const writeStored = (key: string, value: unknown): boolean => {
   try {
-    localStorage.setItem(ackedKey, JSON.stringify(acked));
+    localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch {
     return false;
-  }
-};
-
-const noteRecovery = (state: State): void => {
-  if (state.failures > 0) {
-    track('intake.recovered', { data: { failures: state.failures } });
-    state.failures = 0;
   }
 };
 
@@ -61,19 +54,51 @@ const ticketOf = (state: State, batch: Batch): Ticket => ({
   site: state.site,
 });
 
+const noteHold = (answer: Answer, hold: Hold, now: number): void => {
+  track('intake.held', {
+    data: {
+      failures: hold.failures,
+      retryAfter: answer.retryAfter ?? '',
+      status: answer.status,
+      wait: hold.until - now,
+    },
+  });
+};
+
+const holdAs = (state: State, hold: Hold): void => {
+  state.hold = hold;
+  writeStored(holdKey, hold);
+};
+
+const accept = (state: State, batch: Batch): void => {
+  state.acked = acknowledge(state.acked, batch);
+  writeStored(ackedKey, state.acked);
+  if (state.hold.failures > 0) {
+    track('intake.recovered', { data: { failures: state.hold.failures } });
+  }
+  holdAs(state, free);
+};
+
+const settle = (state: State, batch: Batch, answer: Answer): boolean => {
+  if (answer.status === stored) {
+    accept(state, batch);
+    return true;
+  }
+  const now = Date.now();
+  holdAs(state, holdAfter(answer, now, state.hold));
+  noteHold(answer, state.hold, now);
+  return false;
+};
+
 const sendAll = async (state: State, batches: readonly Batch[]): Promise<void> => {
   const [batch, ...rest] = batches;
   if (batch === undefined) {
     return;
   }
-  if (!(await upload(ticketOf(state, batch), JSON.stringify(batch.events)))) {
-    state.failures += 1;
-    return;
+  const answer = await upload(ticketOf(state, batch), JSON.stringify(batch.events));
+  if (settle(state, batch, answer)) {
+    await sendAll(state, rest);
   }
-  state.acked = acknowledge(state.acked, batch);
-  writeAcked(state.acked);
-  noteRecovery(state);
-  await sendAll(state, rest);
 };
 
 const prune = (state: State): void => {
@@ -86,13 +111,28 @@ const prune = (state: State): void => {
   }
 };
 
+const pending = (state: State): Batch[] =>
+  pendingBatches(recorded(), state.acked, timing.batchSize);
+
 const drain = async (state: State): Promise<void> => {
-  if (state.busy) {
+  const batches = pending(state);
+  if (state.busy || isHeld(state.hold, Date.now()) || !isDue(batches, Date.now())) {
     return;
   }
   state.busy = true;
   try {
-    await sendAll(state, pendingBatches(recorded(), state.acked, batchSize));
+    await sendAll(state, batches);
+    prune(state);
+  } finally {
+    state.busy = false;
+  }
+};
+
+const sendLast = async (state: State, part: Batch): Promise<void> => {
+  state.busy = true;
+  try {
+    const answer = await uploadNow(ticketOf(state, part), JSON.stringify(part.events));
+    settle(state, part, answer);
     prune(state);
   } finally {
     state.busy = false;
@@ -100,39 +140,41 @@ const drain = async (state: State): Promise<void> => {
 };
 
 const lastCall = (state: State): void => {
-  const [batch] = pendingBatches(recorded(), state.acked, batchSize);
-  if (batch === undefined) {
+  const [batch] = pending(state);
+  if (batch === undefined || state.busy || isHeld(state.hold, Date.now())) {
     return;
   }
-  const text = JSON.stringify(batch.events);
-  if (text.length <= keepaliveLimit) {
-    uploadLast(ticketOf(state, batch), text);
+  const part = prefixBatch(batch, fitBytes(batch.events));
+  if (part !== null) {
+    void sendLast(state, part);
   }
 };
 
 const startIntake = async (): Promise<void> => {
   await openLog();
   const state: State = {
-    acked: readAcked(),
+    acked: readStored(ackedKey, ackedSchema, {}),
     busy: false,
-    failures: 0,
     forgotten: new Set(),
+    hold: readStored(holdKey, holdSchema, free),
     site: siteVersion(),
   };
   track('session.started', { data: environment(state.site) });
   watchPage();
-  void startReplay(state.site);
+  if (replayWanted()) {
+    void startReplay(state.site);
+  }
   void noteFingerprint();
-  setTimeout(() => {
-    void drain(state);
-  }, firstDelay);
   setInterval(() => {
     void drain(state);
-  }, period);
+  }, checkEvery);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       lastCall(state);
     }
+  });
+  globalThis.addEventListener('pagehide', () => {
+    lastCall(state);
   });
 };
 

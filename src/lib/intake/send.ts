@@ -11,10 +11,16 @@ interface Packed {
   readonly encoding: 'gzip' | 'identity';
 }
 
+interface Answer {
+  readonly retryAfter: string | null;
+  readonly status: number;
+}
+
 const endpoint = '/api/intake';
 const stored = 204;
 const bodyLimit = 1_000_000;
 const keepaliveLimit = 60_000;
+const unreached: Answer = { retryAfter: null, status: 0 };
 
 const address = (ticket: Ticket, encoding: string): string => {
   const query = new URLSearchParams({
@@ -45,23 +51,55 @@ const pack = async (text: string): Promise<Packed> => {
   }
 };
 
-const post = async (ticket: Ticket, packed: Packed): Promise<boolean> => {
+const answerOf = async (sending: Promise<Response>): Promise<Answer> => {
   try {
-    const response = await fetch(address(ticket, packed.encoding), {
-      body: packed.body,
-      keepalive: packed.body.byteLength <= keepaliveLimit,
-      method: 'POST',
-    });
-    return response.status === stored;
+    const response = await sending;
+    return { retryAfter: response.headers.get('retry-after'), status: response.status };
   } catch {
-    return false;
+    return unreached;
   }
 };
 
-const upload = async (ticket: Ticket, text: string): Promise<boolean> =>
-  post(ticket, await pack(text));
+const deliver = (ticket: Ticket, packed: Packed): Promise<Answer> => {
+  try {
+    return answerOf(
+      fetch(address(ticket, packed.encoding), {
+        body: packed.body,
+        keepalive: packed.body.byteLength <= keepaliveLimit,
+        method: 'POST',
+      }),
+    );
+  } catch {
+    return Promise.resolve(unreached);
+  }
+};
+
+const post = async (ticket: Ticket, packed: Packed): Promise<boolean> => {
+  const answer = await deliver(ticket, packed);
+  return answer.status === stored;
+};
+
+const upload = async (ticket: Ticket, text: string): Promise<Answer> =>
+  deliver(ticket, await pack(text));
+
+const uploadNow = (ticket: Ticket, text: string): Promise<Answer> => {
+  const bytes = new TextEncoder().encode(text);
+  return deliver(ticket, { body: bytes.buffer, encoding: 'identity' });
+};
 
 const uploadLast = (ticket: Ticket, text: string): boolean =>
   navigator.sendBeacon(address(ticket, 'identity'), text);
 
-export { bodyLimit, keepaliveLimit, pack, post, upload, uploadLast, type Packed, type Ticket };
+export {
+  bodyLimit,
+  keepaliveLimit,
+  pack,
+  post,
+  stored,
+  upload,
+  uploadLast,
+  uploadNow,
+  type Answer,
+  type Packed,
+  type Ticket,
+};

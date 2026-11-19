@@ -1,4 +1,14 @@
-import { accountOf, addUsage, hasRoom, readUsage, usageOf } from './budget';
+import {
+  accountOf,
+  addActorUsage,
+  addUsage,
+  dayLimits,
+  hasRoom,
+  readActorUsage,
+  readUsage,
+  secondsToNextDay,
+  usageOf,
+} from './budget';
 
 interface Statement {
   readonly bind: (...values: readonly unknown[]) => Statement;
@@ -132,7 +142,14 @@ const readOrigin = (request: Request): Origin => {
   };
 };
 
-const reply = (code: number): Response => new Response(null, { status: code });
+const retryLater = 60;
+
+const reply = (code: number, retryAfter: number | null = null): Response => {
+  if (retryAfter === null) {
+    return new Response(null, { status: code });
+  }
+  return new Response(null, { headers: { 'retry-after': String(retryAfter) }, status: code });
+};
 
 const refusal = (request: Request, url: URL): number | null => {
   if (request.method !== 'POST') {
@@ -177,16 +194,26 @@ const storing = (database: Database, { body, now, origin, ticket }: Parcel): Sta
       body,
     );
 
-const keep = async (database: Database, parcel: Parcel): Promise<number> => {
+const keep = async (database: Database, parcel: Parcel): Promise<Response> => {
   const account = accountOf(parcel.origin.ip, parcel.now);
+  const { actor } = parcel.ticket;
   const size = parcel.body.byteLength;
-  const used = await database.prepare(readUsage).bind(account.network, account.day).first();
-  if (!hasRoom(usageOf(used), size)) {
-    return status.tooMany;
+  const [network, own] = await Promise.all([
+    database.prepare(readUsage).bind(account.network, account.day).first(),
+    database.prepare(readActorUsage).bind(actor, account.day).first(),
+  ]);
+  if (
+    !hasRoom(usageOf(network), size, dayLimits.network) ||
+    !hasRoom(usageOf(own), size, dayLimits.actor)
+  ) {
+    return reply(status.tooMany, secondsToNextDay(parcel.now));
   }
-  const charge = database.prepare(addUsage).bind(account.network, account.day, size);
-  await database.batch([storing(database, parcel), charge]);
-  return status.stored;
+  await database.batch([
+    storing(database, parcel),
+    database.prepare(addUsage).bind(account.network, account.day, size),
+    database.prepare(addActorUsage).bind(actor, account.day, size),
+  ]);
+  return reply(status.stored);
 };
 
 const receive = async (request: Request, database: Database, ticket: Ticket): Promise<Response> => {
@@ -199,9 +226,9 @@ const receive = async (request: Request, database: Database, ticket: Ticket): Pr
   }
   try {
     const parcel = { body, now: Date.now(), origin: readOrigin(request), ticket };
-    return reply(await keep(database, parcel));
+    return await keep(database, parcel);
   } catch {
-    return reply(status.unavailable);
+    return reply(status.unavailable, retryLater);
   }
 };
 
@@ -219,7 +246,7 @@ const acceptIntake = (
     return reply(status.badRequest);
   }
   if (database === undefined) {
-    return reply(status.unavailable);
+    return reply(status.unavailable, retryLater);
   }
   return receive(request, database, ticket);
 };
