@@ -16,36 +16,40 @@ import { expect, test } from './test';
 test.describe('起步單元：最後一題與執行', () => {
   test.use({ reducedMotion: 'reduce' });
 
-  test('寫錯會顯示編譯沒有過，無窮迴圈會被停下來', async ({ page }) => {
-    await open(page, 'task');
-    await writeProgram(page, wrap('    cout << 11'));
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.compileError'], { timeout: 150_000 });
-    await expect(output(page)).toContainText(say('explain.semicolon', { line: '7' }));
-    expect(await currentId(page)).toBe('task');
-    await writeProgram(page, wrap('    while (true) {\n    }'));
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.timeout'], { timeout: 60_000 });
-    await writeProgram(page, wrap('    cout << 33;'));
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 60_000 });
-    await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
-    expect(await currentId(page)).toBe('task');
-  });
+  test.describe('with the compiler', () => {
+    test.use({ compiler: true });
 
-  test('輪到學生時，焦點不在編輯器按 Enter 也會執行', async ({ page }) => {
-    await open(page, 'task');
-    const button = page.locator('[data-code-runner] [data-role="run"]');
-    await expect(button).toBeEnabled();
-    await expect(page.locator(studentEditor)).toHaveAttribute('tabindex', '0');
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
+    test('寫錯會顯示編譯沒有過，無窮迴圈會被停下來', async ({ page }) => {
+      await open(page, 'task');
+      await writeProgram(page, wrap('    cout << 11'));
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.compileError'], { timeout: 150_000 });
+      await expect(output(page)).toContainText(say('explain.semicolon', { line: '7' }));
+      expect(await currentId(page)).toBe('task');
+      await writeProgram(page, wrap('    while (true) {\n    }'));
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.timeout'], { timeout: 60_000 });
+      await writeProgram(page, wrap('    cout << 33;'));
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 60_000 });
+      await expect(page.locator('[data-role="note"]')).not.toBeEmpty();
+      expect(await currentId(page)).toBe('task');
     });
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
-    expect(await currentId(page)).toBe('task');
+
+    test('輪到學生時，焦點不在編輯器按 Enter 也會執行', async ({ page }) => {
+      await open(page, 'task');
+      const button = page.locator('[data-code-runner] [data-role="run"]');
+      await expect(button).toBeEnabled();
+      await expect(page.locator(studentEditor)).toHaveAttribute('tabindex', '0');
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+      });
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
+      expect(await currentId(page)).toBe('task');
+    });
   });
 
   test('command keys that have not been taught do nothing at the free task', async ({ page }) => {
@@ -71,25 +75,31 @@ test.describe('起步單元：最後一題與執行', () => {
     await expect(page.locator(studentEditor)).not.toContainText('cout << 22');
   });
 
-  test('the free task shows what to print, says what is wrong, and compiles with the prepared header', async ({
-    page,
-  }) => {
-    const header = page.waitForResponse((response) => response.url().endsWith('/compiler/std.pch'));
-    const note = page.locator('[data-role="note"]');
-    await open(page, 'task');
-    await expect(page.locator('[data-code-runner] [data-role="expect"]')).toHaveText('5 3');
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
-    expect((await header).status()).toBe(200);
-    await expect(note).toHaveText(say('wrong.fewer', { got: '1', want: '2' }));
-    await page.keyboard.press('o');
-    await page.keyboard.type('cout << b;');
-    await page.keyboard.press('Escape');
-    await page.keyboard.press('Enter');
-    await expect(status(page)).toHaveText(ui['run.compileError'], { timeout: 150_000 });
-    await expect(note).toBeEmpty();
-    await open(page, 'run-cin');
-    await expect(page.locator('[data-code-runner] [data-role="expect-field"]')).toBeHidden();
+  test.describe('with the compiler and its header', () => {
+    test.use({ compiler: true });
+
+    test('the free task shows what to print, says what is wrong, and compiles with the prepared header', async ({
+      page,
+    }) => {
+      const header = page.waitForResponse((response) =>
+        response.url().endsWith('/compiler/std.pch'),
+      );
+      const note = page.locator('[data-role="note"]');
+      await open(page, 'task');
+      await expect(page.locator('[data-code-runner] [data-role="expect"]')).toHaveText('5 3');
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
+      expect((await header).status()).toBe(200);
+      await expect(note).toHaveText(say('wrong.fewer', { got: '1', want: '2' }));
+      await page.keyboard.press('o');
+      await page.keyboard.type('cout << b;');
+      await page.keyboard.press('Escape');
+      await page.keyboard.press('Enter');
+      await expect(status(page)).toHaveText(ui['run.compileError'], { timeout: 150_000 });
+      await expect(note).toBeEmpty();
+      await open(page, 'run-cin');
+      await expect(page.locator('[data-code-runner] [data-role="expect-field"]')).toBeHidden();
+    });
   });
 
   test('the free task says why a key does nothing', async ({ page }) => {

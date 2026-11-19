@@ -74,11 +74,6 @@ test.describe('起步單元：編輯器關卡', () => {
 
   for (const gate of ['run-cout', 'run-two', 'run-newline', 'run-int', 'run-cin']) {
     test(`${gate} shows the verified result at once, without the compiler`, async ({ page }) => {
-      const wanted: string[] = [];
-      await page.route(/compiler\.worker|program\.worker|\.wasm(?:\?|$)/u, async (route) => {
-        wanted.push(route.request().url());
-        await route.abort();
-      });
       await open(page, gate);
       await solve(page, gate);
       await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 1000 });
@@ -123,22 +118,38 @@ test.describe('起步單元：編輯器關卡', () => {
     expect(await currentId(page)).toBe('arrows-out');
   });
 
-  for (const gate of ['type-template', ...Object.keys(programs)]) {
+  const free = Object.keys(programs).filter((gate) => !(gate in lessons));
+
+  const cannotPass = async (page: Page, gate: string): Promise<void> => {
+    await open(page, gate);
+    for (const key of ['Space', 'ArrowRight', 'ArrowDown', 'Enter', 'Space']) {
+      await page.keyboard.press(key);
+    }
+    if (free.includes(gate)) {
+      await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
+      await expect(output(page)).not.toBeEmpty();
+    }
+    if (gate in lessons) {
+      await expect(status(page)).toBeEmpty();
+    }
+    expect(await currentId(page)).toBe(gate);
+  };
+
+  for (const gate of ['type-template', ...Object.keys(lessons)]) {
     test(`${gate} cannot be passed without finishing it`, async ({ page }) => {
-      await open(page, gate);
-      for (const key of ['Space', 'ArrowRight', 'ArrowDown', 'Enter', 'Space']) {
-        await page.keyboard.press(key);
-      }
-      if (gate === 'task') {
-        await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 150_000 });
-        await expect(output(page)).not.toBeEmpty();
-      }
-      if (gate in lessons) {
-        await expect(status(page)).toBeEmpty();
-      }
-      expect(await currentId(page)).toBe(gate);
+      await cannotPass(page, gate);
     });
   }
+
+  test.describe('with the compiler', () => {
+    test.use({ compiler: true });
+
+    for (const gate of free) {
+      test(`${gate} cannot be passed without finishing it`, async ({ page }) => {
+        await cannotPass(page, gate);
+      });
+    }
+  });
 
   const distractions: Record<string, (page: Page) => Promise<void>> = {
     'clicking the dialogue': async (page) => {

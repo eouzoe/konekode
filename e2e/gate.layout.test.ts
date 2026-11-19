@@ -92,6 +92,8 @@ const finish = async (page: Page, gate: string): Promise<void> => {
   });
 };
 
+test.use({ compiler: true });
+
 for (const size of sizes) {
   const name = `${String(size.width)}×${String(size.height)}`;
   test(`${name}: nothing at a gate is covered or cut off, before or after running`, async ({

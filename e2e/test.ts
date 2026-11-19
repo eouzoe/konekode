@@ -1,11 +1,32 @@
-import { test as base } from '@playwright/test';
+import { test as base, type Page } from '@playwright/test';
 
 interface Options {
+  readonly compiler: boolean;
   readonly tolerated: readonly RegExp[];
 }
 
+const compilerScript = /\/compiler\.worker[^/]*\.js(?:\?|$)/u;
+const needed =
+  'a run reached the compiler, which this test does not load; declare test.use({ compiler: true })';
+
+const withoutCompiler = async (page: Page): Promise<void> => {
+  await page.route(compilerScript, async (route) => {
+    await route.abort();
+  });
+  await page.addInitScript((message) => {
+    const watch = new MutationObserver(() => {
+      if (document.querySelector('[data-code-runner][data-state="error"]') !== null) {
+        watch.disconnect();
+        throw new Error(message);
+      }
+    });
+    watch.observe(document, { attributeFilter: ['data-state'], attributes: true, subtree: true });
+  }, needed);
+};
+
 const test = base.extend<Options>({
-  page: async ({ page, tolerated }, use) => {
+  compiler: [false, { option: true }],
+  page: async ({ compiler, page, tolerated }, use) => {
     const problems: string[] = [];
     page.on('pageerror', (error) => {
       problems.push(`uncaught: ${error.message}`);
@@ -15,6 +36,9 @@ const test = base.extend<Options>({
         problems.push(`console: ${message.text()}`);
       }
     });
+    if (!compiler) {
+      await withoutCompiler(page);
+    }
     await use(page);
     const unexpected = problems.filter(
       (problem) => !tolerated.some((known) => known.test(problem)),
