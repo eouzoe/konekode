@@ -1,5 +1,3 @@
-import { type record as recorder } from '@rrweb/record';
-
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
@@ -105,26 +103,13 @@ const keep = (tape: Tape, frame: unknown, startOver: () => void): void => {
   }
 };
 
-const loadRecorder = async (): Promise<typeof recorder | null> => {
-  try {
-    const { record } = await import('@rrweb/record');
-    return record;
-  } catch (error) {
-    track('replay.failed', { data: { reason: String(error) } });
-    return null;
-  }
-};
-
-const startReplay = async (site: string): Promise<void> => {
-  const record = await loadRecorder();
-  if (record === null) {
-    return;
-  }
+const record = async (site: string): Promise<void> => {
+  const { record: recorder } = await import('@rrweb/record');
   const tape: Tape = { busy: false, chunk: 0, frames: [], site };
-  record({
+  recorder({
     emit: (frame) => {
       keep(tape, frame, () => {
-        record.takeFullSnapshot(true);
+        recorder.takeFullSnapshot(true);
       });
     },
     sampling,
@@ -137,6 +122,14 @@ const startReplay = async (site: string): Promise<void> => {
       lastFrames(tape);
     }
   });
+};
+
+const startReplay = async (site: string): Promise<void> => {
+  try {
+    await record(site);
+  } catch (error) {
+    track('replay.failed', { data: { reason: String(error) } });
+  }
 };
 
 export { startReplay };
