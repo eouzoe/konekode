@@ -1,6 +1,12 @@
 import { timing } from '../src/lib/intake/plan';
-import { blockedWait, databaseName, schemaVersion, storeName } from '../src/lib/record/browser';
-import { say } from '../src/lib/text/ui';
+import {
+  blockedWait,
+  databaseName,
+  schemaVersion,
+  stallWait,
+  storeName,
+} from '../src/lib/record/browser';
+import { say, type UiKey } from '../src/lib/text/ui';
 import { currentId } from './scene-view';
 import { expect, test, type Page } from './test';
 
@@ -13,6 +19,10 @@ const intake = /\/api\/intake\?/u;
 const notice = '[data-role="site-notice"]';
 const second = 1000;
 const tick = 15 * second;
+const openTroubles: ReadonlyMap<string, UiKey> = new Map([
+  ['storage.blocked', 'notice.blocked'],
+  ['storage.stalled', 'notice.unsaved'],
+]);
 
 const isSent = (value: unknown): value is Sent =>
   typeof value === 'object' &&
@@ -184,10 +194,39 @@ test.describe('when the browser cannot keep what the learner does', () => {
     await page.goto('/learn/start/');
     await page
       .locator('[data-scene][data-ready="true"]')
-      .waitFor({ timeout: blockedWait + 10 * second });
+      .waitFor({ timeout: stallWait + 10 * second });
     expect(Date.now() - began).toBeGreaterThanOrEqual(blockedWait);
-    await expect(page.locator(notice)).toHaveText(say('notice.blocked'));
-    await expect.poll(() => faultsIn(sent)).toContain('storage.blocked');
+    await expect
+      .poll(() => faultsIn(sent).filter((kind) => openTroubles.has(kind)))
+      .toHaveLength(1);
+    const trouble = faultsIn(sent).find((kind) => openTroubles.has(kind)) ?? '';
+    await expect(page.locator(notice)).toHaveText(
+      say(openTroubles.get(trouble) ?? 'notice.blocked'),
+    );
+  });
+
+  test('a database that never answers does not leave the unit waiting forever either', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ name, version }) => {
+        const holding = indexedDB.open(name, version);
+        holding.addEventListener('success', () => {
+          Reflect.set(globalThis, 'held', holding.result);
+        });
+        indexedDB.deleteDatabase(name);
+      },
+      { name: databaseName, version: schemaVersion },
+    );
+    const sent = watchUploads(page);
+    const began = Date.now();
+    await page.goto('/learn/start/');
+    await page
+      .locator('[data-scene][data-ready="true"]')
+      .waitFor({ timeout: stallWait + 10 * second });
+    expect(Date.now() - began).toBeGreaterThanOrEqual(stallWait);
+    await expect(page.locator(notice)).toHaveText(say('notice.unsaved'));
+    await expect.poll(() => faultsIn(sent)).toContain('storage.stalled');
   });
 });
 

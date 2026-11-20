@@ -3,7 +3,7 @@ import { actorId, newId, sessionId } from '@/lib/identity/actor';
 import { siteVersion } from '@/lib/site/version';
 import { contentId } from '@/units/content';
 
-import { browserPersistence, type Trouble } from './browser';
+import { browserPersistence, slowAfter, type Storage, type Trouble } from './browser';
 import { faultKind, faultSummaryKind, type LearningEvent } from './event';
 import { createLog, type Entry, type Log, type StoreFault } from './log';
 
@@ -71,7 +71,19 @@ const noteStoreFault = (fault: StoreFault): void => {
 
 const troubleKinds: Readonly<Record<Exclude<Trouble, ''>, string>> = {
   blocked: 'storage.blocked',
+  stalled: 'storage.stalled',
   unavailable: 'storage.unavailable',
+};
+
+const noteOpening = ({ reason, took, trouble }: Storage): void => {
+  if (trouble !== '') {
+    report(troubleKinds[trouble], 'open', reason);
+    return;
+  }
+  if (took > slowAfter) {
+    const waited = Math.round(took);
+    report('storage.slow', 'open', new Error(`${String(waited)} ms`));
+  }
 };
 
 const noteLoaded = (log: Log): void => {
@@ -87,10 +99,8 @@ const replayEarly = (log: Log): void => {
   }
 };
 
-const watchLog = (log: Log, trouble: Trouble, reason: unknown): void => {
-  if (trouble !== '') {
-    report(troubleKinds[trouble], 'open', reason);
-  }
+const watchLog = (log: Log, storage: Storage): void => {
+  noteOpening(storage);
   noteLoaded(log);
   onFault((fault) => {
     record(log, fault);
@@ -119,7 +129,7 @@ const start = async (): Promise<Log> => {
   }
   opened = log;
   replayEarly(log);
-  watchLog(log, storage.trouble, storage.reason);
+  watchLog(log, storage);
   return log;
 };
 

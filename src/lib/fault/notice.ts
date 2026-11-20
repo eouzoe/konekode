@@ -5,6 +5,7 @@ import { onFault, type Fault } from './fault';
 const byKind: Readonly<Record<string, UiKey>> = {
   'storage.blocked': 'notice.blocked',
   'storage.dropped': 'notice.unsaved',
+  'storage.stalled': 'notice.unsaved',
   'storage.unavailable': 'notice.unsaved',
   'storage.write': 'notice.unsaved',
 };

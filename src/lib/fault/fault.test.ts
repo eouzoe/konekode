@@ -91,7 +91,9 @@ test('only faults that change what happens to the learner are told to them', () 
   expect(noticeFor(fault('storage.write'))).toBe('notice.unsaved');
   expect(noticeFor(fault('storage.dropped'))).toBe('notice.unsaved');
   expect(noticeFor(fault('storage.unavailable'))).toBe('notice.unsaved');
+  expect(noticeFor(fault('storage.stalled'))).toBe('notice.unsaved');
   expect(noticeFor(fault('storage.blocked'))).toBe('notice.blocked');
+  expect(noticeFor(fault('storage.slow'))).toBeNull();
   expect(noticeFor(fault('rejected', 'scenes'))).toBe('notice.broken');
   expect(noticeFor(fault('rejected', 'replay'))).toBeNull();
   expect(noticeFor(fault('storage.local', 'draft'))).toBeNull();
