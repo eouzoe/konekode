@@ -18,7 +18,7 @@
   "vim-two-modes": "vim 有兩種模式：NORMAL 與 INSERT。",
   "normal-is": "normal 是一般模式，用來閱讀與下指令。",
   "normal-readonly": "在這個模式下，只能讀取，沒辦法輸入文字。",
-  "press-i": "如果想要要輸入文字的話，就需要按 i 切換成輸入模式。",
+  "press-i": "如果想要輸入文字的話，就需要按 i 切換成輸入模式。",
   "insert-is": "切換成輸入模式了，這樣就能打字了！",
   "shift-combo": "有些符號要先按住 Shift，使用組合鍵來輸入，像是這個 # 就是 Shift + 3。",
   "speed-run": "剩下的，就讓我們一口氣打完吧！",
