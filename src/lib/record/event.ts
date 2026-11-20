@@ -11,6 +11,8 @@ import {
 } from '@/lib/zod';
 
 const currentVersion = 3;
+const faultKind = 'fault';
+const faultSummaryKind = 'fault.summary';
 const unlabelledVersion = 2;
 const legacyVersion = 1;
 const legacySession = 'legacy';
@@ -130,6 +132,8 @@ const ordered = (events: readonly LearningEvent[]): LearningEvent[] =>
 
 export {
   currentVersion,
+  faultKind,
+  faultSummaryKind,
   ordered,
   readCounted,
   readEvent,

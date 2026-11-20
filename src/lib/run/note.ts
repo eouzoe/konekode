@@ -1,4 +1,5 @@
 import { type Pressed } from '@/lib/edit/session';
+import { report } from '@/lib/fault/fault';
 import { track } from '@/lib/record/current';
 import { usedAt } from '@/units/index';
 
@@ -101,4 +102,17 @@ const noteRefusal = (place: Place, key: string): void => {
   track('key.refused', { data: { key }, ref: place.beat, unit: place.unit });
 };
 
-export { noteAttempt, noteEntry, noteRefusal, noteRun, noteStep, type Attempt, type Place };
+const noteFailure = (place: Place, error: unknown): void => {
+  report('run', `${place.unit}/${place.beat}`, error);
+};
+
+export {
+  noteAttempt,
+  noteEntry,
+  noteFailure,
+  noteRefusal,
+  noteRun,
+  noteStep,
+  type Attempt,
+  type Place,
+};

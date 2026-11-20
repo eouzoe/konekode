@@ -69,9 +69,10 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
 </Base>
 
 <script>
+  import { guard } from '@/lib/fault/fault';
   import { mountScenes } from '@/lib/scene/mount';
 
-  void mountScenes();
+  guard('scenes', mountScenes());
 </script>
 
 <style>

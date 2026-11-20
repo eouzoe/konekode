@@ -1,30 +1,78 @@
+import { faultCounts, onFault, report, type Fault } from '@/lib/fault/fault';
 import { actorId, newId, sessionId } from '@/lib/identity/actor';
 import { siteVersion } from '@/lib/site/version';
 import { contentId } from '@/units/content';
 
-import { browserPersistence } from './browser';
-import { type LearningEvent } from './event';
-import { createLog, type Entry, type Log } from './log';
+import { browserPersistence, type Trouble } from './browser';
+import { faultKind, faultSummaryKind, type LearningEvent } from './event';
+import { createLog, type Entry, type Log, type StoreFault } from './log';
 
 type Listener = (event: LearningEvent) => void;
 
-const listeners: Listener[] = [];
-const nothing: readonly LearningEvent[] = [];
+interface Early {
+  readonly entry: Entry;
+  readonly kind: string;
+}
 
-const reasonLimit = 300;
+const listeners: Listener[] = [];
+const early: Early[] = [];
+const nothing: readonly LearningEvent[] = [];
+const earlyLimit = 500;
 
 let opening: Promise<Log> | null = null;
 let opened: Log | null = null;
-let faulted = false;
 
-const noteFault = (error: unknown): void => {
-  if (!faulted) {
-    faulted = true;
-    opened?.track('storage.failed', { data: { reason: String(error).slice(0, reasonLimit) } });
+const clockOrigin = Date.now() - performance.now();
+const now = (): number => Math.round(clockOrigin + performance.now());
+
+const isPowerOfTwo = (count: number): boolean => (count & (count - 1)) === 0;
+
+const recorded = new Map<string, number>();
+
+const keyOf = (kind: string, where: string): string => `${kind}\t${where}`;
+
+const record = (log: Log, fault: Fault): void => {
+  if (!isPowerOfTwo(fault.count)) {
+    return;
+  }
+  recorded.set(keyOf(fault.kind, fault.where), fault.count);
+  log.track(faultKind, {
+    at: fault.at,
+    data: { count: fault.count, kind: fault.kind, reason: fault.reason, where: fault.where },
+  });
+};
+
+const unrecorded = (): string[] =>
+  [...faultCounts().entries()]
+    .filter(([key, count]) => (recorded.get(key) ?? 0) < count)
+    .map(([key, count]) => `${key.replace('\t', '@')}=${String(count)}`);
+
+const summarise = (log: Log): void => {
+  const missing = unrecorded();
+  const dropped = log.dropped();
+  if (missing.length === 0 && dropped === 0) {
+    return;
+  }
+  log.track(faultSummaryKind, { data: { counts: missing.join(','), dropped } });
+  for (const [key, count] of faultCounts()) {
+    recorded.set(key, count);
   }
 };
 
-const clockOrigin = Date.now() - performance.now();
+const storeKinds: Readonly<Record<StoreFault['kind'], string>> = {
+  dropped: 'storage.dropped',
+  remove: 'storage.remove',
+  write: 'storage.write',
+};
+
+const noteStoreFault = (fault: StoreFault): void => {
+  report(storeKinds[fault.kind], 'events', fault.error);
+};
+
+const troubleKinds: Readonly<Record<Exclude<Trouble, ''>, string>> = {
+  blocked: 'storage.blocked',
+  unavailable: 'storage.unavailable',
+};
 
 const noteLoaded = (log: Log): void => {
   const { unlabelled, unreadable } = log.loaded;
@@ -33,14 +81,35 @@ const noteLoaded = (log: Log): void => {
   }
 };
 
+const replayEarly = (log: Log): void => {
+  for (const { entry, kind } of early.splice(0)) {
+    log.track(kind, entry);
+  }
+};
+
+const watchLog = (log: Log, trouble: Trouble, reason: unknown): void => {
+  if (trouble !== '') {
+    report(troubleKinds[trouble], 'open', reason);
+  }
+  noteLoaded(log);
+  onFault((fault) => {
+    record(log, fault);
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      summarise(log);
+    }
+  });
+};
+
 const start = async (): Promise<Log> => {
   const [storage, content] = await Promise.all([browserPersistence(), contentId()]);
   const log = await createLog({
     actor: actorId(),
     content,
     newId,
-    now: () => Math.round(clockOrigin + performance.now()),
-    onFault: noteFault,
+    now,
+    onFault: noteStoreFault,
     persistence: storage.persistence,
     session: sessionId(),
     site: siteVersion(),
@@ -49,10 +118,8 @@ const start = async (): Promise<Log> => {
     log.subscribe(listener);
   }
   opened = log;
-  if (!storage.durable) {
-    log.track('storage.unavailable', { data: { reason: storage.reason.slice(0, reasonLimit) } });
-  }
-  noteLoaded(log);
+  replayEarly(log);
+  watchLog(log, storage.trouble, storage.reason);
   return log;
 };
 
@@ -61,11 +128,19 @@ const openLog = (): Promise<Log> => {
   return opening;
 };
 
-const track = (kind: string, entry?: Entry): void => {
-  opened?.track(kind, entry);
+const track = (kind: string, entry: Entry = {}): void => {
+  if (opened !== null) {
+    opened.track(kind, entry);
+    return;
+  }
+  if (early.length < earlyLimit) {
+    early.push({ entry: { ...entry, at: entry.at ?? now() }, kind });
+    return;
+  }
+  report('record.early', kind, new Error('the log was not open yet'));
 };
 
-const recorded = (): readonly LearningEvent[] => opened?.events() ?? nothing;
+const recordedEvents = (): readonly LearningEvent[] => opened?.events() ?? nothing;
 
 const onRecorded = (listener: Listener): void => {
   listeners.push(listener);
@@ -80,4 +155,4 @@ const forgetRecorded = (ids: readonly string[]): void => {
   opened?.forget(ids);
 };
 
-export { flushLog, forgetRecorded, onRecorded, openLog, recorded, track };
+export { flushLog, forgetRecorded, onRecorded, openLog, recordedEvents as recorded, track };

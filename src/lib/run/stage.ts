@@ -1,6 +1,7 @@
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand, keysOf } from '@/lib/edit/path';
 import { knownKeys, run } from '@/lib/edit/step';
+import { guard } from '@/lib/fault/fault';
 import { chunks } from '@/lib/perform/rhythm';
 import { type Plan } from '@/lib/unit/format';
 import { array, boolean, object, string, type infer as Infer } from '@/lib/zod';
@@ -219,10 +220,13 @@ const demonstrate = (tools: Tools, state: State, stage: Stage): void => {
   tools.desk.blur();
   prepare(tools, state, stage);
   tools.clear();
-  void play(
-    tools,
-    state,
-    stage.now.flatMap((token) => movesOf(token)),
+  guard(
+    'stage',
+    play(
+      tools,
+      state,
+      stage.now.flatMap((token) => movesOf(token)),
+    ),
   );
 };
 

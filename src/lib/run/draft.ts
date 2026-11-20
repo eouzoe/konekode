@@ -1,3 +1,4 @@
+import { report } from '@/lib/fault/fault';
 import { number, object, string, type infer as Infer } from '@/lib/zod';
 
 const prefix = 'cp:draft:';
@@ -25,7 +26,8 @@ const readDraft = (name: string): Draft | null => {
       return null;
     }
     return decode(raw);
-  } catch {
+  } catch (error) {
+    report('storage.local', 'draft', error);
     return null;
   }
 };
@@ -34,7 +36,8 @@ const writeDraft = (name: string, draft: Draft): boolean => {
   try {
     localStorage.setItem(`${prefix}${name}`, JSON.stringify(draft));
     return true;
-  } catch {
+  } catch (error) {
+    report('storage.local', 'draft', error);
     return false;
   }
 };
@@ -42,7 +45,8 @@ const writeDraft = (name: string, draft: Draft): boolean => {
 const clearDraft = (name: string): void => {
   try {
     localStorage.removeItem(`${prefix}${name}`);
-  } catch {
+  } catch (error) {
+    report('storage.local', 'draft', error);
     writeDraft(name, { cursor: 0, text: '' });
   }
 };

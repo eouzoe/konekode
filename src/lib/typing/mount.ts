@@ -1,3 +1,4 @@
+import { guard } from '@/lib/fault/fault';
 import { noteAttempt, noteEntry } from '@/lib/run/note';
 
 import {
@@ -269,7 +270,7 @@ const listen = (session: Session, parts: Parts): void => {
   });
   parts.root.addEventListener('drill:demo', (event) => {
     if (event instanceof CustomEvent && isScript(event.detail)) {
-      void play(session, parts, event.detail);
+      guard('drill', play(session, parts, event.detail));
     }
   });
 };

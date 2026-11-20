@@ -1,3 +1,4 @@
+import { guard } from '@/lib/fault/fault';
 import { unitState, type UnitState } from '@/lib/learner/progress';
 import { flushLog, openLog, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
@@ -25,4 +26,8 @@ const restartUnit = async (unit: string): Promise<void> => {
   globalThis.location.reload();
 };
 
-export { noteCheck, noteReached, openSession, restartUnit, type ReadUnit };
+const restart = (unit: string): void => {
+  guard('restart', restartUnit(unit));
+};
+
+export { noteCheck, noteReached, openSession, restart, type ReadUnit };

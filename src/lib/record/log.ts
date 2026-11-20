@@ -7,9 +7,16 @@ interface Persistence {
 }
 
 interface Entry {
+  readonly at?: number;
   readonly data?: Data;
   readonly ref?: string;
   readonly unit?: string;
+}
+
+interface StoreFault {
+  readonly error: unknown;
+  readonly kind: 'dropped' | 'remove' | 'write';
+  readonly size: number;
 }
 
 interface Source {
@@ -17,8 +24,9 @@ interface Source {
   readonly content: string;
   readonly newId: () => string;
   readonly now: () => number;
-  readonly onFault?: (error: unknown) => void;
+  readonly onFault?: (fault: StoreFault) => void;
   readonly persistence: Persistence;
+  readonly retryDelay?: (attempt: number) => number;
   readonly session: string;
   readonly site: string;
 }
@@ -29,6 +37,7 @@ interface Loaded {
 }
 
 interface Log {
+  readonly dropped: () => number;
   readonly events: () => readonly LearningEvent[];
   readonly flush: () => Promise<void>;
   readonly forget: (ids: readonly string[]) => void;
@@ -38,14 +47,22 @@ interface Log {
 }
 
 interface State {
+  abandoned: boolean;
+  dropped: number;
   readonly events: LearningEvent[];
+  failures: number;
   latest: number;
   readonly listeners: ((event: LearningEvent) => void)[];
   pending: Promise<void>;
   saving: Promise<void>;
   seq: number;
   readonly unsaved: LearningEvent[];
+  waiting: boolean;
 }
+
+const retryLimit = 4;
+const firstRetry = 1000;
+const doubling = 2;
 
 const hasId = (value: unknown, ids: ReadonlySet<string>): boolean =>
   typeof value === 'object' && value !== null && 'id' in value && ids.has(String(value.id));
@@ -81,7 +98,7 @@ const latestOf = (events: readonly LearningEvent[]): number => {
 
 const build = ({ source, state }: Context, kind: string, entry: Entry): LearningEvent => {
   state.seq += 1;
-  state.latest = Math.max(source.now(), state.latest + 1);
+  state.latest = Math.max(entry.at ?? source.now(), state.latest + 1);
   return {
     actor: source.actor,
     at: state.latest,
@@ -98,35 +115,91 @@ const build = ({ source, state }: Context, kind: string, entry: Entry): Learning
   };
 };
 
-const attempt = async (source: Source, work: () => Promise<void>): Promise<void> => {
-  try {
-    await work();
-  } catch (error) {
-    source.onFault?.(error);
-  }
-};
+const delayOf = (source: Source, attempt: number): number =>
+  source.retryDelay?.(attempt) ?? firstRetry * doubling ** (attempt - 1);
 
 const queue = ({ source, state }: Context, work: () => Promise<void>): void => {
   const previous = state.pending;
-  const done = attempt(source, work);
+  const done = (async (): Promise<void> => {
+    try {
+      await work();
+    } catch (error) {
+      source.onFault?.({ error, kind: 'remove', size: 0 });
+    }
+  })();
   state.pending = (async (): Promise<void> => {
     await previous;
     await done;
   })();
 };
 
-const save = async ({ source, state }: Context): Promise<void> => {
-  const batch = state.unsaved.splice(0);
-  if (batch.length > 0) {
-    await attempt(source, () => source.persistence.append(batch));
+interface Failure {
+  readonly batch: readonly LearningEvent[];
+  readonly error: unknown;
+}
+
+const retryLater = (context: Context, again: () => void): void => {
+  context.state.waiting = true;
+  setTimeout(
+    () => {
+      context.state.waiting = false;
+      again();
+    },
+    delayOf(context.source, context.state.failures),
+  );
+};
+
+const giveUp = ({ source, state }: Context, { batch, error }: Failure): void => {
+  state.abandoned = true;
+  state.dropped += batch.length;
+  source.onFault?.({ error, kind: 'dropped', size: batch.length });
+};
+
+const failed = (context: Context, failure: Failure, again: () => void): void => {
+  const { source, state } = context;
+  state.failures += 1;
+  if (state.failures > retryLimit) {
+    giveUp(context, failure);
+    return;
   }
+  state.unsaved.unshift(...failure.batch);
+  source.onFault?.({ error: failure.error, kind: 'write', size: failure.batch.length });
+  retryLater(context, again);
+};
+
+const persist = async (
+  context: Context,
+  batch: readonly LearningEvent[],
+  again: () => void,
+): Promise<void> => {
+  try {
+    await context.source.persistence.append(batch);
+    context.state.failures = 0;
+  } catch (error) {
+    failed(context, { batch, error }, again);
+  }
+};
+
+const save = async (context: Context, again: () => void): Promise<void> => {
+  const { state } = context;
+  const batch = state.unsaved.splice(0);
+  if (batch.length === 0) {
+    return;
+  }
+  if (state.abandoned) {
+    state.dropped += batch.length;
+    return;
+  }
+  await persist(context, batch, again);
 };
 
 const saveLater = (context: Context): void => {
   const previous = context.state.saving;
   context.state.saving = (async (): Promise<void> => {
     await previous;
-    await save(context);
+    await save(context, () => {
+      saveLater(context);
+    });
   })();
 };
 
@@ -138,18 +211,25 @@ const removeLater = (context: Context, ids: readonly string[]): void => {
   });
 };
 
+const freshState = (events: LearningEvent[]): State => ({
+  abandoned: false,
+  dropped: 0,
+  events,
+  failures: 0,
+  latest: latestOf(events),
+  listeners: [],
+  pending: Promise.resolve(),
+  saving: Promise.resolve(),
+  seq: 0,
+  unsaved: [],
+  waiting: false,
+});
+
 const createLog = async (source: Source): Promise<Log> => {
   const { events, unlabelled, unreadable } = readCounted(await source.persistence.load());
-  const state: State = {
-    events,
-    latest: latestOf(events),
-    listeners: [],
-    pending: Promise.resolve(),
-    saving: Promise.resolve(),
-    seq: 0,
-    unsaved: [],
-  };
+  const state = freshState(events);
   return {
+    dropped: () => state.dropped,
     events: () => state.events,
     flush: async () => {
       await state.saving;
@@ -166,7 +246,9 @@ const createLog = async (source: Source): Promise<Log> => {
       const event = build({ source, state }, kind, entry);
       state.events.push(event);
       state.unsaved.push(event);
-      saveLater({ source, state });
+      if (!state.waiting) {
+        saveLater({ source, state });
+      }
       for (const listener of state.listeners) {
         listener(event);
       }
@@ -178,9 +260,11 @@ const createLog = async (source: Source): Promise<Log> => {
 export {
   createLog,
   memoryPersistence,
+  retryLimit,
   type Entry,
   type Loaded,
   type Log,
   type Persistence,
   type Source,
+  type StoreFault,
 };

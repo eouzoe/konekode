@@ -1,9 +1,17 @@
 import { expect, test } from 'bun:test';
 
 import { readEvent, type LearningEvent } from './event';
-import { createLog, memoryPersistence, type Persistence, type Source } from './log';
+import {
+  createLog,
+  memoryPersistence,
+  retryLimit,
+  type Log,
+  type Persistence,
+  type Source,
+  type StoreFault,
+} from './log';
 
-const source = (persistence: Persistence, faults: unknown[] = []): Source => {
+const source = (persistence: Persistence, faults: StoreFault[] = []): Source => {
   let clock = 1000;
   let count = 0;
   return {
@@ -17,10 +25,11 @@ const source = (persistence: Persistence, faults: unknown[] = []): Source => {
       clock += 1;
       return clock;
     },
-    onFault: (error) => {
-      faults.push(error);
+    onFault: (fault) => {
+      faults.push(fault);
     },
     persistence,
+    retryDelay: () => 0,
     session: 'session-a',
     site: 'site-a',
   };
@@ -92,23 +101,63 @@ test('an event is handed to the store at once when no write is in flight', async
   expect(await persistence.load()).toHaveLength(1);
 });
 
-test('儲存失敗不會讓寫入中斷，而且每一次失敗都會回報', async () => {
-  const faults: unknown[] = [];
-  const broken: Persistence = {
-    append: async () => {
+const failingFor = (times: number, kept: LearningEvent[]): Persistence => {
+  let left = times;
+  return {
+    append: async (events) => {
       await Promise.resolve();
-      throw new Error('存不進去');
+      if (left > 0) {
+        left -= 1;
+        throw new Error('存不進去');
+      }
+      kept.push(...events);
     },
     load: () => Promise.resolve([]),
     remove: () => Promise.resolve(),
   };
-  const log = await createLog(source(broken, faults));
+};
+
+const settleRetries = async (log: Log, rounds = retryLimit * 2 + 1): Promise<void> => {
+  if (rounds === 0) {
+    return;
+  }
+  await Bun.sleep(1);
+  await log.flush();
+  await settleRetries(log, rounds - 1);
+};
+
+test('a batch that could not be stored is tried again, and nothing is lost once the store recovers', async () => {
+  const faults: StoreFault[] = [];
+  const kept: LearningEvent[] = [];
+  const log = await createLog(source(failingFor(2, kept), faults));
   log.track('one');
-  await log.flush();
   log.track('two');
-  await log.flush();
-  expect(log.events()).toHaveLength(2);
-  expect(faults.map(String)).toEqual(['Error: 存不進去', 'Error: 存不進去']);
+  await settleRetries(log);
+  log.track('three');
+  await settleRetries(log);
+  expect(kept.map((event) => event.kind)).toEqual(['one', 'two', 'three']);
+  expect(faults.map((fault) => fault.kind)).toEqual(['write', 'write']);
+  expect(log.dropped()).toBe(0);
+});
+
+test('a store that keeps failing is given up after the limit, and what it could not keep is counted', async () => {
+  const faults: StoreFault[] = [];
+  const kept: LearningEvent[] = [];
+  const log = await createLog(source(failingFor(Number.POSITIVE_INFINITY, kept), faults));
+  log.track('one');
+  await settleRetries(log);
+  log.track('two');
+  log.track('three');
+  await settleRetries(log);
+  expect(kept).toEqual([]);
+  const expected: StoreFault['kind'][] = [
+    ...Array.from({ length: retryLimit }, (): StoreFault['kind'] => 'write'),
+    'dropped',
+  ];
+  expect(faults.map((fault) => fault.kind)).toEqual(expected);
+  expect(faults.at(-1)?.size).toBe(1);
+  expect(log.dropped()).toBe(3);
+  expect(log.events().map((event) => event.kind)).toEqual(['one', 'two', 'three']);
 });
 
 test('forgotten events leave the store and stay in memory until the page goes', async () => {

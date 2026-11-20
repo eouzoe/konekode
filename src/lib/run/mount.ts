@@ -17,7 +17,7 @@ import {
   showStep,
   unitOf,
 } from './guidance';
-import { noteRun } from './note';
+import { noteFailure, noteRun } from './note';
 import { busyStatus, describe, failed, type View } from './outcome';
 import { type Outcome } from './protocol';
 import { isKnown, loadedPercent, runProgram, warmUp, watchLoading } from './runner';
@@ -93,6 +93,7 @@ const begin = (parts: Parts): void => {
 };
 
 const fail = (parts: Parts, beat: string, error: unknown): void => {
+  noteFailure({ beat, unit: unitOf(parts.root) }, error);
   if (attending(parts) === beat) {
     show(parts, failed(error));
   }

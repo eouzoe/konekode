@@ -8,7 +8,7 @@ import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { grantUnlocks, readMeta } from './meta';
 import { createReveal, type Reveal } from './reveal';
-import { noteCheck, noteReached, openSession, restartUnit, type ReadUnit } from './session';
+import { noteCheck, noteReached, openSession, restart, type ReadUnit } from './session';
 
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 
@@ -226,7 +226,7 @@ const listen = (scene: Scene): void => {
       }
     },
     restart: () => {
-      void restartUnit(scene.unit);
+      restart(scene.unit);
     },
     screen: () => {
       step(scene, 'SCREEN');

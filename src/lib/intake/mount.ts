@@ -1,14 +1,13 @@
+import { guard, onFault, report } from '@/lib/fault/fault';
 import { keptKinds } from '@/lib/learner/kinds';
 import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
-import { number, object, record, string, type ZodType } from '@/lib/zod';
 
-import { environment, replayWanted, siteVersion } from './environment';
-import { noteFingerprint } from './fingerprint';
+import { environment, siteVersion } from './environment';
+import { observePage } from './observe';
 import { acknowledge, pendingBatches, settled, type Acked, type Batch } from './pending';
 import { fitBytes, free, holdAfter, isDue, isHeld, prefixBatch, timing, type Hold } from './plan';
-import { startReplay } from './replay';
 import { stored, upload, uploadNow, type Answer, type Ticket } from './send';
-import { watchPage } from './watch';
+import { readAcked, readHold, writeAcked, writeHold } from './stored';
 
 interface State {
   acked: Acked;
@@ -18,32 +17,7 @@ interface State {
   readonly site: string;
 }
 
-const ackedKey = 'cp:intake:acked';
-const holdKey = 'cp:intake:hold';
-const ackedSchema = record(string(), number());
-const holdSchema = object({ failures: number(), until: number() });
 const checkEvery = 15_000;
-
-const readStored = <Value>(key: string, schema: ZodType<Value>, fallback: Value): Value => {
-  try {
-    const parsed = schema.safeParse(JSON.parse(localStorage.getItem(key) ?? 'null'));
-    if (parsed.success) {
-      return parsed.data;
-    }
-  } catch {
-    return fallback;
-  }
-  return fallback;
-};
-
-const writeStored = (key: string, value: unknown): boolean => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const siteOf = (state: State, batch: Batch): string => {
   const atTheTime = batch.events[0]?.site ?? '';
@@ -74,12 +48,12 @@ const noteHold = (answer: Answer, hold: Hold, now: number): void => {
 
 const holdAs = (state: State, hold: Hold): void => {
   state.hold = hold;
-  writeStored(holdKey, hold);
+  writeHold(hold);
 };
 
 const accept = (state: State, batch: Batch): void => {
   state.acked = acknowledge(state.acked, batch);
-  writeStored(ackedKey, state.acked);
+  writeAcked(state.acked);
   if (state.hold.failures > 0) {
     track('intake.recovered', { data: { failures: state.hold.failures } });
   }
@@ -94,6 +68,11 @@ const settle = (state: State, batch: Batch, answer: Answer): boolean => {
   const now = Date.now();
   holdAs(state, holdAfter(answer, now, state.hold));
   noteHold(answer, state.hold, now);
+  report(
+    'intake.refused',
+    String(answer.status),
+    new Error(`retry after ${String(state.hold.until - now)} ms`),
+  );
   return false;
 };
 
@@ -153,28 +132,19 @@ const lastCall = (state: State): void => {
   }
   const part = prefixBatch(batch, fitBytes(batch.events));
   if (part !== null) {
-    void sendLast(state, part);
+    guard('intake.last', sendLast(state, part));
   }
 };
 
-const startIntake = async (): Promise<void> => {
-  await openLog();
-  const state: State = {
-    acked: readStored(ackedKey, ackedSchema, {}),
-    busy: false,
-    forgotten: new Set(),
-    hold: readStored(holdKey, holdSchema, free),
-    site: siteVersion(),
-  };
-  track('session.started', { data: environment(state.site) });
-  watchPage();
-  if (replayWanted()) {
-    void startReplay(state.site);
-  }
-  void noteFingerprint();
+const keepSending = (state: State): void => {
   setInterval(() => {
-    void drain(state);
+    guard('intake.drain', drain(state));
   }, checkEvery);
+  onFault(() => {
+    setTimeout(() => {
+      guard('intake.drain', drain(state));
+    }, 0);
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       lastCall(state);
@@ -183,6 +153,20 @@ const startIntake = async (): Promise<void> => {
   globalThis.addEventListener('pagehide', () => {
     lastCall(state);
   });
+};
+
+const startIntake = async (): Promise<void> => {
+  await openLog();
+  const state: State = {
+    acked: readAcked(),
+    busy: false,
+    forgotten: new Set(),
+    hold: readHold(),
+    site: siteVersion(),
+  };
+  track('session.started', { data: environment(state.site) });
+  observePage(state.site);
+  keepSending(state);
 };
 
 export { startIntake };

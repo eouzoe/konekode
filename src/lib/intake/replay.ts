@@ -1,3 +1,4 @@
+import { guard, report } from '@/lib/fault/fault';
 import { actorId, sessionId } from '@/lib/identity/actor';
 import { track } from '@/lib/record/current';
 
@@ -115,7 +116,7 @@ const record = async (site: string): Promise<void> => {
     sampling,
   });
   setInterval(() => {
-    void flush(tape);
+    guard('replay.flush', flush(tape));
   }, period);
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
@@ -128,7 +129,7 @@ const startReplay = async (site: string): Promise<void> => {
   try {
     await record(site);
   } catch (error) {
-    track('replay.failed', { data: { reason: String(error) } });
+    report('replay', 'start', error);
   }
 };
 

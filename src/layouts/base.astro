@@ -35,15 +35,44 @@ const structured = scriptJson(data);
     <script type="application/ld+json" is:inline set:html={structured} />
     <script>
       import { startDev } from '@/lib/dev/start';
+      import { guard, watchUncaught } from '@/lib/fault/fault';
+      import { mountNotice } from '@/lib/fault/notice';
       import { startIntake } from '@/lib/intake/mount';
 
-      void startIntake();
+      watchUncaught();
+      const notice = document.querySelector<HTMLElement>('[data-role="site-notice"]');
+      if (notice !== null) {
+        mountNotice(notice);
+      }
+      guard('intake', startIntake());
       if (import.meta.env.PUBLIC_MODE === 'dev') {
-        void startDev();
+        guard('dev', startDev());
       }
     </script>
   </head>
   <body>
+    <p class="site-notice" data-role="site-notice" role="status" aria-live="polite" hidden></p>
     <main class:list={[full ? 'full' : 'page']}><slot /></main>
   </body>
 </html>
+
+<style>
+  .site-notice {
+    position: fixed;
+    inset: 0.5rem 0.5rem auto;
+    z-index: 10;
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.5rem;
+    background: var(--notice-bg, #fff4d6);
+    color: var(--notice-fg, #3d2f00);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    box-shadow: 0 1px 4px rgb(0 0 0 / 15%);
+  }
+
+  .site-notice[hidden] {
+    display: none;
+  }
+</style>

@@ -1,16 +1,23 @@
 import { readEvents, type LearningEvent } from './event';
 import { memoryPersistence, type Persistence } from './log';
 
+type Trouble = '' | 'blocked' | 'unavailable';
+
 interface Storage {
-  readonly durable: boolean;
   readonly persistence: Persistence;
-  readonly reason: string;
+  readonly reason: unknown;
+  readonly trouble: Trouble;
 }
 
 const databaseName = 'konekode';
 const storeName = 'events';
 const schemaVersion = 1;
 const legacyKey = 'cp:events:v1';
+const blockedWait = 3000;
+
+class BlockedError extends Error {
+  override readonly name = 'BlockedError';
+}
 
 const settle = <Result>(pending: IDBRequest<Result>): Promise<Result> => {
   const { promise, reject, resolve } = Promise.withResolvers<Result>();
@@ -23,12 +30,44 @@ const settle = <Result>(pending: IDBRequest<Result>): Promise<Result> => {
   return promise;
 };
 
+const committed = async (transaction: IDBTransaction): Promise<void> => {
+  const { promise, reject, resolve } = Promise.withResolvers<null>();
+  transaction.addEventListener('complete', () => {
+    resolve(null);
+  });
+  const fail = (): void => {
+    reject(transaction.error ?? new Error('瀏覽器的資料庫放棄了這次寫入'));
+  };
+  transaction.addEventListener('abort', fail);
+  transaction.addEventListener('error', fail);
+  await promise;
+};
+
+const closeWhenOpened = (opening: IDBOpenDBRequest): void => {
+  opening.addEventListener('success', () => {
+    opening.result.close();
+  });
+};
+
+const unblocked = (opening: IDBOpenDBRequest): Promise<never> => {
+  const { promise, reject } = Promise.withResolvers<never>();
+  opening.addEventListener('blocked', () => {
+    setTimeout(() => {
+      closeWhenOpened(opening);
+      reject(new BlockedError('另一個分頁占著舊版的資料庫'));
+    }, blockedWait);
+  });
+  return promise;
+};
+
 const openDatabase = async (): Promise<IDBDatabase> => {
   const opening = indexedDB.open(databaseName, schemaVersion);
   opening.addEventListener('upgradeneeded', () => {
-    opening.result.createObjectStore(storeName, { keyPath: 'id' });
+    if (!opening.result.objectStoreNames.contains(storeName)) {
+      opening.result.createObjectStore(storeName, { keyPath: 'id' });
+    }
   });
-  const database = await settle(opening);
+  const database = await Promise.race([settle(opening), unblocked(opening)]);
   database.addEventListener('versionchange', () => {
     database.close();
   });
@@ -56,8 +95,12 @@ const dropLegacy = (): void => {
 };
 
 const putAll = async (database: IDBDatabase, events: readonly LearningEvent[]): Promise<void> => {
-  const store = database.transaction(storeName, 'readwrite').objectStore(storeName);
-  await Promise.all(events.map((event) => settle(store.put(event))));
+  const transaction = database.transaction(storeName, 'readwrite');
+  const store = transaction.objectStore(storeName);
+  for (const event of events) {
+    store.put(event);
+  }
+  await committed(transaction);
 };
 
 const importLegacy = async (database: IDBDatabase): Promise<void> => {
@@ -81,18 +124,33 @@ const databasePersistence = async (): Promise<Persistence> => {
       return all;
     },
     remove: async (ids) => {
-      const store = database.transaction(storeName, 'readwrite').objectStore(storeName);
-      await Promise.all(ids.map((id) => settle(store.delete(id))));
+      const transaction = database.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      for (const id of ids) {
+        store.delete(id);
+      }
+      await committed(transaction);
     },
   };
 };
 
+const troubleOf = (error: unknown): Trouble => {
+  if (error instanceof BlockedError) {
+    return 'blocked';
+  }
+  return 'unavailable';
+};
+
 const browserPersistence = async (): Promise<Storage> => {
   try {
-    return { durable: true, persistence: await databasePersistence(), reason: '' };
+    return { persistence: await databasePersistence(), reason: null, trouble: '' };
   } catch (error) {
-    return { durable: false, persistence: memoryPersistence(readLegacy()), reason: String(error) };
+    return {
+      persistence: memoryPersistence(readLegacy()),
+      reason: error,
+      trouble: troubleOf(error),
+    };
   }
 };
 
-export { browserPersistence, databaseName, storeName };
+export { blockedWait, browserPersistence, databaseName, schemaVersion, storeName, type Trouble };

@@ -1,4 +1,4 @@
-import { type LearningEvent } from '@/lib/record/event';
+import { faultKind, faultSummaryKind, type LearningEvent } from '@/lib/record/event';
 
 import { type Batch } from './pending';
 
@@ -32,9 +32,15 @@ const free: Hold = { failures: 0, until: 0 };
 const encoder = new TextEncoder();
 const brackets = 2;
 
+const urgentKinds: ReadonlySet<string> = new Set([faultKind, faultSummaryKind]);
+
+const isUrgent = (batch: Batch): boolean =>
+  batch.events.some((event) => urgentKinds.has(event.kind));
+
 const isDue = (batches: readonly Batch[], now: number, rule: Timing = timing): boolean =>
   batches.some(
     (batch) =>
+      isUrgent(batch) ||
       batch.events.length >= rule.batchSize ||
       (batch.events[0]?.at ?? Number.POSITIVE_INFINITY) <= now - rule.maxWait,
   );

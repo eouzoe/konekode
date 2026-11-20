@@ -1,3 +1,5 @@
+import { report } from '@/lib/fault/fault';
+
 const actorKey = 'cp:device';
 
 const newId = (): string => crypto.randomUUID();
@@ -5,7 +7,8 @@ const newId = (): string => crypto.randomUUID();
 const remember = (key: string, value: string): string => {
   try {
     localStorage.setItem(key, value);
-  } catch {
+  } catch (error) {
+    report('storage.local', key, error);
     return value;
   }
   return value;
@@ -14,7 +17,8 @@ const remember = (key: string, value: string): string => {
 const recall = (key: string): string | null => {
   try {
     return localStorage.getItem(key);
-  } catch {
+  } catch (error) {
+    report('storage.local', key, error);
     return null;
   }
 };
