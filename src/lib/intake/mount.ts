@@ -15,6 +15,7 @@ interface State {
   readonly forgotten: Set<string>;
   hold: Hold;
   readonly site: string;
+  wanted: boolean;
 }
 
 const checkEvery = 15_000;
@@ -100,9 +101,9 @@ const prune = (state: State): void => {
 const pending = (state: State): Batch[] =>
   pendingBatches(recorded(), state.acked, timing.batchSize);
 
-const drain = async (state: State): Promise<void> => {
+const sendDue = async (state: State): Promise<void> => {
   const batches = pending(state);
-  if (state.busy || isHeld(state.hold, Date.now()) || !isDue(batches, Date.now())) {
+  if (isHeld(state.hold, Date.now()) || !isDue(batches, Date.now())) {
     return;
   }
   state.busy = true;
@@ -114,6 +115,18 @@ const drain = async (state: State): Promise<void> => {
   }
 };
 
+const drain = async (state: State): Promise<void> => {
+  if (state.busy) {
+    state.wanted = true;
+    return;
+  }
+  await sendDue(state);
+  if (state.wanted) {
+    state.wanted = false;
+    await drain(state);
+  }
+};
+
 const sendLast = async (state: State, part: Batch): Promise<void> => {
   state.busy = true;
   try {
@@ -122,6 +135,10 @@ const sendLast = async (state: State, part: Batch): Promise<void> => {
     prune(state);
   } finally {
     state.busy = false;
+  }
+  if (state.wanted) {
+    state.wanted = false;
+    await drain(state);
   }
 };
 
@@ -163,6 +180,7 @@ const startIntake = async (): Promise<void> => {
     forgotten: new Set(),
     hold: readHold(),
     site: siteVersion(),
+    wanted: false,
   };
   track('session.started', { data: environment(state.site) });
   observePage(state.site);
