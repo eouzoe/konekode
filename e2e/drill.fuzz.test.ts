@@ -23,6 +23,8 @@ const length = 40;
 const input = '[data-typing-drill] [data-role="input"]';
 const pool = String.raw`abcdefghijklmnopqrstuvwxyzIOX0123456789#<>(){};.-:' `.split('');
 const named = ['Enter', 'Escape', 'Backspace', 'Delete', 'Tab'];
+
+test.use({ heldTime: true });
 const wanted = (model: Drill): string => {
   if (isTyped(model)) {
     return 'Escape';
@@ -114,7 +116,7 @@ const mismatch = async (run: Run): Promise<string> => {
 };
 
 const expectSettled = async (run: Run, label: string): Promise<void> => {
-  await expect.poll(async () => await mismatch(run), { message: label, timeout: 3000 }).toBe('');
+  await expect.poll(async () => await mismatch(run), { message: label }).toBe('');
 };
 
 const finish = async (run: Run, label: string): Promise<void> => {

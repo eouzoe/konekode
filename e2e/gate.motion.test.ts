@@ -1,7 +1,6 @@
 import { beatsOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { studentEditor } from './gate-view';
-import { frames } from './scene-view';
 import { expect, test, type Page } from './test';
 
 const gate = 'run-cout';
@@ -64,16 +63,44 @@ test.describe('with reduced motion', () => {
   test.use({ reducedMotion: 'reduce' });
 
   test('nothing shakes, pulses or flashes, and the words are still there', async ({ page }) => {
+    await page.addInitScript(() => {
+      const animated: string[] = [];
+      Object.assign(globalThis, { animated });
+      const original: unknown = Reflect.get(Element.prototype, 'animate');
+      if (typeof original !== 'function') {
+        throw new TypeError('Element has no animate');
+      }
+      Element.prototype.animate = function animate(
+        this: Element,
+        ...values: Parameters<Element['animate']>
+      ): Animation {
+        if (this instanceof HTMLElement) {
+          animated.push(this.dataset.key ?? this.dataset.role ?? '');
+        }
+        const made: unknown = Reflect.apply(original, this, values);
+        if (!(made instanceof Animation)) {
+          throw new TypeError('animate did not return an animation');
+        }
+        return made;
+      };
+    });
     await openAt(page, gate, studentEditor);
-    await watchMotion(page);
     await page.keyboard.press('x');
     await expect(page.locator(`${runner} [data-role="hint"]`)).toContainText('G');
     await page.keyboard.press('G');
     await expect(page.locator(`${runner} [data-role="effect"]`)).not.toBeEmpty();
-    await frames(page, 6);
-    const seen = await motion(page);
-    expect(seen).not.toContain('script:G');
-    expect(seen).not.toContain('css:key-waits');
-    expect(seen.filter((name) => name.startsWith('css:cursor-lands-'))).toEqual([]);
+    const shown = await page.evaluate((selector) => {
+      const animated: unknown = Reflect.get(globalThis, 'animated');
+      const names = [...document.querySelectorAll(`${selector} *`)].flatMap((element) =>
+        getComputedStyle(element).animationName.split(', '),
+      );
+      if (!Array.isArray(animated)) {
+        return { animated: [], names };
+      }
+      return { animated: animated.map(String), names };
+    }, runner);
+    expect(shown.animated).not.toContain('G');
+    expect(shown.names).not.toContain('key-waits');
+    expect(shown.names.filter((name) => name.startsWith('cursor-lands-'))).toEqual([]);
   });
 });

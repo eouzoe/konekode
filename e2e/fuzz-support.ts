@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+import { focusArrives } from './time';
+
 const modulus = 4_294_967_296;
 const multiplier = 1_664_525;
 const increment = 1_013_904_223;
@@ -43,6 +45,7 @@ const openAnywhere = async (page: Page, beat: string): Promise<void> => {
 
 const openAt = async (page: Page, beat: string, focus: string): Promise<void> => {
   await openAnywhere(page, beat);
+  await focusArrives(page, focus);
   await expect(page.locator(focus)).toBeFocused();
 };
 

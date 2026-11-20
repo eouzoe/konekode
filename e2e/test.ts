@@ -1,7 +1,10 @@
 import { test as base, type Page } from '@playwright/test';
 
+import { holdTime } from './time';
+
 interface Options {
   readonly compiler: boolean;
+  readonly heldTime: boolean;
   readonly tolerated: readonly RegExp[];
 }
 
@@ -24,20 +27,29 @@ const withoutCompiler = async (page: Page): Promise<void> => {
   }, needed);
 };
 
+const watchProblems = (page: Page): string[] => {
+  const problems: string[] = [];
+  page.on('pageerror', (error) => {
+    problems.push(`uncaught: ${error.message}`);
+  });
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      problems.push(`console: ${message.text()}`);
+    }
+  });
+  return problems;
+};
+
 const test = base.extend<Options>({
   compiler: [false, { option: true }],
-  page: async ({ compiler, page, tolerated }, use) => {
-    const problems: string[] = [];
-    page.on('pageerror', (error) => {
-      problems.push(`uncaught: ${error.message}`);
-    });
-    page.on('console', (message) => {
-      if (message.type() === 'error') {
-        problems.push(`console: ${message.text()}`);
-      }
-    });
+  heldTime: [false, { option: true }],
+  page: async ({ compiler, heldTime, page, tolerated }, use) => {
+    const problems = watchProblems(page);
     if (!compiler) {
       await withoutCompiler(page);
+    }
+    if (heldTime) {
+      await holdTime(page);
     }
     await use(page);
     const unexpected = problems.filter(

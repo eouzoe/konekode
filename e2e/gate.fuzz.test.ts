@@ -12,6 +12,8 @@ const burst = 3;
 const pool = String.raw`abcdefghijklmnopqrstuvwxyzGIOX$0.123<>(){};'"# `.split('');
 const named = ['Escape', 'Escape', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowDown', 'Enter'];
 
+test.use({ heldTime: true });
+
 const rightKey = (walk: Walk): string | null => {
   const expected = expectedNow(walk.session);
   if (expected === null || expected.kind === 'run') {

@@ -2,10 +2,17 @@ import { ui } from '../src/lib/text/ui';
 import { studentEditor } from './gate-view';
 import { currentId } from './scene-view';
 import { open, status, output, programs, draftAt, editorText, spriteEditor } from './start-support';
-import { expect, test } from './test';
+import { expect, test, type Page } from './test';
+import { pass, passUntil } from './time';
+
+const quiet = 3000;
+
+const spriteShows = async (page: Page, wanted: string, label: string): Promise<void> => {
+  await passUntil(page, async () => (await editorText(page, spriteEditor)) === wanted, { label });
+};
 
 test.describe('起步單元：小精靈的示範', () => {
-  test.use({ reducedMotion: 'reduce' });
+  test.use({ heldTime: true, reducedMotion: 'reduce' });
 
   test('不是輪到學生時不能執行也不能改，Enter 就是下一句', async ({ page }) => {
     await open(page, 'do-things');
@@ -24,9 +31,11 @@ test.describe('起步單元：小精靈的示範', () => {
     const student = page.locator(studentEditor);
     await expect(sprite).toBeVisible();
     await expect(student).toBeHidden();
-    await expect
-      .poll(async () => (await editorText(page, spriteEditor)).split('\n'), { timeout: 15_000 })
-      .toContain('    cout << 11;');
+    await passUntil(
+      page,
+      async () => (await editorText(page, spriteEditor)).split('\n').includes('    cout << 11;'),
+      { label: 'the demonstration' },
+    );
     expect(await editorText(page)).not.toContain('cout << 11;');
     await page.keyboard.press('ArrowLeft');
     expect(await currentId(page)).toBe('indent');
@@ -73,13 +82,19 @@ test.describe('起步單元：小精靈的示範', () => {
         }
         return keys.join('');
       });
-    await expect.poll(read, { timeout: 15_000 }).toBe('G');
-    await expect(page.locator('[data-code-runner] [data-role="keycap"]')).toBeEmpty();
+    const keycap = page.locator('[data-code-runner] [data-role="keycap"]');
+    await passUntil(page, async () => (await read()) !== '', { label: 'the first key' });
+    await passUntil(page, async () => (await keycap.textContent()) === '', {
+      label: 'the end of the demonstration',
+    });
+    expect(await read()).toBe('G');
   });
 
   test('小精靈示範的執行結果不會被算成學生過關', async ({ page }) => {
     await open(page, 'what-run');
-    await expect(status(page)).not.toBeEmpty({ timeout: 30_000 });
+    await passUntil(page, async () => (await status(page).textContent()) !== '', {
+      label: 'the demonstrated run',
+    });
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('run-cout');
     await expect(page.locator(studentEditor)).toBeFocused();
@@ -100,12 +115,11 @@ test.describe('起步單元：小精靈的示範', () => {
     await expect(page.locator('[data-typing-drill] [data-role="input"]')).toBeFocused();
     await page.keyboard.press('ArrowLeft');
     expect(await currentId(page)).toBe('press-esc');
-    await expect(page.locator('[data-typing-drill] [data-role="mode"]')).toHaveText(
-      '-- NORMAL --',
-      {
-        timeout: 15_000,
-      },
-    );
+    const mode = page.locator('[data-typing-drill] [data-role="mode"]');
+    await passUntil(page, async () => (await mode.textContent()) === '-- NORMAL --', {
+      label: 'the demonstration',
+    });
+    await pass(page, quiet);
     await expect(hint).toBeEmpty();
     await page.keyboard.press('ArrowRight');
     expect(await currentId(page)).toBe('type-template');
@@ -129,22 +143,16 @@ test.describe('起步單元：小精靈的示範', () => {
     ];
     for (const [beat, draft, wanted] of cases) {
       await open(page, beat, { draft, unlocked: ['pair.paren', 'pair.brace'] });
-      await expect
-        .poll(async () => await editorText(page, spriteEditor), { message: beat, timeout: 30_000 })
-        .toBe(wanted);
+      await spriteShows(page, wanted, beat);
     }
   });
 
   test('a demonstration starts from the unit text, whatever the learner has', async ({ page }) => {
     const mine = programs['run-two'] ?? '';
     await open(page, 'semicolon', { draft: draftAt(mine, 'cout << 22;') });
-    await expect
-      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
-      .toBe(programs['run-cout'] ?? '');
+    await spriteShows(page, programs['run-cout'] ?? '', 'the first demonstration');
     await page.reload();
     await page.locator('[data-scene][data-ready="true"]').waitFor();
-    await expect
-      .poll(async () => await editorText(page, spriteEditor), { timeout: 20_000 })
-      .toBe(programs['run-cout'] ?? '');
+    await spriteShows(page, programs['run-cout'] ?? '', 'the demonstration after a reload');
   });
 });

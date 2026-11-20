@@ -4,6 +4,7 @@ import { sceneMachine } from '../src/lib/scene/machine';
 import { current, currentId } from './scene-view';
 import { open, readMetas } from './start-support';
 import { expect, test, type Page } from './test';
+import { passUntil } from './time';
 
 const noteNextKey = async (page: Page, name: string): Promise<void> => {
   await page.evaluate((as) => {
@@ -106,6 +107,8 @@ test.describe('起步單元：對話', () => {
 });
 
 test.describe('有動態效果時', () => {
+  test.use({ heldTime: true });
+
   test('文字逐字出現，按一下先顯示完整句，再按才換句', async ({ page }) => {
     await open(page);
     expect((await current(page)).revealing).toBe(true);
@@ -115,7 +118,9 @@ test.describe('有動態效果時', () => {
     expect(shown.revealing).toBe(false);
     await page.keyboard.press('Space');
     expect(await currentId(page)).toBe('fullscreen-no');
-    await expect.poll(async () => (await current(page)).revealing, { timeout: 5000 }).toBe(false);
+    expect((await current(page)).revealing).toBe(true);
+    await passUntil(page, async () => !(await current(page)).revealing, { label: 'the sentence' });
+    expect(await currentId(page)).toBe('fullscreen-no');
   });
 });
 

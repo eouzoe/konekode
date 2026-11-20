@@ -1,3 +1,4 @@
+import { calmAfter } from '../src/lib/run/view';
 import { say, ui } from '../src/lib/text/ui';
 import { describeCommand, describeNext } from '../src/lib/typing/hint';
 import { studentEditor } from './gate-view';
@@ -17,9 +18,10 @@ import {
 } from './start-support';
 import { recordedAs } from './stored';
 import { expect, test, type Page } from './test';
+import { pass, passUntil } from './time';
 
 test.describe('起步單元：編輯器關卡', () => {
-  test.use({ reducedMotion: 'reduce' });
+  test.use({ heldTime: true, reducedMotion: 'reduce' });
 
   test('a guided gate accepts only the next key and says which one', async ({ page }) => {
     const editor = page.locator(studentEditor);
@@ -56,7 +58,8 @@ test.describe('起步單元：編輯器關卡', () => {
     await page.keyboard.press('Escape');
     await expect(hint).toHaveText(`${ui['guide.earlyLeave']}${describeNext('c')}`);
     expect(await currentId(page)).toBe('run-cout');
-    await expect(hint).toBeEmpty({ timeout: 5000 });
+    await pass(page, calmAfter);
+    await expect(hint).toBeEmpty();
     await page.keyboard.type('cout <');
     await expect(hint).toHaveText(describeNext('<'));
     await page.keyboard.press('x');
@@ -76,8 +79,8 @@ test.describe('起步單元：編輯器關卡', () => {
     test(`${gate} shows the verified result at once, without the compiler`, async ({ page }) => {
       await open(page, gate);
       await solve(page, gate);
-      await expect(status(page)).toHaveText(ui['run.finished'], { timeout: 1000 });
-      await expect.poll(async () => (await current(page)).waiting, { timeout: 3000 }).toBe(false);
+      await expect(status(page)).toHaveText(ui['run.finished']);
+      await expect.poll(async () => (await current(page)).waiting).toBe(false);
       expect(await currentId(page)).not.toBe(gate);
     });
   }
@@ -245,9 +248,10 @@ test.describe('起步單元：編輯器關卡', () => {
     const keys = lessons['run-newline'] ?? [];
     await follow(page, keys.slice(0, keys.indexOf('.') + 1));
     await expect(effect).toHaveText(say('effect.repeat', { count: '10', keys: '1' }));
-    await expect
-      .poll(async () => await editorText(page))
-      .toContain(String.raw`    cout << 11 << '\n';`);
+    const repeated = String.raw`    cout << 11 << '\n';`;
+    await passUntil(page, async () => (await editorText(page)).includes(repeated), {
+      label: 'the repeated line',
+    });
     await open(page, 'run-int');
     await follow(page, ['d', 'j']);
     await expect(effect).toHaveText(say('effect.dropped', { count: '2', keys: '2' }));
@@ -255,6 +259,8 @@ test.describe('起步單元：編輯器關卡', () => {
 });
 
 test.describe('有動態效果時的關卡', () => {
+  test.use({ heldTime: true });
+
   for (const gate of Object.keys(lessons)) {
     test(`${gate} takes the keys as soon as its sentence is shown`, async ({ page }) => {
       await open(page, gate);

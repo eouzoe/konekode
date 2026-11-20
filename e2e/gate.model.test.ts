@@ -8,6 +8,8 @@ import { expect, test } from './test';
 const gates = checksOf('start').filter((gate) => (planOf('start', gate.id)?.path.length ?? 0) > 0);
 const never = '~';
 
+test.use({ heldTime: true });
+
 const swapCase = (key: string): string => {
   if (key.length !== 1) {
     return never;

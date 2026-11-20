@@ -38,10 +38,9 @@ const settledStates = /^(?:ok|error)$/u;
 
 const cursorClass = 'cm-own-line';
 const partNames = ['editor', 'keys', 'io', 'bar', 'output', 'snippet'];
-const settling = 2;
+const looks = 60;
 
-const measure = async (page: Page): Promise<Layout> => {
-  await frames(page, settling);
+const read = async (page: Page): Promise<Layout> => {
   const found = await page.evaluate(
     ({ allowance, lineClass, partClasses }) => {
       const runner = document.querySelector('[data-code-runner]');
@@ -98,6 +97,19 @@ const measure = async (page: Page): Promise<Layout> => {
     scaled: found.scaled,
     width: found.width,
   };
+};
+
+const measure = async (page: Page): Promise<Layout> => {
+  let before = await read(page);
+  for (let look = 0; look < looks; look += 1) {
+    await frames(page, 1);
+    const now = await read(page);
+    if (JSON.stringify(now) === JSON.stringify(before)) {
+      return now;
+    }
+    before = now;
+  }
+  throw new Error(`the layout was still changing after ${String(looks)} frames`);
 };
 
 const expectInside = (layout: Layout, label: string): void => {
