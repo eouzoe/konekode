@@ -60,10 +60,10 @@ test('events wait until there is enough to send, then reach the server with thei
   });
   await openUnit(page);
   await page.keyboard.press('ArrowRight');
-  await page.clock.runFor(timing.maxWait - tick);
+  await page.clock.fastForward(timing.maxWait - tick);
   expect(asked).toEqual([]);
   const uploaded = page.waitForResponse((response) => isIntake(response.url()));
-  await page.clock.runFor(2 * tick);
+  await page.clock.fastForward(2 * tick);
   const response = await uploaded;
   expect(response.status()).toBe(stored);
   const query = new URL(response.url()).searchParams;
@@ -88,7 +88,7 @@ test('uploaded events nobody reads locally are dropped from the browser', async 
   const uploaded = page.waitForResponse(
     (response) => isIntake(response.url()) && response.status() === stored,
   );
-  await page.clock.runFor(timing.maxWait + tick);
+  await page.clock.fastForward(timing.maxWait + tick);
   await uploaded;
   await expect.poll(async () => await kindsStored(page)).not.toContain('session.started');
   await expect.poll(async () => await kindsStored(page)).toContain('beat.reached');
@@ -112,12 +112,12 @@ test.describe('when the intake refuses', () => {
     });
     await openUnit(page);
     await page.keyboard.press('ArrowRight');
-    await page.clock.runFor(timing.maxWait + tick);
+    await page.clock.fastForward(timing.maxWait + tick);
     await expect.poll(() => asked).toBe(1);
-    await page.clock.runFor(30 * minute);
+    await page.clock.fastForward(30 * minute);
     await page.reload();
     await page.locator('[data-scene][data-ready="true"]').waitFor();
-    await page.clock.runFor(10 * minute);
+    await page.clock.fastForward(10 * minute);
     await leave(page, true);
     expect(asked).toBe(1);
     expect(await kindsStored(page)).toContain('session.started');
@@ -126,7 +126,7 @@ test.describe('when the intake refuses', () => {
     const accepted = page.waitForResponse(
       (response) => isIntake(response.url()) && response.status() === stored,
     );
-    await page.clock.runFor(waitSeconds * second);
+    await page.clock.fastForward(waitSeconds * second);
     await accepted;
     await expect.poll(async () => await kindsStored(page)).not.toContain('session.started');
   });
@@ -167,7 +167,7 @@ test('the last batch on leaving fits its bytes even in Chinese, and the rest fol
   const rest = page.waitForResponse(
     (response) => isIntake(response.url()) && response.status() === stored,
   );
-  await page.clock.runFor(timing.maxWait + tick);
+  await page.clock.fastForward(timing.maxWait + tick);
   await rest;
   await expect.poll(async () => await kindsStored(page)).not.toContain('input.unusual');
 });
