@@ -1,14 +1,17 @@
 { pkgs, lib, ... }: {
   stdenv = pkgs.stdenvNoCC;
 
-  languages.javascript.bun.enable = true;
+  languages.javascript = {
+    enable = true;
+    bun = {
+      enable = true;
+      install.enable = true;
+    };
+  };
 
   packages = with pkgs; [
-    bun
-    jujutsu
     just
     vim
-    wrangler
   ];
 
   env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
@@ -29,12 +32,6 @@
       port = 4321;
       path = "/";
     };
-  };
-
-  tasks."deps:install" = {
-    exec = "bun install";
-    execIfModified = [ "bun.lock" ];
-    before = [ "devenv:enterShell" ];
   };
 
   enterShell = ''
