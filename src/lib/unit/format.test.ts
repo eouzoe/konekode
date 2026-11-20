@@ -86,3 +86,15 @@ test('a plan replays every earlier task without its runs', () => {
 test('a program is the starting text with the goal indented before its last line', () => {
   expect(programOf('int main()\n{\n}', 'a;\nb;')).toBe('int main()\n{\n    a;\n    b;\n}');
 });
+
+test('a starting text that does not end with main is refused instead of giving a wrong program', () => {
+  const shapes = [
+    'int main()\n{\n}\n',
+    'int main()\n{\n}\nint helper()\n{\n    return 1;\n}',
+    'int main()\n{\n    return 0; }',
+    'void helper()\n{\n}',
+  ];
+  for (const starter of shapes) {
+    expect(() => programOf(starter, 'a;')).toThrow('起始程式要以 main 結尾');
+  }
+});

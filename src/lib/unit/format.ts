@@ -127,8 +127,24 @@ const pathOf = (task: Task): string[] => {
 
 const indent = '    ';
 
+const mainStart = 'int main()';
+const closer = '}';
+
+const mainCloses = (lines: readonly string[]): boolean => {
+  const main = lines.findIndex((line) => line.startsWith(mainStart));
+  const last = lines.length - 1;
+  const closers = [...lines.entries()].filter(([, line]) => line === closer).map(([at]) => at);
+  const hasMain = lines.some((line) => line.startsWith(mainStart));
+  return hasMain && closers.at(fromEnd) === last && closers.every((at) => at < main || at === last);
+};
+
 const programOf = (starter: string, goal: string): string => {
   const lines = starter.split('\n');
+  if (!mainCloses(lines)) {
+    throw new Error(
+      '起始程式要以 main 結尾：main 之後沒有別的函式，最後一行是單獨的「}」，後面不再換行',
+    );
+  }
   const body = goal.split('\n').map((line) => `${indent}${line}`);
   return [...lines.slice(0, fromEnd), ...body, ...lines.slice(fromEnd)].join('\n');
 };

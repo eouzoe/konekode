@@ -1,6 +1,6 @@
-import { isPlain, type Buffer, type Rules } from './buffer';
+import { type Buffer, type Rules } from './buffer';
 import { insertKey } from './insert';
-import { commands, dropTwoLines, findChar, prefixes } from './normal';
+import { commands, follows, prefixes } from './normal';
 
 interface Result {
   readonly buffer: Buffer;
@@ -12,13 +12,11 @@ const continued = (buffer: Buffer, key: string, rules: Rules): Buffer | null => 
   if (key === 'Escape') {
     return ready;
   }
-  if (buffer.pending === 'd' && key === 'j' && rules.keys.has(key)) {
-    return dropTwoLines(ready);
+  const follow = follows.get(buffer.pending);
+  if (follow === undefined || !follow.accepts(key, rules.keys)) {
+    return null;
   }
-  if (buffer.pending === 'f' && isPlain(key)) {
-    return findChar(ready, key);
-  }
-  return null;
+  return follow.apply(ready, key);
 };
 
 const normalKey = (buffer: Buffer, key: string, rules: Rules): Buffer | null => {

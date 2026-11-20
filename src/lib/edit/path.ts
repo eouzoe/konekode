@@ -1,3 +1,6 @@
+import { follows } from './normal';
+import { knownKeys } from './step';
+
 interface Expected {
   readonly key: string;
   readonly kind: 'command' | 'run' | 'text';
@@ -24,6 +27,17 @@ interface Slip {
 }
 
 const typePrefix = 'type:';
+
+const isCommand = (token: string): boolean => {
+  const [first = '', next, ...rest] = token.split('');
+  if (rest.length > 0) {
+    return false;
+  }
+  if (next === undefined) {
+    return knownKeys.has(first);
+  }
+  return follows.get(first)?.accepts(next, knownKeys) ?? false;
+};
 const named: Record<string, Expected> = {
   BS: { key: 'Backspace', kind: 'command' },
   Enter: { key: 'Enter', kind: 'command' },
@@ -44,6 +58,11 @@ const expandToken = (token: string): Expected[] => {
       .slice(typePrefix.length)
       .split('')
       .map((key) => ({ key, kind: 'text' }));
+  }
+  if (!isCommand(token)) {
+    throw new Error(
+      `「${token}」不是認得的按鍵記號：不是 BS、Enter、Esc、run、reset、type:…，也不是一個完整的指令`,
+    );
   }
   return token.split('').map((key) => ({ key, kind: 'command' }));
 };

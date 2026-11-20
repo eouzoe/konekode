@@ -1,6 +1,7 @@
 import {
   far,
   firstNonBlank,
+  isPlain,
   lastColumn,
   lineEnd,
   lineStart,
@@ -9,6 +10,7 @@ import {
   place,
   splice,
   type Buffer,
+  type Rules,
 } from './buffer';
 import { indentBelow } from './indent';
 
@@ -139,6 +141,16 @@ const commands: ReadonlyMap<string, Command> = new Map([
   ['x', erase],
 ]);
 
-const prefixes: ReadonlySet<string> = new Set(['d', 'f']);
+interface Follow {
+  readonly accepts: (key: string, keys: Rules['keys']) => boolean;
+  readonly apply: (buffer: Buffer, key: string) => Buffer | null;
+}
 
-export { commands, dropTwoLines, findChar, prefixes, type Command };
+const follows: ReadonlyMap<string, Follow> = new Map<string, Follow>([
+  ['d', { accepts: (key, keys) => key === 'j' && keys.has(key), apply: dropTwoLines }],
+  ['f', { accepts: (key) => isPlain(key), apply: findChar }],
+]);
+
+const prefixes: ReadonlySet<string> = new Set(follows.keys());
+
+export { commands, follows, prefixes, type Command, type Follow };
