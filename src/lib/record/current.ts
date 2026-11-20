@@ -1,4 +1,5 @@
 import { faultCounts, onFault, report, type Fault } from '@/lib/fault/fault';
+import { countOf, setCount, type Counted, type Tally } from '@/lib/fault/tally';
 import { actorId, newId, sessionId } from '@/lib/identity/actor';
 import { siteVersion } from '@/lib/site/version';
 import { contentId } from '@/units/content';
@@ -27,25 +28,21 @@ const now = (): number => Math.round(clockOrigin + performance.now());
 
 const isPowerOfTwo = (count: number): boolean => (count & (count - 1)) === 0;
 
-const recorded = new Map<string, number>();
-
-const keyOf = (kind: string, where: string): string => `${kind}\t${where}`;
+const recorded: Tally = new Map();
 
 const record = (log: Log, fault: Fault): void => {
   if (!isPowerOfTwo(fault.count)) {
     return;
   }
-  recorded.set(keyOf(fault.kind, fault.where), fault.count);
+  setCount(recorded, fault);
   log.track(faultKind, {
     at: fault.at,
     data: { count: fault.count, kind: fault.kind, reason: fault.reason, where: fault.where },
   });
 };
 
-const unrecorded = (): string[] =>
-  [...faultCounts().entries()]
-    .filter(([key, count]) => (recorded.get(key) ?? 0) < count)
-    .map(([key, count]) => `${key.replace('\t', '@')}=${String(count)}`);
+const unrecorded = (): Counted[] =>
+  faultCounts().filter((fault) => countOf(recorded, fault.kind, fault.where) < fault.count);
 
 const summarise = (log: Log): void => {
   const missing = unrecorded();
@@ -53,9 +50,9 @@ const summarise = (log: Log): void => {
   if (missing.length === 0 && dropped === 0) {
     return;
   }
-  log.track(faultSummaryKind, { data: { counts: missing.join(','), dropped } });
-  for (const [key, count] of faultCounts()) {
-    recorded.set(key, count);
+  log.track(faultSummaryKind, { data: { counts: JSON.stringify(missing), dropped } });
+  for (const fault of missing) {
+    setCount(recorded, fault);
   }
 };
 

@@ -1,3 +1,5 @@
+import { bump, counted, type Counted, type Tally } from './tally';
+
 interface Fault {
   readonly at: number;
   readonly count: number;
@@ -13,7 +15,7 @@ const keptLimit = 200;
 
 const sinks: Sink[] = [];
 const kept: Fault[] = [];
-const counts = new Map<string, number>();
+const counts: Tally = new Map();
 
 const reasonOf = (error: unknown): string => {
   if (error instanceof Error) {
@@ -31,9 +33,7 @@ const deliver = (sink: Sink, fault: Fault): void => {
 };
 
 const report = (kind: string, where: string, error: unknown): Fault => {
-  const key = `${kind}\t${where}`;
-  const count = (counts.get(key) ?? 0) + 1;
-  counts.set(key, count);
+  const count = bump(counts, kind, where);
   const fault: Fault = { at: Date.now(), count, kind, reason: reasonOf(error), where };
   if (kept.length < keptLimit) {
     kept.push(fault);
@@ -51,7 +51,7 @@ const onFault = (sink: Sink): void => {
   }
 };
 
-const faultCounts = (): ReadonlyMap<string, number> => counts;
+const faultCounts = (): Counted[] => counted(counts);
 
 const settle = async (where: string, work: Promise<unknown>): Promise<void> => {
   try {

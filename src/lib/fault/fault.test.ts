@@ -24,7 +24,16 @@ test('each kind and place is counted on its own, so every fault says which time 
     ['storage.write', 'events', 2],
     ['storage.local', 'draft', 1],
   ]);
-  expect([...faultCounts().values()]).toEqual([2, 1]);
+  expect(faultCounts()).toEqual([
+    { count: 2, kind: 'storage.write', where: 'events' },
+    { count: 1, kind: 'storage.local', where: 'draft' },
+  ]);
+});
+
+test('a kind or a place may hold any character, since they are never joined into one string', () => {
+  report('kind	with tab', 'place@with=marks', new Error('x'));
+  report('kind	with tab', 'place@with=marks', new Error('x'));
+  expect(faultCounts()).toEqual([{ count: 2, kind: 'kind	with tab', where: 'place@with=marks' }]);
 });
 
 test('a place that listens late still hears what happened before it', () => {

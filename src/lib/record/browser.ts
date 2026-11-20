@@ -19,6 +19,7 @@ const legacyKey = 'cp:events:v1';
 const blockedWait = 3000;
 const stallWait = 6000;
 const slowAfter = 2000;
+const relaxed: IDBTransactionOptions = { durability: 'relaxed' };
 
 class BlockedOpenError extends Error {
   override readonly name = 'BlockedOpenError';
@@ -108,7 +109,7 @@ const dropLegacy = (): void => {
 };
 
 const putAll = async (database: IDBDatabase, events: readonly LearningEvent[]): Promise<void> => {
-  const transaction = database.transaction(storeName, 'readwrite');
+  const transaction = database.transaction(storeName, 'readwrite', relaxed);
   const store = transaction.objectStore(storeName);
   for (const event of events) {
     store.put(event);
@@ -137,7 +138,7 @@ const databasePersistence = async (): Promise<Persistence> => {
       return all;
     },
     remove: async (ids) => {
-      const transaction = database.transaction(storeName, 'readwrite');
+      const transaction = database.transaction(storeName, 'readwrite', relaxed);
       const store = transaction.objectStore(storeName);
       for (const id of ids) {
         store.delete(id);
