@@ -18,7 +18,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   runtimeCaching: [
     {
-      handler: new StaleWhileRevalidate({ cacheName: 'pages' }),
+      handler: new StaleWhileRevalidate({ cacheName: 'pages', matchOptions: { ignoreVary: true } }),
       matcher: ({ request, sameOrigin, url }) => sameOrigin && isPage(url, request),
     },
     {

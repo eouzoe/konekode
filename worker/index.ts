@@ -1,4 +1,5 @@
 import { acceptIntake, intakePath, type Database } from './intake';
+import { markPlatform } from './platform';
 
 interface Env {
   readonly ASSETS: { readonly fetch: (request: Request) => Promise<Response> };
@@ -27,14 +28,14 @@ const servePacked = async (request: Request, env: Env, kind: string): Promise<Re
   return new Response(stored.body, init);
 };
 
-const serve = (request: Request, env: Env): Promise<Response> | Response => {
+const serve = async (request: Request, env: Env): Promise<Response> => {
   const url = new URL(request.url);
   if (url.pathname === intakePath) {
     return acceptIntake(request, url, env.INTAKE);
   }
   const kind = packed.exec(url.pathname)?.groups?.kind;
   if (kind === undefined) {
-    return env.ASSETS.fetch(request);
+    return markPlatform(request, await env.ASSETS.fetch(request));
   }
   return servePacked(request, env, kind);
 };

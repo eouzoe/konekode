@@ -8,6 +8,7 @@ interface Beat {
   readonly input?: string;
   readonly keys?: readonly string[];
   readonly lines?: string;
+  readonly needs?: 'fullscreen-key';
   readonly say: string;
   readonly snippet?: string;
   readonly stage: 'code' | 'drill' | 'empty' | 'run';

@@ -2,6 +2,9 @@ import { open } from './start-support';
 import { expect, test } from './test';
 
 const sizes = [
+  { height: 740, width: 360 },
+  { height: 844, width: 390 },
+  { height: 390, width: 844 },
   { height: 650, width: 900 },
   { height: 620, width: 1100 },
   { height: 720, width: 1280 },

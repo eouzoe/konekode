@@ -1,5 +1,5 @@
 {
-  "fullscreen-ask": "開始之前，建議先按 F11，把畫面放到全螢幕喔！",
+  "fullscreen-ask": "開始之前，建議先按 {fullscreen}，把畫面放到全螢幕喔！",
   "fullscreen-yes": "哇，已經是全螢幕了！真棒！",
   "fullscreen-no": "好吧，那我們就這樣開始吧。",
   "intro": "好的，那就讓我們從第一步開始吧！",

@@ -2,6 +2,8 @@
 import CodeRunner from '@/components/code-runner.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
+import { fullscreenMark } from '@/lib/scene/conditions';
+import { fullscreenKeys } from '@/lib/site/device';
 import { lessonData, pages, site } from '@/lib/site/pages';
 import { dues } from '@/lib/supply/plan';
 import { rules } from '@/lib/supply/rules';
@@ -12,11 +14,11 @@ const codeLines = template.split('\n');
 const data = lessonData(Astro.site ?? Astro.url, pages.start);
 const needs = JSON.stringify(dues(beats, rules));
 const opening = beats[0]?.stage ?? 'empty';
+const defaultKey = ui[fullscreenKeys.pc];
 ---
 
 <Base page={pages.start} data={data} full>
   <p class="plain">{site['start.plain']} <a href={pages.home.path}>{site.name}</a></p>
-  <p class="needs-keyboard">{ui['page.needsKeyboard']}</p>
   <section class="scene" data-scene data-unit="start" data-stage={opening} data-needs={needs}>
     <div class="stage">
       <p class="supplying" role="status">{ui['page.supplying']}</p>
@@ -53,9 +55,15 @@ const opening = beats[0]?.stage ?? 'empty';
               data-keys={beat.keys === undefined ? undefined : JSON.stringify(beat.keys)}
               data-after={beat.after}
               data-when={beat.when}
+              data-needs={beat.needs}
               data-unlock={beat.unlock?.join(',')}
             >
-              {beat.say}
+              {beat.say.split(fullscreenMark).map((part, at) => (
+                <>
+                  {at > 0 && <span data-fullscreen-key>{defaultKey}</span>}
+                  {part}
+                </>
+              ))}
             </p>
           ))
         }
@@ -92,20 +100,6 @@ const opening = beats[0]?.stage ?? 'empty';
   .plain a {
     color: var(--accent);
   }
-  .needs-keyboard {
-    display: none;
-    margin: 0;
-    padding: 0.6rem 1rem;
-    background: var(--panel);
-    border-bottom: 1px solid var(--line);
-    color: var(--ink);
-    text-align: center;
-  }
-  @media (pointer: coarse) and (hover: none) {
-    .needs-keyboard {
-      display: block;
-    }
-  }
   .scene {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
@@ -117,6 +111,25 @@ const opening = beats[0]?.stage ?? 'empty';
   }
   .scene:not([data-ready='true']) [data-beat]:not(:first-child) {
     display: none;
+  }
+  :global(:root.on-touch) [data-needs='fullscreen-key'] {
+    display: none;
+  }
+  :global(:root.on-touch)
+    .scene:not([data-ready='true'])
+    [data-needs='fullscreen-key']
+    + [data-beat]:not([data-needs='fullscreen-key']) {
+    display: block;
+  }
+  @media not all and (any-pointer: fine) {
+    [data-needs='fullscreen-key'] {
+      display: none;
+    }
+    .scene:not([data-ready='true'])
+      [data-needs='fullscreen-key']
+      + [data-beat]:not([data-needs='fullscreen-key']) {
+      display: block;
+    }
   }
   .scene:not([data-ready='true']) .tools {
     visibility: hidden;
@@ -351,6 +364,42 @@ const opening = beats[0]?.stage ?? 'empty';
     color: var(--accent);
     font-size: 0.8125rem;
     animation: bob 1.2s ease-in-out infinite;
+  }
+  @media (width < 40rem) {
+    .dialogue {
+      --shown-lines: 4;
+      --edge: 1rem;
+      --head: 2rem;
+      grid-template-columns: auto 1fr;
+      gap: 0 1rem;
+      padding: var(--edge) 1.25rem;
+      font-size: 1.125rem;
+    }
+    .scene[data-ready='true'] .dialogue {
+      grid-template-rows: var(--head) minmax(0, 1fr) var(--note-line);
+      height: calc(
+        var(--shown-lines) * 1lh + 2 * var(--edge) + var(--head) + var(--note-line) + 2px
+      );
+    }
+    .words {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .note {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
+    .tools {
+      display: flex;
+      grid-column: 2;
+      grid-row: 1;
+      gap: 1rem;
+      justify-content: end;
+    }
+    .more {
+      right: 1.25rem;
+      bottom: 0.5rem;
+    }
   }
   .by-tap {
     display: none;

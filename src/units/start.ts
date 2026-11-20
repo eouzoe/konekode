@@ -31,14 +31,16 @@ cout << b << '\n';
 cout << a << '\n';`;
 
 const opening: readonly Line[] = [
-  { id: 'fullscreen-ask', stage: 'empty' },
+  { id: 'fullscreen-ask', needs: 'fullscreen-key', stage: 'empty' },
   {
     id: 'fullscreen-yes',
+    needs: 'fullscreen-key',
     stage: 'empty',
     when: 'fullscreen',
   },
   {
     id: 'fullscreen-no',
+    needs: 'fullscreen-key',
     stage: 'empty',
     when: 'windowed',
   },
