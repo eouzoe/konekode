@@ -1,17 +1,8 @@
 import { guard } from '@/lib/fault/fault';
 import { noteAttempt, noteEntry } from '@/lib/run/note';
 
-import {
-  createDrill,
-  escape,
-  expectedChar,
-  isDone,
-  isTyped,
-  press,
-  remind,
-  type Drill,
-} from './drill';
-import { escapeKey } from './keyboard';
+import { createDrill, expectedChar, isDone, isTyped, press, type Drill } from './drill';
+import { onKeyDown, typeInto } from './keypress';
 import { attemptOf } from './note';
 import {
   instant,
@@ -24,53 +15,6 @@ import {
   type Session,
 } from './steps';
 import { buildKeyboard, findPart, quiet, render, type Parts } from './view';
-
-const deleteKeys = new Set(['Backspace', 'Delete']);
-
-const typedBy = (event: KeyboardEvent): string | null => {
-  if (event.ctrlKey || event.metaKey || event.altKey) {
-    return null;
-  }
-  if (event.key === 'Enter') {
-    return '\n';
-  }
-  if (event.key.length === 1) {
-    return event.key;
-  }
-  return null;
-};
-
-const typeInto = (drill: Drill, text: string): Drill => {
-  let next = drill;
-  for (const char of text) {
-    next = press(next, char);
-  }
-  return next;
-};
-
-const judge = (drill: Drill, event: KeyboardEvent): Drill | null => {
-  const typed = typedBy(event);
-  if (event.key === escapeKey) {
-    return escape(drill);
-  }
-  if (deleteKeys.has(event.key)) {
-    return remind(drill, 'no-delete');
-  }
-  if (typed === null) {
-    return null;
-  }
-  return press(drill, typed);
-};
-
-const onKeyDown = (drill: Drill, event: KeyboardEvent): Drill => {
-  const next = judge(drill, event);
-  if (next === null) {
-    return drill;
-  }
-  event.preventDefault();
-  event.stopPropagation();
-  return next;
-};
 
 const isElsewhere = (target: EventTarget | null): boolean =>
   target instanceof Element && target.closest('dialog, input, textarea, select') !== null;
