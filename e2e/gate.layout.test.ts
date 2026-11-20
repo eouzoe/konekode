@@ -1,4 +1,4 @@
-import { checksOf } from '../src/units/index';
+import { checksOf, planOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { arrive, tap } from './gate-support';
 import { studentEditor } from './gate-view';
@@ -156,25 +156,57 @@ const finish = async (page: Page, gate: string): Promise<void> => {
   });
 };
 
-test.use({ compiler: true });
+const gates = checksOf('start').map((check) => check.id);
+const guided = gates.filter((gate) => (planOf('start', gate)?.path.length ?? 0) > 0);
+const free = gates.filter((gate) => !guided.includes(gate));
+const [reference = ''] = gates;
+
+interface Visit {
+  readonly first: Frame;
+  readonly gate: string;
+  readonly name: string;
+}
+
+const walk = async (page: Page, { first, gate, name }: Visit): Promise<void> => {
+  await openAt(page, gate, studentEditor);
+  const arrived = await measure(page);
+  expectInside(arrived, `${name}, ${gate}, on arrival`);
+  expectSteady(arrived, first, `${name}, ${gate}, on arrival`);
+  await finish(page, gate);
+  const ran = await measure(page);
+  expectInside(ran, `${name}, ${gate}, after running`);
+  expectSteady(ran, first, `${name}, ${gate}, after running`);
+};
+
+const referenceFrame = async (page: Page): Promise<Frame> => {
+  await openAt(page, reference, studentEditor);
+  return (await measure(page)).frame;
+};
 
 for (const size of sizes) {
   const name = `${String(size.width)}×${String(size.height)}`;
-  test(`${name}: nothing at a gate is covered, cut off, resized or moved, before or after running`, async ({
+
+  test(`${name}: nothing at a guided gate is covered, cut off, resized or moved, before or after running`, async ({
     page,
   }) => {
     await page.setViewportSize(size);
-    let first: Frame | null = null;
-    for (const gate of checksOf('start')) {
-      await openAt(page, gate.id, studentEditor);
-      const arrived = await measure(page);
-      first ??= arrived.frame;
-      expectInside(arrived, `${name}, ${gate.id}, on arrival`);
-      expectSteady(arrived, first, `${name}, ${gate.id}, on arrival`);
-      await finish(page, gate.id);
-      const ran = await measure(page);
-      expectInside(ran, `${name}, ${gate.id}, after running`);
-      expectSteady(ran, first, `${name}, ${gate.id}, after running`);
+    const first = await referenceFrame(page);
+    for (const gate of guided) {
+      await walk(page, { first, gate, name });
     }
+  });
+
+  test.describe(() => {
+    test.use({ compiler: true });
+
+    test(`${name}: a gate that compiles keeps the same frame, before and after running`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(size);
+      const first = await referenceFrame(page);
+      for (const gate of free) {
+        await walk(page, { first, gate, name });
+      }
+    });
   });
 }
