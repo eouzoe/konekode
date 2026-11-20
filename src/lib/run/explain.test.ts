@@ -25,13 +25,50 @@ test('箭頭方向反了', () => {
   expect(first(message)).toContain('箭頭方向可能反了');
 });
 
-test('只解釋第一個錯誤，並保留原始訊息', () => {
+test('只解釋第一個錯誤，原始訊息也只留它自己的那幾行', () => {
   const message =
-    "main.cpp:7:14: error: expected ';' after expression\nmain.cpp:9:1: error: expected '}'\n2 errors generated.";
-  const text = explain(message);
-  expect(text.split('\n')[0]).toBe('第 7 行的最後面少了分號 ;');
-  expect(text).toContain('編譯器的原始訊息：');
-  expect(text).toContain('2 errors generated.');
+    "main.cpp:7:14: error: expected ';' after expression\n    7 |     cout << 7\n      |              ^\nmain.cpp:9:1: error: expected '}'\n2 errors generated.";
+  expect(explain(message).split('\n')).toEqual([
+    '第 7 行的最後面少了分號 ;',
+    '',
+    '編譯器的原始訊息：',
+    "main.cpp:7:14: error: expected ';' after expression",
+    '    7 |     cout << 7',
+    '      |              ^',
+  ]);
+});
+
+test('箭頭打反時，編譯器列出的一百多行候選不顯示', () => {
+  const candidates = [...Array.from({ length: 120 }).keys()].map(
+    (at) =>
+      `/usr/include/c++/v1/ostream:${String(at + 1)}:1: note: candidate template ignored: could not match\n  ${String(at + 1)} | operator<<(basic_ostream<_CharT, _Traits>& __os)\n      | ^`,
+  );
+  const message = [
+    "main.cpp:9:9: error: invalid operands to binary expression ('istream' and 'int')",
+    '    9 |     cin << a;',
+    '      |     ~~~ ^  ~',
+    ...candidates,
+    '1 error generated.',
+  ].join('\n');
+  const shown = explain(message).split('\n');
+  expect(shown.at(-1)).toBe('      |     ~~~ ^  ~');
+  expect(shown).toHaveLength(6);
+});
+
+test('前面有警告時，原始訊息從第一個錯誤開始', () => {
+  const message =
+    'main.cpp:9:17: warning: adding \'int\' to a string does not append to the string\n    9 |     cout << "a" + a;\nmain.cpp:9:21: error: expected expression\n    9 |     cout << ;\nfatal error: too many errors emitted, stopping now';
+  expect(explain(message).split('\n').slice(3)).toEqual([
+    'main.cpp:9:21: error: expected expression',
+    '    9 |     cout << ;',
+  ]);
+});
+
+test('看不懂的長訊息只留開頭幾行', () => {
+  const message = [...Array.from({ length: 40 }).keys()]
+    .map((at) => `line ${String(at)}`)
+    .join('\n');
+  expect(explain(message).split('\n')).toHaveLength(6);
 });
 
 test('沒看過的錯誤也指出是哪一行', () => {

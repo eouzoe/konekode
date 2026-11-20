@@ -49,12 +49,41 @@ const translate = (problem: Problem): string => {
   return say('explain.other', { line: problem.line });
 };
 
+const another =
+  /^(?:\S.*:\d+:\d+: (?:fatal error|error|warning|note): |fatal error: |\d+ (?:error|warning)s? )/u;
+const blockLines = 3;
+const briefLines = 6;
+
+const ownLines = (rest: readonly string[]): readonly string[] => {
+  const own: string[] = [];
+  for (const line of rest) {
+    if (another.test(line)) {
+      break;
+    }
+    own.push(line);
+  }
+  return own;
+};
+
+const firstBlock = (message: string): string => {
+  const lines = message.split('\n');
+  const from = lines.findIndex((line) => header.test(line));
+  const [head = '', ...rest] = lines.slice(from);
+  return [head, ...ownLines(rest)]
+    .filter((line) => line.trim() !== '')
+    .slice(0, blockLines)
+    .join('\n');
+};
+
+const brief = (message: string): string =>
+  message.trim().split('\n').slice(0, briefLines).join('\n');
+
 const explain = (message: string): string => {
   const problem = find(message);
   if (problem === null) {
-    return message;
+    return brief(message);
   }
-  return `${translate(problem)}\n\n${say('explain.original')}\n${message.trim()}`;
+  return `${translate(problem)}\n\n${say('explain.original')}\n${firstBlock(message)}`;
 };
 
 export { explain };

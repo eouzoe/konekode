@@ -26,6 +26,19 @@ test.describe('起步單元：最後一題與執行', () => {
       await expect(status(page)).toHaveText(ui['run.compileError'], { timeout: 150_000 });
       await expect(output(page)).toContainText(say('explain.semicolon', { line: '7' }));
       expect(await currentId(page)).toBe('task');
+      const box = await output(page).boundingBox();
+      const button = await page.locator('[data-code-runner] [data-role="run"]').boundingBox();
+      await writeProgram(page, wrap('    int a{};\n    cin << a;'));
+      await page.keyboard.press('Enter');
+      await expect(output(page)).toContainText(say('explain.operands', { line: '8' }), {
+        timeout: 60_000,
+      });
+      const shown = await output(page).evaluate((element) => element.textContent.split('\n'));
+      expect(shown.length).toBeLessThanOrEqual(6);
+      expect(await output(page).boundingBox()).toEqual(box);
+      expect(await page.locator('[data-code-runner] [data-role="run"]').boundingBox()).toEqual(
+        button,
+      );
       await writeProgram(page, wrap('    while (true) {\n    }'));
       await page.keyboard.press('Enter');
       await expect(status(page)).toHaveText(ui['run.timeout'], { timeout: 60_000 });
