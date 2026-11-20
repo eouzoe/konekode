@@ -19,17 +19,40 @@ const noticeFor = (fault: Fault): UiKey | null => {
   return byKind[fault.kind] ?? null;
 };
 
+const withdrawnBy: Readonly<Record<string, string>> = {
+  'storage.recovered': 'storage.stalled',
+};
+
+const withdraw = (element: HTMLElement, fault: Fault): boolean => {
+  const cause = withdrawnBy[fault.kind];
+  if (cause === undefined || element.dataset.cause !== cause) {
+    return false;
+  }
+  element.hidden = true;
+  element.dataset.cause = '';
+  element.dataset.notice = '';
+  return true;
+};
+
+const tell = (element: HTMLElement, key: UiKey, fault: Fault): void => {
+  element.textContent = say(key);
+  Object.assign(element.dataset, { cause: fault.kind, notice: key });
+  element.hidden = false;
+};
+
 const mountNotice = (element: HTMLElement): void => {
-  const told = new Set<UiKey>();
+  const told = new Set<string>();
   onFault((fault) => {
-    const key = noticeFor(fault);
-    if (key === null || told.has(key)) {
+    const shown = element.dataset.notice ?? '';
+    if (withdraw(element, fault)) {
+      told.delete(shown);
       return;
     }
-    told.add(key);
-    element.textContent = say(key);
-    element.dataset.notice = key;
-    element.hidden = false;
+    const key = noticeFor(fault);
+    if (key !== null && !told.has(key)) {
+      told.add(key);
+      tell(element, key, fault);
+    }
   });
 };
 

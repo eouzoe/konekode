@@ -228,6 +228,58 @@ test.describe('when the browser cannot keep what the learner does', () => {
     await expect(page.locator(notice)).toHaveText(say('notice.unsaved'));
     await expect.poll(() => faultsIn(sent)).toContain('storage.stalled');
   });
+
+  test('a database that answers late is taken over, and what was done meanwhile is kept', async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ delay, name }) => {
+        const open = indexedDB.open.bind(indexedDB);
+        const kinds = ['upgradeneeded', 'success', 'error', 'blocked'];
+        indexedDB.open = (asked: string, version?: number): IDBOpenDBRequest => {
+          if (asked !== name) {
+            return open(asked, version);
+          }
+          const carrier = open(`${name}-carrier`);
+          for (const kind of kinds) {
+            carrier.addEventListener(kind, (event) => {
+              if (event.isTrusted) {
+                event.stopImmediatePropagation();
+              }
+            });
+          }
+          setTimeout(() => {
+            const real = open(asked, version);
+            Object.defineProperty(carrier, 'result', { get: () => real.result });
+            Object.defineProperty(carrier, 'error', { get: () => real.error });
+            for (const kind of kinds) {
+              real.addEventListener(kind, () => {
+                carrier.dispatchEvent(new Event(kind));
+              });
+            }
+          }, delay);
+          return carrier;
+        };
+      },
+      { delay: stallWait + 2 * second, name: databaseName },
+    );
+    const sent = watchUploads(page);
+    await page.goto('/learn/start/');
+    await page
+      .locator('[data-scene][data-ready="true"]')
+      .waitFor({ timeout: stallWait + 10 * second });
+    await expect(page.locator(notice)).toHaveText(say('notice.unsaved'));
+    await nextSentence(page);
+    const later = { timeout: 20 * second };
+    await expect(page.locator(notice)).toBeHidden(later);
+    await expect
+      .poll(() => faultsIn(sent), later)
+      .toEqual(expect.arrayContaining(['storage.stalled', 'storage.recovered']));
+    await expect.poll(async () => await reachedStored(page), later).toBeGreaterThan(0);
+    const kept = await reachedStored(page);
+    await nextSentence(page);
+    await expect.poll(async () => await reachedStored(page), later).toBeGreaterThan(kept);
+  });
 });
 
 test.describe('when the intake fails', () => {

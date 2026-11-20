@@ -75,9 +75,21 @@ const troubleKinds: Readonly<Record<Exclude<Trouble, ''>, string>> = {
   unavailable: 'storage.unavailable',
 };
 
-const noteOpening = ({ reason, took, trouble }: Storage): void => {
+const awaitLate = async (later: Promise<number>): Promise<void> => {
+  try {
+    const waited = Math.round(await later);
+    report('storage.recovered', 'open', new Error(`${String(waited)} ms`));
+  } catch (error) {
+    report('storage.unavailable', 'late', error);
+  }
+};
+
+const noteOpening = ({ later, reason, took, trouble }: Storage): void => {
   if (trouble !== '') {
     report(troubleKinds[trouble], 'open', reason);
+    if (later !== null) {
+      void awaitLate(later);
+    }
     return;
   }
   if (took > slowAfter) {

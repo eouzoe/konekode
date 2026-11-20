@@ -1,9 +1,11 @@
+import { adopt } from './adopt';
 import { readEvents, type LearningEvent } from './event';
 import { memoryPersistence, type Persistence } from './log';
 
 type Trouble = '' | 'blocked' | 'stalled' | 'unavailable';
 
 interface Storage {
+  readonly later: Promise<number> | null;
   readonly persistence: Persistence;
   readonly reason: unknown;
   readonly took: number;
@@ -18,15 +20,8 @@ const blockedWait = 3000;
 const stallWait = 6000;
 const slowAfter = 2000;
 
-class OpenTroubleError extends Error {
-  override readonly name = 'OpenTroubleError';
-
-  readonly trouble: 'blocked' | 'stalled';
-
-  constructor(trouble: 'blocked' | 'stalled', message: string) {
-    super(message);
-    this.trouble = trouble;
-  }
+class BlockedOpenError extends Error {
+  override readonly name = 'BlockedOpenError';
 }
 
 const settle = <Result>(pending: IDBRequest<Result>): Promise<Result> => {
@@ -64,23 +59,17 @@ const unblocked = (opening: IDBOpenDBRequest): Promise<never> => {
   opening.addEventListener('blocked', () => {
     setTimeout(() => {
       closeWhenOpened(opening);
-      reject(new OpenTroubleError('blocked', '另一個分頁占著舊版的資料庫'));
+      reject(new BlockedOpenError('另一個分頁占著舊版的資料庫'));
     }, blockedWait);
   });
   return promise;
 };
 
-const unstalled = (opening: IDBOpenDBRequest): Promise<never> => {
-  const { promise, reject } = Promise.withResolvers<never>();
-  const timer = setTimeout(() => {
-    closeWhenOpened(opening);
-    reject(new OpenTroubleError('stalled', `瀏覽器的資料庫 ${String(stallWait)} 毫秒都沒有回應`));
+const deadline = (): Promise<null> => {
+  const { promise, resolve } = Promise.withResolvers<null>();
+  setTimeout(() => {
+    resolve(null);
   }, stallWait);
-  for (const name of ['success', 'error', 'blocked']) {
-    opening.addEventListener(name, () => {
-      clearTimeout(timer);
-    });
-  }
   return promise;
 };
 
@@ -91,7 +80,7 @@ const openDatabase = async (): Promise<IDBDatabase> => {
       opening.result.createObjectStore(storeName, { keyPath: 'id' });
     }
   });
-  const database = await Promise.race([settle(opening), unblocked(opening), unstalled(opening)]);
+  const database = await Promise.race([settle(opening), unblocked(opening)]);
   database.addEventListener('versionchange', () => {
     database.close();
   });
@@ -159,19 +148,41 @@ const databasePersistence = async (): Promise<Persistence> => {
 };
 
 const troubleOf = (error: unknown): Trouble => {
-  if (error instanceof OpenTroubleError) {
-    return error.trouble;
+  if (error instanceof BlockedOpenError) {
+    return 'blocked';
   }
   return 'unavailable';
 };
 
+const meanwhile = (opening: Promise<Persistence>, began: number): Storage => {
+  const adoption = adopt(memoryPersistence(readLegacy()), opening, began);
+  return {
+    later: adoption.done,
+    persistence: adoption.persistence,
+    reason: new Error(`瀏覽器的資料庫 ${String(stallWait)} 毫秒還沒有打開`),
+    took: performance.now() - began,
+    trouble: 'stalled',
+  };
+};
+
 const browserPersistence = async (): Promise<Storage> => {
   const began = performance.now();
+  const opening = databasePersistence();
   try {
-    const persistence = await databasePersistence();
-    return { persistence, reason: null, took: performance.now() - began, trouble: '' };
+    const first = await Promise.race([opening, deadline()]);
+    if (first === null) {
+      return meanwhile(opening, began);
+    }
+    return {
+      later: null,
+      persistence: first,
+      reason: null,
+      took: performance.now() - began,
+      trouble: '',
+    };
   } catch (error) {
     return {
+      later: null,
       persistence: memoryPersistence(readLegacy()),
       reason: error,
       took: performance.now() - began,
