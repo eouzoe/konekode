@@ -3,7 +3,7 @@ import { type Pressed } from '@/lib/edit/session';
 import { type Desk } from './desk';
 import { createKeys, type Keys } from './keys';
 import { noteEntry, noteRefusal, noteStep, type Place } from './note';
-import { nextKey, nextOf, quietHint, wrongHint } from './view';
+import { calmAfter, nextKey, nextOf, quietHint, wrongHint } from './view';
 
 interface Panel {
   readonly button: HTMLButtonElement;
@@ -12,7 +12,6 @@ interface Panel {
   readonly root: HTMLElement;
 }
 
-const calmAfter = 2600;
 const calming = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 const isGuided = (root: HTMLElement): boolean => root.dataset.guided === 'true';

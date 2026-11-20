@@ -5,6 +5,8 @@ import { say, ui } from '@/lib/text/ui';
 import { describeCommand, describeNext, needsTelling } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
 
+const calmAfter = 2600;
+
 const named: Record<string, string> = {
   Backspace: `${messages.press}Backspace`,
   Enter: messages.pressEnter,
@@ -98,4 +100,4 @@ const freeHint = (pressed: Pressed): string => {
 const effectText = (effect: Effect): string =>
   say(`effect.${effect.kind}`, { count: String(effect.count), keys: String(effect.keys) });
 
-export { effectText, freeHint, idleHints, nextKey, nextOf, quietHint, wrongHint };
+export { calmAfter, effectText, freeHint, idleHints, nextKey, nextOf, quietHint, wrongHint };
