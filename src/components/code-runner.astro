@@ -32,7 +32,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     <kbd data-role="keycap" class="keycap" aria-hidden="true"></kbd>
     <span data-role="hint" class="hint"></span>
   </div>
-  <pre data-role="output" class="output"></pre>
+  <pre data-role="output" class="output" data-label={ui['page.output']}></pre>
 </section>
 
 <script>
@@ -44,7 +44,11 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
 <style>
   .runner {
     display: grid;
+    grid-template-rows: minmax(9rem, 1fr);
+    grid-auto-rows: auto;
     gap: 0.75rem;
+    height: 100%;
+    min-height: 0;
   }
   .field {
     display: grid;
@@ -62,11 +66,15 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     grid-auto-flow: column;
     gap: 0.75rem;
   }
-  .io:not(:has(.field:not([hidden]))) {
+  .io:not(:has(.field:not([hidden]))),
+  .runner[data-guided='true'] .io:not(:has([data-role='field']:not([hidden]))) {
     display: none;
   }
   .editor {
     position: relative;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: 0;
   }
   .editor:focus {
     outline: none;
@@ -149,15 +157,17 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   }
   .keys {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
+    height: 2.25rem;
+    overflow-x: auto;
     color: var(--faint);
     font-size: 0.8125rem;
+    white-space: nowrap;
     transition: opacity 0.2s;
   }
   .keys[hidden] {
-    display: none;
+    visibility: hidden;
   }
   .keys[data-mode='insert'],
   .runner:not([data-armed='true']) .keys {
@@ -251,6 +261,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     display: flex;
     gap: 1rem;
     align-items: center;
+    height: 3rem;
   }
   button {
     padding: 0.45rem 1.4rem;
@@ -289,8 +300,11 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .hint {
     flex: 1;
     order: -1;
+    max-height: 100%;
+    overflow: hidden;
     color: var(--faint);
     font-size: 0.875rem;
+    line-height: 1.25;
     user-select: none;
   }
   .runner:not([data-armed='true']) .hint {
@@ -306,13 +320,17 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
   .runner[data-state='error'] .status {
     color: var(--bad);
   }
-  .runner:not([data-state='busy']) .output:empty {
-    display: none;
+  .output:empty::before {
+    content: attr(data-label);
+    color: var(--faint);
   }
   .output {
-    min-height: 3.5rem;
+    --shown-lines: 4;
+    --edge: 0.6rem;
+    height: calc(var(--shown-lines) * 1lh + 2 * var(--edge) + 2px);
     margin: 0;
-    padding: 0.9rem 1rem;
+    padding: var(--edge) 1rem;
+    overflow-y: auto;
     border: 1px solid var(--line);
     border-radius: 0.6rem;
     background: var(--panel);
@@ -320,5 +338,23 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     line-height: 1.6;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
+  }
+  @media (max-height: 50rem) {
+    .runner {
+      gap: 0.5rem;
+    }
+    .keys {
+      height: 2rem;
+    }
+    .stdin {
+      padding: 0.4rem 0.8rem;
+    }
+    .bar {
+      height: 2.75rem;
+    }
+    .output {
+      --shown-lines: 3;
+      --edge: 0.4rem;
+    }
   }
 </style>

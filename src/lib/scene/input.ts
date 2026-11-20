@@ -9,7 +9,6 @@ interface Handlers {
   readonly checked: (kind: Check, output: string, beat: string) => void;
   readonly next: () => void;
   readonly played: (beat: string) => void;
-  readonly resized: () => void;
   readonly restart: () => void;
   readonly screen: () => void;
 }
@@ -152,7 +151,6 @@ const listenInput = (root: HTMLElement, handlers: Handlers): void => {
   document.addEventListener('keydown', (event) => {
     onKey(root, handlers, event);
   });
-  globalThis.addEventListener('resize', handlers.resized);
   watchFullScreen(handlers.screen);
 };
 

@@ -63,6 +63,7 @@
   "page.moreByTap": "點一下繼續",
   "page.input": "輸入",
   "page.expect": "應該輸出",
+  "page.output": "輸出",
   "page.run": "執行",
   "page.typeHere": "在這裡打字",
   "start.task": "輸入有兩個整數。請先印出第二個數，換行；再印出第一個數，換行。"

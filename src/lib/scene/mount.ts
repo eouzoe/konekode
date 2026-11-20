@@ -4,7 +4,6 @@ import { diagnose } from '@/lib/run/diagnose';
 
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
-import { fitStage, watchStage } from './fit';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { grantUnlocks, readMeta } from './meta';
@@ -191,7 +190,6 @@ const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void =
   notePassed(scene, passed);
   scene.waiting = snapshot.matches('blocked');
   speak(scene, snapshot.matches('revealing'), enter(scene, index));
-  fitStage(scene.root);
   if (mismatch) {
     setNote(scene, mismatchNote(scene));
     return;
@@ -227,15 +225,11 @@ const listen = (scene: Scene): void => {
         step(scene, 'PLAYED');
       }
     },
-    resized: () => {
-      fitStage(scene.root);
-    },
     restart: () => {
       void restartUnit(scene.unit);
     },
     screen: () => {
       step(scene, 'SCREEN');
-      fitStage(scene.root);
     },
   });
 };
@@ -281,7 +275,6 @@ const mountScene = (root: HTMLElement, read: ReadUnit): void => {
   root.dataset.ready = 'true';
   show(scene);
   startReveal(scene);
-  watchStage(scene.root);
 };
 
 const mountScenes = async (): Promise<void> => {

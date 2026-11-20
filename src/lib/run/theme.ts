@@ -27,7 +27,7 @@ const look = EditorView.theme(
       borderRadius: '0.6rem',
       color: night.ink,
       fontSize: '1.1875rem',
-      maxHeight: '21rem',
+      height: '100%',
     },
     '&.cm-focused': { outline: 'none' },
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': {

@@ -110,6 +110,7 @@ const yieldInput = (session: Session, parts: Parts): void => {
 
 const paint = (session: Session, parts: Parts): void => {
   render(parts, shown(session));
+  parts.current.scrollIntoView({ block: 'nearest' });
   yieldInput(session, parts);
   parts.root.dataset.demo = String(session.demo);
   if (session.demo && (!session.guide || isDone(session.show))) {

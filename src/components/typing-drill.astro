@@ -30,15 +30,18 @@ const { target } = Astro.props;
 <style>
   .drill {
     display: grid;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: minmax(0, 1fr) auto;
     gap: 1rem;
     height: 100%;
+    min-height: 24rem;
     cursor: text;
   }
   .drill-top {
     position: relative;
     display: grid;
-    align-content: center;
+    align-content: safe center;
+    min-height: 0;
+    overflow-y: auto;
   }
   .drill-code {
     margin: 0;
@@ -156,6 +159,21 @@ const { target } = Astro.props;
   @media (pointer: coarse) {
     .keyboard {
       display: none;
+    }
+  }
+  @media (max-height: 50rem) {
+    .drill {
+      gap: 0.75rem;
+    }
+    .drill-code {
+      padding-top: 0.9rem;
+      font-size: 1.25rem;
+    }
+    .drill-hint {
+      margin-bottom: 0.5rem;
+    }
+    .keyboard :global(.key) {
+      height: 2.1rem;
     }
   }
 </style>
