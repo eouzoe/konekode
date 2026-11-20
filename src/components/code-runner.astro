@@ -12,27 +12,32 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
 ---
 
 <section class="runner" data-code-runner data-draft={draft}>
-  <div class="editor" data-role="editor" data-source={source}>
-    <pre set:text={source} />
-  </div>
-  <div class="keys" data-role="keys" aria-hidden="true" hidden></div>
-  <div class="io">
-    <div class="field" data-role="field" hidden={!withInput}>
-      <span>{ui['page.input']}</span>
-      <pre data-role="stdin" class="stdin" set:text={input} />
+  <div class="main">
+    <div class="editor" data-role="editor" data-source={source}>
+      <pre set:text={source} />
     </div>
-    <div class="field" data-role="expect-field" hidden>
-      <span>{ui['page.expect']}</span>
-      <pre data-role="expect" class="stdin"></pre>
+    <div class="keys" data-role="keys" aria-hidden="true" hidden></div>
+    <div class="io">
+      <div class="field" data-role="field" hidden={!withInput}>
+        <span>{ui['page.input']}</span>
+        <pre data-role="stdin" class="stdin" set:text={input} />
+      </div>
+      <div class="field" data-role="expect-field" hidden>
+        <span>{ui['page.expect']}</span>
+        <pre data-role="expect" class="stdin"></pre>
+      </div>
+    </div>
+    <div class="bar">
+      <button type="button" data-role="run">{ui['page.run']}</button>
+      <span data-role="status" class="status" aria-live="polite"></span>
+      <kbd data-role="keycap" class="keycap" aria-hidden="true"></kbd>
+      <span data-role="hint" class="hint"></span>
     </div>
   </div>
-  <div class="bar">
-    <button type="button" data-role="run">{ui['page.run']}</button>
-    <span data-role="status" class="status" aria-live="polite"></span>
-    <kbd data-role="keycap" class="keycap" aria-hidden="true"></kbd>
-    <span data-role="hint" class="hint"></span>
+  <div class="side">
+    <slot name="aside" />
+    <pre data-role="output" class="output" data-label={ui['page.output']}></pre>
   </div>
-  <pre data-role="output" class="output" data-label={ui['page.output']}></pre>
 </section>
 
 <script>
@@ -50,8 +55,13 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     height: 100%;
     min-height: 0;
   }
+  .main,
+  .side {
+    display: contents;
+  }
   .field {
     display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 0.25rem;
     color: var(--soft);
     font-size: 0.8125rem;
@@ -264,6 +274,7 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     height: 3rem;
   }
   button {
+    order: 1;
     padding: 0.45rem 1.4rem;
     border: 0;
     border-radius: 0.5rem;
@@ -355,6 +366,31 @@ const { source, input = '', withInput = false, draft = '' } = Astro.props;
     .output {
       --shown-lines: 3;
       --edge: 0.4rem;
+    }
+  }
+  @media (min-width: 62rem) and (max-height: 50rem) {
+    .runner {
+      grid-template-rows: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) 22rem;
+      column-gap: 1rem;
+    }
+    .main,
+    .side {
+      display: grid;
+      gap: 0.5rem;
+      min-width: 0;
+      min-height: 0;
+    }
+    .main {
+      grid-template-rows: minmax(9rem, 1fr);
+      grid-auto-rows: auto;
+    }
+    .side {
+      grid-template-rows: 7rem minmax(0, 1fr);
+    }
+    .output {
+      grid-row: 2;
+      height: auto;
     }
   }
 </style>

@@ -51,6 +51,32 @@ for (const size of sizes) {
     expect(found.tallest, `${name}: ${found.which}`).toBeLessThanOrEqual(found.room + slack);
   });
 
+  test(`${name}: every line to add is shown in full`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await open(page, 'task');
+    const cut = await page.evaluate((allowance) => {
+      const card = document.querySelector<HTMLElement>('[data-role="snippet"]');
+      if (card === null) {
+        return ['no card'];
+      }
+      const lines = [...document.querySelectorAll<HTMLElement>('[data-beat][data-snippet]')].map(
+        (beat) => beat.dataset.snippet ?? '',
+      );
+      const before = card.textContent;
+      const found = [...new Set(lines)].filter((line) => {
+        card.textContent = line;
+        return (
+          card.clientWidth === 0 ||
+          card.scrollWidth > card.clientWidth + allowance ||
+          card.scrollHeight > card.clientHeight + allowance
+        );
+      });
+      card.textContent = before;
+      return found;
+    }, slack);
+    expect(cut).toEqual([]);
+  });
+
   test(`${name}: the dialogue box is the same height whatever is in it`, async ({ page }) => {
     await page.setViewportSize(size);
     await open(page);

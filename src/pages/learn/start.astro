@@ -22,8 +22,9 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
         <TypingDrill target={template} />
       </div>
       <div class="run-slot" data-show="run">
-        <pre class="snippet" data-role="snippet"></pre>
-        <CodeRunner source={starter} draft="start" />
+        <CodeRunner source={starter} draft="start">
+          <pre slot="aside" class="snippet" data-role="snippet"></pre>
+        </CodeRunner>
       </div>
     </div>
 
@@ -193,7 +194,21 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     border-radius: 0.4rem;
     background: color-mix(in oklch, var(--accent) 16%, var(--panel));
     font-size: 1.125rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     pointer-events: none;
+  }
+  @media (min-width: 62rem) and (max-height: 50rem) {
+    .scene[data-stage='run'] .run-slot[data-show] {
+      width: 100%;
+    }
+    .snippet {
+      position: static;
+      align-self: start;
+      max-width: none;
+      max-height: 100%;
+      overflow-y: auto;
+    }
   }
   .snippet:empty,
   .run-slot:has([data-code-runner][data-guided='true'][data-armed='true']) .snippet {
