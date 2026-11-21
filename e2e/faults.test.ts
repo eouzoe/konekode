@@ -130,12 +130,12 @@ const fillTheQuota = async (page: Page): Promise<void> => {
 };
 
 const waitsAtMostForATrouble = async (page: Page, sent: readonly Sent[]): Promise<void> => {
-  const began = Date.now();
+  const began = performance.now();
   await page.goto('/learn/start/');
   await page
     .locator('[data-scene][data-ready="true"]')
     .waitFor({ timeout: stallWait + 10 * second });
-  expect(Date.now() - began).toBeGreaterThanOrEqual(blockedWait);
+  expect(performance.now() - began).toBeGreaterThanOrEqual(blockedWait);
   await expect.poll(() => faultsIn(sent).filter((kind) => openTroubles.has(kind))).toHaveLength(1);
   const trouble = faultsIn(sent).find((kind) => openTroubles.has(kind)) ?? '';
   await expect(page.locator(notice)).toHaveText(say(openTroubles.get(trouble) ?? 'notice.blocked'));
