@@ -10,7 +10,10 @@ import {
 type Listener = (percent: number) => void;
 
 const timeLimit = 5000;
+const complete = 100;
 const listeners = new Set<Listener>();
+
+const quiet = { compiling: 30_000, loading: 20_000 };
 
 let compiler: Worker | null = null;
 let loaded = 0;
@@ -23,6 +26,7 @@ const getCompiler = (): Worker => {
 const discard = (worker: Worker): void => {
   if (worker === compiler) {
     compiler = null;
+    loaded = 0;
     worker.terminate();
   }
 };
@@ -33,9 +37,19 @@ const watchLoading = (listener: Listener): void => {
 
 const loadedPercent = (): number => loaded;
 
+const quietLimit = (): number => {
+  if (loaded < complete) {
+    return quiet.loading;
+  }
+  return quiet.compiling;
+};
+
 const readCompile = ({ data: message }: MessageEvent<CompileMessage>): CompileReply | null => {
   if (message.kind === 'done') {
     return message.reply;
+  }
+  if (message.kind === 'alive') {
+    return null;
   }
   loaded = message.percent;
   for (const listener of listeners) {
@@ -46,40 +60,84 @@ const readCompile = ({ data: message }: MessageEvent<CompileMessage>): CompileRe
 
 const readRun = ({ data }: MessageEvent<RunReply>): RunReply => data;
 
-const once = <Reply>(
-  worker: Worker,
-  message: unknown,
-  read: (event: MessageEvent) => Reply | null,
-): Promise<Reply> => {
+interface Exchange<Reply> {
+  readonly limit: (() => number) | null;
+  readonly message: unknown;
+  readonly read: (event: MessageEvent) => Reply | null;
+  readonly worker: Worker;
+}
+
+interface Watchdog {
+  readonly restart: () => void;
+  readonly stop: () => void;
+}
+
+const watchdog = (limit: (() => number) | null, onQuiet: (quietFor: number) => void): Watchdog => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const stop = (): void => {
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+  };
+  const restart = (): void => {
+    if (limit === null) {
+      return;
+    }
+    stop();
+    const quietFor = limit();
+    timer = setTimeout(() => {
+      onQuiet(quietFor);
+    }, quietFor);
+  };
+  return { restart, stop };
+};
+
+interface Handlers {
+  readonly error: (event: ErrorEvent) => void;
+  readonly message: (event: MessageEvent) => void;
+}
+
+const listen = (worker: Worker, signal: AbortSignal, handlers: Handlers): void => {
+  worker.addEventListener('message', handlers.message, { signal });
+  worker.addEventListener('error', handlers.error, { signal });
+};
+
+const once = <Reply>({ limit, message, read, worker }: Exchange<Reply>): Promise<Reply> => {
   const { promise, reject, resolve } = Promise.withResolvers<Reply>();
   const controller = new AbortController();
-  const { signal } = controller;
-  worker.addEventListener(
-    'message',
-    (event: MessageEvent) => {
+  const settle = (): void => {
+    guard.stop();
+    controller.abort();
+  };
+  const fail = (error: Error): void => {
+    settle();
+    discard(worker);
+    reject(error);
+  };
+  const guard = watchdog(limit, (quietFor) => {
+    fail(new Error(`the compiler said nothing for ${String(quietFor)} ms`));
+  });
+  listen(worker, controller.signal, {
+    error: (event) => {
+      fail(new Error(event.message));
+    },
+    message: (event) => {
       const reply = read(event);
-      if (reply !== null) {
-        controller.abort();
-        resolve(reply);
+      if (reply === null) {
+        guard.restart();
+        return;
       }
+      settle();
+      resolve(reply);
     },
-    { signal },
-  );
-  worker.addEventListener(
-    'error',
-    (event) => {
-      controller.abort();
-      discard(worker);
-      reject(new Error(event.message));
-    },
-    { signal },
-  );
+  });
+  guard.restart();
   worker.postMessage(message);
   return promise;
 };
 
 const finish = async (worker: Worker, request: RunRequest): Promise<Outcome> => {
-  const reply = await once(worker, request, readRun);
+  const reply = await once({ limit: null, message: request, read: readRun, worker });
   return { exitCode: reply.exitCode, kind: 'finished', output: reply.output };
 };
 
@@ -107,19 +165,22 @@ const compile = async (source: string): Promise<CompileReply> => {
   pending = promise;
   try {
     await previous;
-    return await once(getCompiler(), { source }, readCompile);
+    return await once({
+      limit: quietLimit,
+      message: { source },
+      read: readCompile,
+      worker: getCompiler(),
+    });
+  } catch (error) {
+    return { cause: 'compiler', message: String(error), ok: false };
   } finally {
     resolve(null);
   }
 };
 
 const warmUp = async (): Promise<boolean> => {
-  try {
-    await compile('int main() {}');
-    return true;
-  } catch {
-    return false;
-  }
+  const reply = await compile('int main() {}');
+  return reply.ok;
 };
 
 const isKnown = (source: string, input: string): boolean => knownOutcome(source, input) !== null;

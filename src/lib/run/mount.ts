@@ -106,6 +106,9 @@ const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<voi
   const place = { beat, unit: unitOf(parts.root) };
   const known = isKnown(source, input);
   noteRun({ forced, input, known, outcome, place, source, took: performance.now() - began });
+  if (outcome.kind === 'unavailable') {
+    noteFailure(place, new Error(outcome.message));
+  }
   finish(parts, { beat, forced, outcome });
 };
 

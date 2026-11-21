@@ -7,6 +7,7 @@ type CompileReply =
   | { readonly ok: true; readonly wasm: Uint8Array };
 
 type CompileMessage =
+  | { readonly kind: 'alive' }
   | { readonly kind: 'done'; readonly reply: CompileReply }
   | { readonly kind: 'progress'; readonly percent: number };
 
