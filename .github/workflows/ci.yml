@@ -17,7 +17,7 @@ permissions:
 jobs:
   check:
     name: 檢查與建置
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       full: ${{ steps.tier.outputs.full }}
@@ -49,7 +49,7 @@ jobs:
     name: 端到端（ubuntu，chromium）
     needs: check
     if: needs.check.outputs.full != 'true'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: actions/checkout v7.0.1
@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-26.04, macos-latest]
+        os: [ubuntu-24.04, macos-latest]
         browser: [chromium, firefox, webkit]
         shard: [1/2, 2/2]
     steps:
@@ -141,7 +141,7 @@ jobs:
     name: 部署
     needs: [e2e-nix, e2e-windows]
     if: github.event_name == 'push' && github.ref_name == 'main' && vars.DEPLOY == 'true'
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: production
     steps:
