@@ -60,6 +60,7 @@ const sitemapXml = (origin: URL | string, paths: readonly string[]): string => {
 const websiteData = (origin: URL | string): Readonly<Record<string, unknown>> => ({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  alternateName: site.alternateName,
   description: site['home.description'],
   inLanguage: language,
   name: site.name,
