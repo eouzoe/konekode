@@ -1,4 +1,5 @@
 import { baseFlags, pchMagic, pchName, pchUrl } from './flags';
+import { fetchInParts } from './parts';
 import { type CompileMessage, type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
@@ -44,7 +45,20 @@ const fetchHeader = async (): Promise<Uint8Array | null> => {
   }
 };
 
+const fetchWhole = globalThis.fetch.bind(globalThis);
+
+const useParts = (): void => {
+  if (!import.meta.env.PROD) {
+    return;
+  }
+  const inParts = fetchInParts(fetchWhole, globalThis.location.href, () => {
+    post({ kind: 'alive' });
+  });
+  globalThis.fetch = Object.assign(inParts, { preconnect: globalThis.fetch.preconnect });
+};
+
 const load = async (): Promise<Tools> => {
+  useParts();
   const clang = await import('@yowasp/clang');
   const [header] = await Promise.all([
     fetchHeader(),

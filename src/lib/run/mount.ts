@@ -34,7 +34,6 @@ interface Parts {
   readonly status: HTMLElement;
 }
 
-const firstTouch = ['pointerdown', 'keydown'];
 const find = <Kind extends HTMLElement>(
   root: Element,
   role: string,
@@ -107,6 +106,9 @@ const runOnce = async (parts: Parts, beat: string, forced: boolean): Promise<voi
   const place = { beat, unit: unitOf(parts.root) };
   const known = isKnown(source, input);
   noteRun({ forced, input, known, outcome, place, source, took: performance.now() - began });
+  if (outcome.kind === 'unavailable') {
+    noteFailure(place, new Error(outcome.message));
+  }
   finish(parts, { beat, forced, outcome });
 };
 
@@ -125,19 +127,26 @@ const execute = async (parts: Parts, forced: boolean): Promise<void> => {
   }
 };
 
-const preload = (): void => {
-  const controller = new AbortController();
-  const { signal } = controller;
-  for (const name of firstTouch) {
-    document.addEventListener(
-      name,
-      () => {
-        controller.abort();
-        void warmUp();
-      },
-      { signal },
-    );
+const whenIdle = (task: () => void): void => {
+  if ('requestIdleCallback' in globalThis) {
+    requestIdleCallback(task);
+    return;
   }
+  setTimeout(task, 0);
+};
+
+const warmWhenIdle = (): void => {
+  whenIdle(() => {
+    void warmUp();
+  });
+};
+
+const preload = (): void => {
+  if (document.readyState === 'complete') {
+    warmWhenIdle();
+    return;
+  }
+  globalThis.addEventListener('load', warmWhenIdle, { once: true });
 };
 
 const rules = (): Rules => ({ keys: engine.keys(), pairs: engine.pairs() });

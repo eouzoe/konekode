@@ -5,10 +5,9 @@ interface Env {
   readonly INTAKE?: Database;
 }
 
-const types: Record<string, string> = { tar: 'application/x-tar', wasm: 'application/wasm' };
-const packed = /\.(?<kind>tar|wasm)$/u;
+const part = /^\/parts\/[\da-f]{64}$/u;
 
-const servePacked = async (request: Request, env: Env, kind: string): Promise<Response> => {
+const servePart = async (request: Request, env: Env): Promise<Response> => {
   const url = new URL(request.url);
   url.pathname += '.br';
   const stored = await env.ASSETS.fetch(new Request(url, { method: request.method }));
@@ -20,7 +19,7 @@ const servePacked = async (request: Request, env: Env, kind: string): Promise<Re
     headers: {
       'cache-control': 'public, max-age=31536000, immutable',
       'content-encoding': 'br',
-      'content-type': types[kind] ?? 'application/octet-stream',
+      'content-type': 'application/octet-stream',
       'x-content-type-options': 'nosniff',
     },
   };
@@ -32,11 +31,10 @@ const serve = (request: Request, env: Env): Promise<Response> | Response => {
   if (url.pathname === intakePath) {
     return acceptIntake(request, url, env.INTAKE);
   }
-  const kind = packed.exec(url.pathname)?.groups?.kind;
-  if (kind === undefined) {
-    return env.ASSETS.fetch(request);
+  if (part.test(url.pathname)) {
+    return servePart(request, env);
   }
-  return servePacked(request, env, kind);
+  return env.ASSETS.fetch(request);
 };
 
 const handler = { fetch: serve };
