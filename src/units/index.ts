@@ -102,11 +102,14 @@ const shownAt = (unit: string, beat: string): readonly string[] =>
 
 const unitContent = (): unknown => ({ catalog, units });
 
+const engineContent = (version: string): string => JSON.stringify({ catalog, units, version });
+
 export {
   allChecks,
   allDomains,
   beatsOf,
   checksOf,
+  engineContent,
   pathFor,
   planOf,
   shownAt,

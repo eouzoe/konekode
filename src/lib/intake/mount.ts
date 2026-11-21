@@ -1,5 +1,5 @@
 import { guard, onFault, report } from '@/lib/fault/fault';
-import { keptKinds } from '@/lib/learner/kinds';
+import { keptKindsNow } from '@/lib/learner/engine';
 import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
 
 import { environment, siteVersion } from './environment';
@@ -89,7 +89,11 @@ const sendAll = async (state: State, batches: readonly Batch[]): Promise<void> =
 };
 
 const prune = (state: State): void => {
-  const ids = settled(recorded(), state.acked, keptKinds).filter((id) => !state.forgotten.has(id));
+  const kept = keptKindsNow();
+  if (kept === null) {
+    return;
+  }
+  const ids = settled(recorded(), state.acked, kept).filter((id) => !state.forgotten.has(id));
   for (const id of ids) {
     state.forgotten.add(id);
   }

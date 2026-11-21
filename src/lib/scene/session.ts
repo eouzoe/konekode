@@ -1,14 +1,13 @@
 import { guard } from '@/lib/fault/fault';
-import { unitState, type UnitState } from '@/lib/learner/progress';
-import { flushLog, openLog, track } from '@/lib/record/current';
+import { openEngine, shownAt, unitProgress, type UnitState } from '@/lib/learner/engine';
+import { flushLog, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
-import { shownAt } from '@/units/index';
 
 type ReadUnit = (unit: string) => UnitState;
 
 const openSession = async (): Promise<ReadUnit> => {
-  const log = await openLog();
-  return (unit) => unitState(log.events(), unit);
+  await openEngine();
+  return unitProgress;
 };
 
 const noteReached = (unit: string, beat: string): void => {

@@ -34,6 +34,9 @@ format:
 test:
     bun test src worker
 
+engine-update engine="../konekode-engine":
+    bun src/lib/learner/engine.build.ts {{ engine }}
+
 results:
     bun src/units/results.build.ts
     bun x oxfmt --write src/units/results.ts

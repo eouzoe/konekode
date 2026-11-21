@@ -1,0 +1,22 @@
+{
+  "commit": "fa10f122a82bfc1c8c1f3ac6abd047e706878749",
+  "files": {
+    "konekode_wasm.js": {
+      "built": "2026-11-21T02:49:41.141Z",
+      "sha256": "2566619e534da434858390454110c193a8ef49793584c61dad10d2cc16538366"
+    },
+    "konekode_wasm.d.ts": {
+      "built": "2026-11-21T02:49:41.141Z",
+      "sha256": "d4206dd2b197f586d9b4575ed29d46aaec6c2066aca347821f50d5bae66bdcd3"
+    },
+    "konekode_wasm_bg.wasm": {
+      "built": "2026-11-21T02:49:41.141Z",
+      "sha256": "d83f92e2f66129e6d03101a028f36bb6c138cf97e691162f8a1f8036b988bc8f"
+    },
+    "konekode_wasm_bg.wasm.d.ts": {
+      "built": "2026-11-21T02:49:41.141Z",
+      "sha256": "ee60e1819778fcd25f1667a7fccd9cf282082250102b24d2a85c16b0f9d08f92"
+    }
+  },
+  "repository": "konekode-engine"
+}

@@ -1,4 +1,4 @@
-import { unlockedNow } from '@/lib/learner/live';
+import { unlockedNow } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
 
 import { beatSchema, type BeatMeta } from './machine';

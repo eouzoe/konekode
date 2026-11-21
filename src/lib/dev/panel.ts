@@ -1,10 +1,15 @@
 import { components } from '@/lib/learner/domain';
-import { componentOf, learnerModel, recollect, type Component } from '@/lib/learner/model';
-import { unitState } from '@/lib/learner/progress';
-import { flushLog, onRecorded, openLog, recorded, track } from '@/lib/record/current';
+import {
+  engineComponents,
+  openEngine,
+  shownAt,
+  unitProgress,
+  type EngineComponent,
+} from '@/lib/learner/engine';
+import { flushLog, onRecorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
 import { ui } from '@/lib/text/ui';
-import { allDomains, beatsOf, shownAt } from '@/units/index';
+import { beatsOf } from '@/units/index';
 
 import { textEditor, type Editor } from './edit';
 import { jumpTo, skipFrom, type Entry } from './jump';
@@ -55,7 +60,7 @@ const apply = async (unit: string, entries: readonly Entry[]): Promise<void> => 
 };
 
 const positionOf = (unit: string): string =>
-  unitState(recorded(), unit).position ?? beatsOf(unit)[0]?.id ?? '';
+  unitProgress(unit).position ?? beatsOf(unit)[0]?.id ?? '';
 
 const jumpButton = (unit: string, at: number): HTMLLIElement => {
   const item = make('li');
@@ -102,51 +107,23 @@ const noteSheet = (unit: string): HTMLDialogElement => {
 };
 
 const standings: Record<string, string> = { done: '自己做過', shown: '看過示範', unseen: '沒看過' };
-const columns = [
-  '知識點',
-  '狀態',
-  '看過示範',
-  '機會',
-  '第一下就對',
-  '做到了',
-  '最近一次第一下錯',
-  'BKT（只記錄）',
-  '還記得的機率（只記錄）',
-  '下次確認',
-];
+const columns = ['知識點', '狀態', '看過示範', '機會', '第一下就對', '做到了', '最近一次第一下錯'];
 const marks: Record<string, string> = { false: '', true: '是' };
-const digits = 3;
 
-const hoursInDay = 24;
-const minutesInHour = 60;
-
-const checkIn = (days: number): string => {
-  const hours = days * hoursInDay;
-  if (days <= 0) {
-    return '到期了';
-  }
-  if (days >= 1) {
-    return `${days.toFixed(1)} 天後`;
-  }
-  if (hours >= 1) {
-    return `${hours.toFixed(1)} 小時後`;
-  }
-  return `${String(Math.ceil(hours * minutesInHour))} 分鐘後`;
-};
-
-const memoryCells = (item: Component, at: number): string[] => {
-  const view = recollect(item, at);
-  if (view === null) {
-    return ['', ''];
-  }
-  return [view.recall.toFixed(digits), checkIn(view.daysLeft)];
-};
+const unseen = (id: string): EngineComponent => ({
+  completed: 0,
+  firstRight: 0,
+  id,
+  opportunities: 0,
+  shown: 0,
+  standing: 'unseen',
+  unsettled: false,
+});
 
 const modelRows = (): HTMLTableRowElement[] => {
-  const model = learnerModel(recorded(), allDomains());
-  const at = Date.now();
+  const known = new Map(engineComponents().map((item) => [item.id, item]));
   return components.map((id) => {
-    const item = componentOf(model, id);
+    const item = known.get(id) ?? unseen(id);
     const row = make('tr');
     const cells = [
       id,
@@ -156,8 +133,6 @@ const modelRows = (): HTMLTableRowElement[] => {
       item.firstRight,
       item.completed,
       marks[String(item.unsettled)],
-      item.estimate.toFixed(digits),
-      ...memoryCells(item, at),
     ];
     row.append(...cells.map((value) => make('td', String(value))));
     return row;
@@ -174,13 +149,7 @@ const modelSheet = (): HTMLDialogElement => {
   sheet.addEventListener('toggle', () => {
     body.replaceChildren(...modelRows());
   });
-  sheet.append(
-    make(
-      'strong',
-      '學生模型（由事件紀錄算出來；第一版只有指令鍵；BKT 與記憶都只記錄、不決定任何事）',
-    ),
-    table,
-  );
+  sheet.append(make('strong', '學生模型（引擎由事件紀錄算出來；第一版只有指令鍵）'), table);
   return sheet;
 };
 
@@ -267,7 +236,7 @@ const jumpFromAddress = async (unit: string): Promise<boolean> => {
 };
 
 const mountDevPanel = async (): Promise<void> => {
-  await openLog();
+  await openEngine();
   const unit = document.querySelector<HTMLElement>('[data-scene]')?.dataset.unit;
   if (unit === undefined || (await jumpFromAddress(unit))) {
     return;

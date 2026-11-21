@@ -1,7 +1,7 @@
 import { type Pressed } from '@/lib/edit/session';
 import { report } from '@/lib/fault/fault';
+import { usedAt } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
-import { usedAt } from '@/units/index';
 
 import { type Outcome } from './protocol';
 
