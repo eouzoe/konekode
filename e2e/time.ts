@@ -47,4 +47,12 @@ const focusArrives = async (page: Page, selector: string): Promise<void> => {
   }
 };
 
-export { focusArrives, holdTime, isHeld, pass, passUntil };
+const laterStep = 250;
+
+const laterStarts = async (page: Page): Promise<void> => {
+  const started = async (): Promise<boolean> =>
+    await page.evaluate(() => document.documentElement.dataset.later === 'started');
+  await passUntil(page, started, { every: laterStep, label: 'the work kept for later' });
+};
+
+export { focusArrives, holdTime, isHeld, laterStarts, pass, passUntil };

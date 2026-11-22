@@ -20,7 +20,7 @@ import {
 import { noteFailure, noteRun } from './note';
 import { busyStatus, describe, failed, type View } from './outcome';
 import { type Outcome } from './protocol';
-import { isKnown, loadedPercent, runProgram, warmUp, watchLoading } from './runner';
+import { isKnown, loadedPercent, runProgram, watchLoading } from './runner';
 import { createStage } from './stage';
 
 interface Parts {
@@ -34,7 +34,6 @@ interface Parts {
   readonly status: HTMLElement;
 }
 
-const firstTouch = ['pointerdown', 'keydown'];
 const find = <Kind extends HTMLElement>(
   root: Element,
   role: string,
@@ -122,21 +121,6 @@ const execute = async (parts: Parts, forced: boolean): Promise<void> => {
     fail(parts, beat, error);
   } finally {
     parts.button.disabled = !isArmed(parts);
-  }
-};
-
-const preload = (): void => {
-  const controller = new AbortController();
-  const { signal } = controller;
-  for (const name of firstTouch) {
-    document.addEventListener(
-      name,
-      () => {
-        controller.abort();
-        void warmUp();
-      },
-      { signal },
-    );
   }
 };
 
@@ -256,12 +240,8 @@ const mountRunner = (root: HTMLElement): void => {
 };
 
 const mountRunners = (): void => {
-  const roots = [...document.querySelectorAll<HTMLElement>('[data-code-runner]')];
-  for (const root of roots) {
+  for (const root of document.querySelectorAll<HTMLElement>('[data-code-runner]')) {
     mountRunner(root);
-  }
-  if (roots.length > 0) {
-    preload();
   }
 };
 

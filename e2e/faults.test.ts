@@ -9,6 +9,7 @@ import {
 import { say, type UiKey } from '../src/lib/text/ui';
 import { currentId } from './scene-view';
 import { expect, test, type Page } from './test';
+import { laterStarts } from './time';
 
 interface Sent {
   readonly data: Readonly<Record<string, unknown>>;
@@ -175,6 +176,7 @@ test.describe('when the browser cannot keep what the learner does', () => {
     const sent = watchUploads(page);
     await page.clock.install();
     await openUnit(page);
+    await laterStarts(page);
     await expect(page.locator(notice)).toHaveText(say('notice.unsaved'));
     await expect.poll(() => faultsIn(sent)).toContain('storage.unavailable');
     await nextSentence(page);
@@ -290,6 +292,7 @@ test.describe('when the intake fails', () => {
     const sent = watchUploads(page);
     await page.clock.install();
     await openUnit(page);
+    await laterStarts(page);
     await nextSentence(page);
     const refused = page.waitForResponse((response) => intake.test(response.url()));
     await page.clock.fastForward(timing.maxWait + tick);

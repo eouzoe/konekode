@@ -2,11 +2,12 @@ import { guard, onFault, report } from '@/lib/fault/fault';
 import { keptKindsNow } from '@/lib/learner/engine';
 import { forgetRecorded, openLog, recorded, track } from '@/lib/record/current';
 
-import { environment, siteVersion } from './environment';
+import { siteVersion } from './environment';
 import { observePage } from './observe';
 import { acknowledge, pendingBatches, settled, type Acked, type Batch } from './pending';
 import { fitBytes, free, holdAfter, isDue, isHeld, prefixBatch, timing, type Hold } from './plan';
 import { stored, upload, uploadNow, type Answer, type Ticket } from './send';
+import { beginSession } from './session';
 import { readAcked, readHold, writeAcked, writeHold } from './stored';
 
 interface State {
@@ -186,7 +187,7 @@ const startIntake = async (): Promise<void> => {
     site: siteVersion(),
     wanted: false,
   };
-  track('session.started', { data: environment(state.site) });
+  beginSession();
   observePage(state.site);
   keepSending(state);
 };

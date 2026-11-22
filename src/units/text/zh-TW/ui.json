@@ -65,6 +65,7 @@
   "page.expect": "應該輸出",
   "page.output": "輸出",
   "page.run": "執行",
+  "page.supplying": "正在準備這一段要用的東西",
   "page.typeHere": "在這裡打字",
   "notice.unsaved": "這個瀏覽器現在存不了進度。可以繼續學，但重新整理或關掉之後，會回到上一次存好的地方。",
   "notice.blocked": "另一個分頁還開著舊版的網站，所以現在存不了進度。把其他分頁關掉，再重新整理就好。",

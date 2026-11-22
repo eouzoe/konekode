@@ -1,5 +1,6 @@
 import { timing } from '../src/lib/intake/plan';
 import { expect, test, type Page } from './test';
+import { laterStarts } from './time';
 
 const stored = 204;
 const refusedMethod = 405;
@@ -31,6 +32,7 @@ const openUnit = async (page: Page): Promise<void> => {
   await page.clock.install();
   await page.goto('/learn/start/');
   await page.locator('[data-scene][data-ready="true"]').waitFor();
+  await laterStarts(page);
 };
 
 const leave = async (page: Page, hidden: boolean): Promise<void> => {

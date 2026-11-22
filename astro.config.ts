@@ -6,6 +6,7 @@ import { constants, createBrotliCompress } from 'node:zlib';
 
 import { defineConfig } from 'astro/config';
 
+import { finishOffline } from './src/lib/site/offline.build';
 import { textEditing } from './text.config';
 
 const packed = /\.(?:tar|wasm)$/u;
@@ -76,11 +77,15 @@ const readVersion = async (name: string): Promise<string> => {
 const compiler = await readVersion('@yowasp/clang');
 
 export default defineConfig({
+  build: {
+    inlineStylesheets: 'always',
+  },
   integrations: [
     {
       hooks: {
         'astro:build:done': async ({ dir }) => {
           await packAssets(dir);
+          await finishOffline(dir);
         },
       },
       name: 'pack-large-assets',

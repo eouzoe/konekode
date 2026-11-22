@@ -1,14 +1,18 @@
 import { createActor, type Actor, type SnapshotFrom } from 'xstate';
 
-import { diagnose } from '@/lib/run/diagnose';
+import { type UnitState } from '@/lib/learner/engine';
+import { type Supply } from '@/lib/supply/supply';
 
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
+import { type Early } from './early';
+import { fillExpect, fillInput, markLines, mismatchNote, showBeats } from './fill';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
 import { grantUnlocks, readMeta } from './meta';
 import { createReveal, type Reveal } from './reveal';
-import { noteCheck, noteReached, openSession, restart, type ReadUnit } from './session';
+import { noteCheck, noteReached, restart, type ReadUnit } from './session';
+import { supplyScene } from './supplies';
 
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 
@@ -24,21 +28,16 @@ interface Scene {
   readonly root: HTMLElement;
   readonly snippet: HTMLElement | null;
   readonly stdin: HTMLElement | null;
+  readonly supply: Supply;
   timer: ReturnType<typeof setTimeout> | null;
   readonly unit: string;
   waiting: boolean;
 }
 
 const forward = 1;
-const markLines = (scene: Scene, beat: HTMLElement): void => {
-  const marked = new Set((beat.dataset.lines ?? '').split(','));
-  for (const line of scene.lines) {
-    line.dataset.marked = String(marked.has(line.dataset.line ?? ''));
-  }
-};
 
 const showStage = (scene: Scene, beat: HTMLElement): void => {
-  markLines(scene, beat);
+  markLines(scene.lines, beat);
   if (scene.snippet !== null) {
     scene.snippet.textContent = beat.dataset.snippet ?? '';
   }
@@ -49,51 +48,15 @@ const showStage = (scene: Scene, beat: HTMLElement): void => {
   });
 };
 
-const fillInput = (scene: Scene, beat: HTMLElement): void => {
-  const { input } = beat.dataset;
-  if (scene.stdin === null || input === undefined) {
-    return;
-  }
-  scene.stdin.textContent = input;
-  const field = scene.stdin.closest<HTMLElement>('[data-role="field"]');
-  if (field !== null) {
-    field.hidden = false;
-  }
-};
-
-const fillExpect = (scene: Scene, beat: HTMLElement): void => {
-  const field = scene.expect?.closest<HTMLElement>('[data-role="expect-field"]');
-  if (scene.expect === null || field === null || field === undefined) {
-    return;
-  }
-  scene.expect.textContent = beat.dataset.expect ?? '';
-  field.hidden = beat.dataset.expect === undefined;
-};
-
 const fillBoxes = (scene: Scene, beat: HTMLElement): void => {
-  fillInput(scene, beat);
-  fillExpect(scene, beat);
+  fillInput(scene.stdin, beat);
+  fillExpect(scene.expect, beat);
 };
-
-const mismatchNote = (scene: Scene): string =>
-  diagnose(
-    scene.beats[scene.index]?.dataset.expect ?? '',
-    scene.root.querySelector('[data-role="output"]')?.textContent ?? '',
-  );
 
 const setNote = (scene: Scene, text: string): void => {
   if (scene.note !== null) {
     scene.note.textContent = text;
   }
-};
-
-const isShown = (scene: Scene, at: number): boolean => {
-  if (at > scene.index) {
-    return false;
-  }
-  return scene.beats
-    .slice(at + forward, scene.index + forward)
-    .every((beat) => beat.dataset.append === 'true');
 };
 
 const step = (scene: Scene, type: Move): void => {
@@ -113,8 +76,13 @@ const schedule = (scene: Scene, beat: HTMLElement): void => {
   }
 };
 
+const supplied = (scene: Scene): boolean => {
+  const missing = scene.supply.missing(scene.index);
+  scene.root.dataset.supplying = String(missing.length > 0);
+  return missing.length === 0;
+};
+
 const focusTyping = (scene: Scene, beat: HTMLElement): void => {
-  grantUnlocks(scene.unit, beat);
   const typing = scene.root.querySelector<HTMLElement>('[data-role="input"]');
   if (beat.dataset.wait === 'drill' && scene.waiting) {
     typing?.focus();
@@ -124,19 +92,27 @@ const focusTyping = (scene: Scene, beat: HTMLElement): void => {
   stageRun(scene.root, scene.beats, beat.dataset.wait === 'run' && scene.waiting);
 };
 
+const equip = (scene: Scene): void => {
+  const beat = scene.beats[scene.index];
+  if (beat === undefined || !supplied(scene)) {
+    return;
+  }
+  direct(scene.root, scene.beats, scene.index);
+  focusTyping(scene, beat);
+};
+
 const show = (scene: Scene): void => {
   const beat = scene.beats[scene.index];
   if (beat === undefined) {
     return;
   }
-  for (const [at, other] of scene.beats.entries()) {
-    other.hidden = !isShown(scene, at);
-  }
-  direct(scene.root, scene.beats, scene.index);
+  showBeats(scene.beats, scene.index);
+  scene.supply.advance(scene.index);
+  grantUnlocks(scene.unit, beat);
   schedule(scene, beat);
   showStage(scene, beat);
   fillBoxes(scene, beat);
-  focusTyping(scene, beat);
+  equip(scene);
 };
 
 const notePassed = (scene: Scene, passed: readonly string[]): void => {
@@ -153,7 +129,7 @@ const enter = (scene: Scene, index: number): boolean => {
   const beat = scene.beats[index];
   if (index === scene.index) {
     scene.root.dataset.waiting = String(scene.waiting);
-    if (beat !== undefined && scene.waiting) {
+    if (beat !== undefined && scene.waiting && supplied(scene)) {
       focusTyping(scene, beat);
     }
     return false;
@@ -191,7 +167,7 @@ const sync = (scene: Scene, snapshot: SnapshotFrom<typeof sceneMachine>): void =
   scene.waiting = snapshot.matches('blocked');
   speak(scene, snapshot.matches('revealing'), enter(scene, index));
   if (mismatch) {
-    setNote(scene, mismatchNote(scene));
+    setNote(scene, mismatchNote(scene.root, scene.beats[scene.index]));
     return;
   }
   setNote(scene, '');
@@ -234,17 +210,36 @@ const listen = (scene: Scene): void => {
   });
 };
 
-const build = (root: HTMLElement, read: ReadUnit): Scene => {
-  const beats = [...root.querySelectorAll<HTMLElement>('[data-beat]')];
-  const unit = root.dataset.unit ?? '';
-  const state = read(unit);
+interface Held {
+  scene: Scene | null;
+}
+
+const supplyFor = (root: HTMLElement, beats: readonly HTMLElement[], held: Held): Supply =>
+  supplyScene(root, beats, () => {
+    if (held.scene?.root.dataset.supplying === 'true') {
+      equip(held.scene);
+    }
+  });
+
+const startActor = (
+  beats: readonly HTMLElement[],
+  state: UnitState,
+): Actor<typeof sceneMachine> => {
   const metas = beats.map((beat) => readMeta(beat));
   const actor = createActor(sceneMachine, {
     input: { beats: metas, passed: [...state.passed], position: state.position },
   });
   actor.start();
+  return actor;
+};
+
+const build = (root: HTMLElement, read: ReadUnit): Scene => {
+  const beats = [...root.querySelectorAll<HTMLElement>('[data-beat]')];
+  const held: Held = { scene: null };
+  const unit = root.dataset.unit ?? '';
+  const actor = startActor(beats, read(unit));
   const first = actor.getSnapshot();
-  return {
+  held.scene = {
     actor,
     beats,
     expect: root.querySelector<HTMLElement>('[data-role="expect"]'),
@@ -256,16 +251,33 @@ const build = (root: HTMLElement, read: ReadUnit): Scene => {
     root,
     snippet: root.querySelector<HTMLElement>('[data-role="snippet"]'),
     stdin: root.querySelector<HTMLElement>('[data-role="stdin"]'),
+    supply: supplyFor(root, beats, held),
     timer: null,
     unit,
     waiting: first.matches('blocked'),
   };
+  return held.scene;
 };
 
-const mountScene = (root: HTMLElement, read: ReadUnit): void => {
+const opening = 0;
+
+const begin = (scene: Scene, early: Early): void => {
+  if (scene.index !== opening) {
+    startReveal(scene);
+    early();
+    return;
+  }
+  scene.actor.send({ type: 'REVEALED' });
+  if (early()) {
+    step(scene, 'NEXT');
+  }
+};
+
+const mountScene = async (root: HTMLElement, read: ReadUnit, early: Early): Promise<void> => {
   const scene = build(root, read);
+  await scene.supply.until(scene.index);
   for (const beat of scene.beats.slice(0, scene.index)) {
-    fillInput(scene, beat);
+    fillInput(scene.stdin, beat);
     grantUnlocks(scene.unit, beat);
   }
   scene.actor.subscribe((snapshot) => {
@@ -274,14 +286,7 @@ const mountScene = (root: HTMLElement, read: ReadUnit): void => {
   listen(scene);
   root.dataset.ready = 'true';
   show(scene);
-  startReveal(scene);
+  begin(scene, early);
 };
 
-const mountScenes = async (): Promise<void> => {
-  const read = await openSession();
-  for (const root of document.querySelectorAll<HTMLElement>('[data-scene]')) {
-    mountScene(root, read);
-  }
-};
-
-export { mountScenes };
+export { mountScene };

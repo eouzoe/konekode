@@ -1,0 +1,14 @@
+{
+  "prefetch": [
+    {
+      "where": { "selector_matches": "a[data-prepare]" },
+      "eagerness": "immediate"
+    }
+  ],
+  "prerender": [
+    {
+      "where": { "selector_matches": "a[data-prepare]" },
+      "eagerness": "moderate"
+    }
+  ]
+}

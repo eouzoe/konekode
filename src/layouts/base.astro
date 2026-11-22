@@ -37,14 +37,16 @@ const structured = scriptJson(data);
       import { startDev } from '@/lib/dev/start';
       import { guard, watchUncaught } from '@/lib/fault/fault';
       import { mountNotice } from '@/lib/fault/notice';
-      import { startIntake } from '@/lib/intake/mount';
+      import { startLater } from '@/lib/site/later';
+      import { reloadOnStaleCode } from '@/lib/site/stale';
 
       watchUncaught();
+      reloadOnStaleCode();
       const notice = document.querySelector<HTMLElement>('[data-role="site-notice"]');
       if (notice !== null) {
         mountNotice(notice);
       }
-      guard('intake', startIntake());
+      startLater();
       if (import.meta.env.PUBLIC_MODE === 'dev') {
         guard('dev', startDev());
       }

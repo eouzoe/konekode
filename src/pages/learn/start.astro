@@ -3,18 +3,23 @@ import CodeRunner from '@/components/code-runner.astro';
 import TypingDrill from '@/components/typing-drill.astro';
 import Base from '@/layouts/base.astro';
 import { lessonData, pages, site } from '@/lib/site/pages';
+import { dues } from '@/lib/supply/plan';
+import { rules } from '@/lib/supply/rules';
 import { ui } from '@/lib/text/ui';
 import { beats, starter, template } from '@/units/start';
 
 const codeLines = template.split('\n');
 const data = lessonData(Astro.site ?? Astro.url, pages.start);
+const needs = JSON.stringify(dues(beats, rules));
+const opening = beats[0]?.stage ?? 'empty';
 ---
 
 <Base page={pages.start} data={data} full>
   <p class="plain">{site['start.plain']} <a href={pages.home.path}>{site.name}</a></p>
   <p class="needs-keyboard">{ui['page.needsKeyboard']}</p>
-  <section class="scene" data-scene data-unit="start">
+  <section class="scene" data-scene data-unit="start" data-stage={opening} data-needs={needs}>
     <div class="stage">
+      <p class="supplying" role="status">{ui['page.supplying']}</p>
       <div class="code" data-show="code">
         {codeLines.map((line, at) => <span class="line" data-line={String(at + 1)} set:text={line} />)}
       </div>
@@ -71,13 +76,14 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
 
 <script>
   import { guard } from '@/lib/fault/fault';
-  import { mountScenes } from '@/lib/scene/mount';
+  import { mountScenes } from '@/lib/scene/start';
 
   guard('scenes', mountScenes());
 </script>
 
 <style>
   .plain {
+    display: none;
     margin: 0;
     padding: 1rem;
     background: var(--panel);
@@ -85,11 +91,6 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   }
   .plain a {
     color: var(--accent);
-  }
-  @media (scripting: enabled) {
-    .plain {
-      display: none;
-    }
   }
   .needs-keyboard {
     display: none;
@@ -110,22 +111,61 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     grid-template-rows: minmax(0, 1fr) auto;
     gap: 1rem;
     width: min(100% - 3rem, 80rem);
+    height: 100dvh;
     margin: 0 auto;
     padding: 1.5rem 0;
   }
-  .scene[data-ready='true'] {
-    height: 100dvh;
+  .scene:not([data-ready='true']) [data-beat]:not(:first-child) {
+    display: none;
   }
-  @media (scripting: enabled) {
-    .scene:not([data-ready='true']) {
-      visibility: hidden;
-    }
+  .scene:not([data-ready='true']) .tools {
+    visibility: hidden;
   }
   .stage {
+    position: relative;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
     overflow-y: auto;
+  }
+  .supplying {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: none;
+    place-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    background: color-mix(in oklch, var(--page) 70%, transparent);
+    color: var(--soft);
+    font-size: 1.125rem;
+  }
+  .supplying::after {
+    content: '';
+    width: 10rem;
+    height: 0.25rem;
+    border-radius: 999px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent) 0 0 / 50% 100%
+      no-repeat var(--line);
+    animation: sweep 1.2s linear infinite;
+  }
+  @keyframes sweep {
+    from {
+      background-position: -50% 0;
+    }
+    to {
+      background-position: 150% 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .supplying::after {
+      animation: none;
+      background-position: 50% 0;
+    }
+  }
+  .scene[data-ready='true'][data-supplying='true'] .supplying {
+    display: grid;
   }
   .code {
     align-self: safe center;
@@ -152,7 +192,7 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   .line[data-marked='true'] {
     background: color-mix(in oklch, var(--accent) 22%, transparent);
   }
-  .scene[data-ready='true'] [data-show] {
+  .scene [data-show] {
     display: none;
     animation: appear 0.45s ease both;
   }
@@ -163,7 +203,7 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .scene[data-ready='true'] [data-show] {
+    .scene [data-show] {
       animation: none;
     }
   }
@@ -229,12 +269,10 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     border: 1px solid var(--line);
     border-radius: 1.1rem;
     background: var(--panel);
-    font-size: 1.375rem;
-    line-height: 1.75;
-  }
-  .scene[data-ready='true'] .dialogue {
     grid-template-rows: minmax(0, 1fr) var(--note-line);
     height: calc(var(--shown-lines) * 1lh + 2 * var(--edge) + var(--note-line) + 2px);
+    font-size: 1.375rem;
+    line-height: 1.75;
     cursor: pointer;
   }
   @media (max-width: 60rem) and (min-height: 50.0625rem), (max-width: 52rem) {
@@ -274,16 +312,11 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   }
   .words {
     min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .scene[data-ready='true'] .words {
     max-height: 100%;
     overflow-y: auto;
+    overflow-wrap: anywhere;
   }
   .words p {
-    margin: 0 0 0.5rem;
-  }
-  .scene[data-ready='true'] .words p {
     margin: 0;
   }
   .note {
@@ -297,17 +330,11 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .scene:not([data-ready='true']) .note:empty {
-    display: none;
-  }
   .tools {
     display: grid;
     grid-column: 3;
     grid-row: 1;
     justify-items: end;
-  }
-  .scene:not([data-ready='true']) .tools {
-    display: none;
   }
   .back {
     border: 0;
@@ -337,7 +364,6 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
     }
   }
   .scene:not([data-ready='true']) .more,
-  .scene:not([data-ready='true']) .back,
   .scene[data-waiting='true'] .more,
   .scene[data-revealing='true'] .more,
   .scene[data-last='true'] .more {
@@ -351,6 +377,35 @@ const data = lessonData(Astro.site ?? Astro.url, pages.start);
   @media (prefers-reduced-motion: reduce) {
     .more {
       animation: none;
+    }
+  }
+  @media (scripting: none) {
+    .plain {
+      display: block;
+    }
+    .scene {
+      height: auto;
+    }
+    .scene [data-show],
+    .scene:not([data-ready='true']) [data-beat]:not(:first-child) {
+      display: block;
+      animation: none;
+    }
+    .dialogue {
+      grid-template-rows: none;
+      height: auto;
+      cursor: auto;
+    }
+    .words {
+      max-height: none;
+      overflow-y: visible;
+    }
+    .words p {
+      margin: 0 0 0.5rem;
+    }
+    .note:empty,
+    .tools {
+      display: none;
     }
   }
 </style>

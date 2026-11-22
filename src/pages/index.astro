@@ -22,7 +22,7 @@ const data = websiteData(Astro.site ?? Astro.url);
     <section class="hero">
       <h1>{site['home.heading']}</h1>
       <p class="lead">{site['home.lead']}</p>
-      <a class="enter" href={pages.start.path}>{site['home.enter']}</a>
+      <a class="enter" href={pages.start.path} data-prepare>{site['home.enter']}</a>
       <p class="aside">{site['home.enterNote']}</p>
     </section>
 

@@ -8,6 +8,7 @@ interface Options {
   readonly tolerated: readonly RegExp[];
 }
 
+const plainHttpOnly = /Prefetch request denied: URL must be secure \(HTTPS\)/u;
 const compilerScript = /\/compiler\.worker[^/]*\.js(?:\?|$)/u;
 const needed =
   'a run reached the compiler, which this test does not load; declare test.use({ compiler: true })';
@@ -53,7 +54,7 @@ const test = base.extend<Options>({
     }
     await use(page);
     const unexpected = problems.filter(
-      (problem) => !tolerated.some((known) => known.test(problem)),
+      (problem) => !plainHttpOnly.test(problem) && !tolerated.some((known) => known.test(problem)),
     );
     if (unexpected.length > 0) {
       throw new Error(`the page threw or logged an error:\n${unexpected.join('\n')}`);

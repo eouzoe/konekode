@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro sync && tsc --noEmit --runExternalCode -p tsconfig.typecheck.json",
+    "typecheck": "astro sync && tsc --noEmit --runExternalCode -p tsconfig.typecheck.json && tsc -p sw/tsconfig.json",
     "lint": "oxlint --type-aware",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check ."
@@ -22,6 +22,7 @@
     "@rrweb/record": "2.2.2",
     "@yowasp/clang": "^22.0.0-git20542-10",
     "astro": "^7.4.13",
+    "serwist": "9.5.15",
     "ts-fsrs": "6.0.0",
     "xstate": "6.0.0-beta.3",
     "zod": "^4.6.7"

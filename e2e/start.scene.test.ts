@@ -25,17 +25,20 @@ test.describe('起步單元：對話', () => {
     await open(page);
     await expect(page.locator('[data-beat]:not([hidden])')).toHaveCount(1);
     expect(await currentId(page)).toBe('fullscreen-ask');
-    const hiddenBeforeReady = await page.evaluate(() => {
+    const beforeReady = await page.evaluate(() => {
       const scene = document.querySelector<HTMLElement>('[data-scene]');
       if (scene === null) {
-        return '';
+        return null;
       }
       delete scene.dataset.ready;
+      const shown = [...scene.querySelectorAll<HTMLElement>('[data-beat]')].filter(
+        (beat) => getComputedStyle(beat).display !== 'none',
+      );
       const { visibility } = getComputedStyle(scene);
       scene.dataset.ready = 'true';
-      return visibility;
+      return { shown: shown.map((beat) => beat.dataset.id), visibility };
     });
-    expect(hiddenBeforeReady).toBe('hidden');
+    expect(beforeReady).toEqual({ shown: ['fullscreen-ask'], visibility: 'visible' });
   });
 
   test('台詞裡沒有跑出編碼，長句會換行', async ({ page }) => {
@@ -109,18 +112,25 @@ test.describe('起步單元：對話', () => {
 test.describe('有動態效果時', () => {
   test.use({ heldTime: true });
 
-  test('文字逐字出現，按一下先顯示完整句，再按才換句', async ({ page }) => {
+  test('第一句已經在頁面上，之後的句子逐字出現，按一下先顯示完整句，再按才換句', async ({
+    page,
+  }) => {
     await open(page);
+    const first = await current(page);
+    expect(first.id).toBe('fullscreen-ask');
+    expect(first.revealing).toBe(false);
+    await page.keyboard.press('Space');
+    expect(await currentId(page)).toBe('fullscreen-no');
     expect((await current(page)).revealing).toBe(true);
     await page.keyboard.press('Space');
     const shown = await current(page);
-    expect(shown.id).toBe('fullscreen-ask');
+    expect(shown.id).toBe('fullscreen-no');
     expect(shown.revealing).toBe(false);
     await page.keyboard.press('Space');
-    expect(await currentId(page)).toBe('fullscreen-no');
+    expect(await currentId(page)).toBe('intro');
     expect((await current(page)).revealing).toBe(true);
     await passUntil(page, async () => !(await current(page)).revealing, { label: 'the sentence' });
-    expect(await currentId(page)).toBe('fullscreen-no');
+    expect(await currentId(page)).toBe('intro');
   });
 });
 

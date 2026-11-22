@@ -24,6 +24,7 @@ export default defineConfig({
     actionTimeout: actionSeconds * second,
     baseURL: `http://localhost:${String(port)}`,
     navigationTimeout: pageSeconds * second,
+    serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },
   webServer: {
