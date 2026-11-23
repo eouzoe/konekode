@@ -1,4 +1,5 @@
 import { knownOutcome } from './known';
+import { prefetched, watchPrefetch } from './prefetch';
 import {
   type CompileMessage,
   type CompileReply,
@@ -17,6 +18,7 @@ const quiet = { compiling: 30_000, loading: 20_000 };
 
 let compiler: Worker | null = null;
 let loaded = 0;
+let fetched = 0;
 
 const getCompiler = (): Worker => {
   compiler ??= new Worker(new URL('compiler.worker.ts', import.meta.url), { type: 'module' });
@@ -35,7 +37,7 @@ const watchLoading = (listener: Listener): void => {
   listeners.add(listener);
 };
 
-const loadedPercent = (): number => loaded;
+const loadedPercent = (): number => Math.max(loaded, fetched);
 
 const quietLimit = (): number => {
   if (loaded < complete) {
@@ -43,6 +45,17 @@ const quietLimit = (): number => {
   }
   return quiet.compiling;
 };
+
+const tell = (): void => {
+  for (const listener of listeners) {
+    listener(loadedPercent());
+  }
+};
+
+watchPrefetch((percent) => {
+  fetched = percent;
+  tell();
+});
 
 const readCompile = ({ data: message }: MessageEvent<CompileMessage>): CompileReply | null => {
   if (message.kind === 'done') {
@@ -52,9 +65,7 @@ const readCompile = ({ data: message }: MessageEvent<CompileMessage>): CompileRe
     return null;
   }
   loaded = message.percent;
-  for (const listener of listeners) {
-    listener(loaded);
-  }
+  tell();
   return null;
 };
 
@@ -165,6 +176,7 @@ const compile = async (source: string): Promise<CompileReply> => {
   pending = promise;
   try {
     await previous;
+    await prefetched();
     return await once({
       limit: quietLimit,
       message: { source },

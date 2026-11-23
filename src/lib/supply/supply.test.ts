@@ -7,7 +7,13 @@ const sentence: Step = { say: '一二三四五六七八九十', stage: 'empty' }
 const steps: readonly Step[] = Array.from({ length: 20 }, () => sentence);
 const fast: Link = { bitsPerMs: 100_000, latencyMs: 10 };
 
-const due = (name: string, by: number, gate = true): Due => ({ by, bytes: 1024, gate, name });
+const due = (name: string, by: number, gate = true): Due => ({
+  by,
+  bytes: 1024,
+  early: true,
+  gate,
+  name,
+});
 
 interface Pending {
   readonly name: string;

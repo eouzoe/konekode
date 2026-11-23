@@ -37,6 +37,7 @@ const structured = scriptJson(data);
       import { startDev } from '@/lib/dev/start';
       import { guard, watchUncaught } from '@/lib/fault/fault';
       import { mountNotice } from '@/lib/fault/notice';
+      import { watchIntents } from '@/lib/site/intent';
       import { startLater } from '@/lib/site/later';
       import { reloadOnStaleCode } from '@/lib/site/stale';
 
@@ -47,6 +48,7 @@ const structured = scriptJson(data);
         mountNotice(notice);
       }
       startLater();
+      watchIntents(navigator.userAgent);
       if (import.meta.env.PUBLIC_MODE === 'dev') {
         guard('dev', startDev());
       }

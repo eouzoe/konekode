@@ -1,9 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 
+import brotliPromise from 'brotli-dec-wasm';
+
 import { fetchInParts, type Fetch } from './parts';
 
 const base = 'https://site.test/_astro/compiler.worker.js';
 const hashOf = (index: number): string => String(index).repeat(64);
+const same = (bytes: Uint8Array): Uint8Array => bytes;
+const brotliParts: Readonly<Record<string, readonly number[]>> = {
+  'int main() ': [11, 5, 128, 105, 110, 116, 32, 109, 97, 105, 110, 40, 41, 32, 3],
+  '{': [11, 0, 128, 123, 3],
+};
+const packedPart = (body: string) => (): Response =>
+  new Response(new Uint8Array(brotliParts[body] ?? []));
 const ignore = (): void => {
   /* Parts are not counted in this test. */
 };
@@ -59,8 +68,13 @@ describe('fetchInParts', () => {
       [`/parts/${hashOf(3)}`]: text('ghi'),
     });
     let parts = 0;
-    const fetchWhole = fetchInParts(fetcher, base, () => {
-      parts += 1;
+    const fetchWhole = fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: () => {
+        parts += 1;
+      },
     });
     const response = await fetchWhole(new URL('/_astro/llvm.wasm', base));
     expect(response.headers.get('content-type')).toBe('application/wasm');
@@ -81,23 +95,65 @@ describe('fetchInParts', () => {
       [`/parts/${hashOf(1)}`]: text('a'),
       [`/parts/${hashOf(2)}`]: text('b'),
     });
-    const response = await fetchInParts(fetcher, base, ignore)('/compiler/std.pch');
+    const response = await fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: ignore,
+    })('/compiler/std.pch');
     expect(asked).toEqual(['/compiler/std.pch.json']);
     expect(await readAll(response)).toBe('ab');
   });
 
   test('passes every other address through untouched', async () => {
     const { asked, fetcher } = serve({ '/api/intake': text('ok') });
-    const response = await fetchInParts(fetcher, base, ignore)('/api/intake');
+    const response = await fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: ignore,
+    })('/api/intake');
     expect(await response.text()).toBe('ok');
     expect(asked).toEqual(['/api/intake']);
   });
 
+  test('passes other WebAssembly, such as the decoder, through untouched', async () => {
+    const { asked, fetcher } = serve({
+      '/_astro/brotli_dec_wasm_bg-a1.wasm': text('wasm'),
+    });
+    const response = await fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: ignore,
+    })('/_astro/brotli_dec_wasm_bg-a1.wasm');
+    expect(await response.text()).toBe('wasm');
+    expect(asked).toEqual(['/_astro/brotli_dec_wasm_bg-a1.wasm']);
+  });
+
+  test('decodes every part with the Brotli decoder before joining them', async () => {
+    const brotli = await brotliPromise;
+    const { fetcher } = serve({
+      '/_astro/llvm.core-x.wasm.json': listing([hashOf(1), hashOf(2)], 12),
+      [`/parts/${hashOf(1)}`]: packedPart('int main() '),
+      [`/parts/${hashOf(2)}`]: packedPart('{'),
+    });
+    const response = await fetchInParts({
+      base,
+      decode: (bytes) => brotli.decompress(bytes),
+      fetcher,
+      onPart: ignore,
+    })('/_astro/llvm.core-x.wasm');
+    expect(await readAll(response)).toBe('int main() {');
+  });
+
   test('refuses when the list is missing', async () => {
     const { fetcher } = serve({});
-    expect(await failureOf(fetchInParts(fetcher, base, ignore)('/_astro/llvm.wasm'))).toContain(
-      '/_astro/llvm.wasm.json answered 404',
-    );
+    expect(
+      await failureOf(
+        fetchInParts({ base, decode: same, fetcher, onPart: ignore })('/_astro/llvm.wasm'),
+      ),
+    ).toContain('/_astro/llvm.wasm.json answered 404');
   });
 
   test.each([
@@ -106,9 +162,11 @@ describe('fetchInParts', () => {
     ['no size', JSON.stringify({ parts: [hashOf(1)] })],
   ])('refuses a list with %s', async (_reason, body) => {
     const { fetcher } = serve({ '/_astro/llvm.wasm.json': text(body) });
-    expect(await failureOf(fetchInParts(fetcher, base, ignore)('/_astro/llvm.wasm'))).toContain(
-      'is not a list of parts',
-    );
+    expect(
+      await failureOf(
+        fetchInParts({ base, decode: same, fetcher, onPart: ignore })('/_astro/llvm.wasm'),
+      ),
+    ).toContain('is not a list of parts');
   });
 
   test('fails the stream when a part cannot be fetched', async () => {
@@ -116,7 +174,12 @@ describe('fetchInParts', () => {
       '/_astro/llvm.wasm.json': listing([hashOf(1), hashOf(2)], 2),
       [`/parts/${hashOf(1)}`]: text('a'),
     });
-    const response = await fetchInParts(fetcher, base, ignore)('/_astro/llvm.wasm');
+    const response = await fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: ignore,
+    })('/_astro/llvm.wasm');
     expect(await failureOf(readAll(response))).toContain('part 1 answered 404');
   });
 
@@ -125,7 +188,12 @@ describe('fetchInParts', () => {
       '/_astro/llvm.wasm.json': listing([hashOf(1)], 5),
       [`/parts/${hashOf(1)}`]: text('abc'),
     });
-    const response = await fetchInParts(fetcher, base, ignore)('/_astro/llvm.wasm');
+    const response = await fetchInParts({
+      base,
+      decode: same,
+      fetcher,
+      onPart: ignore,
+    })('/_astro/llvm.wasm');
     expect(await failureOf(readAll(response))).toContain('the parts add up to 3 bytes, not 5');
   });
 });

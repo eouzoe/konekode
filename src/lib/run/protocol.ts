@@ -11,6 +11,11 @@ type CompileMessage =
   | { readonly kind: 'done'; readonly reply: CompileReply }
   | { readonly kind: 'progress'; readonly percent: number };
 
+type PrefetchMessage =
+  | { readonly kind: 'done' }
+  | { readonly kind: 'failed'; readonly reason: string }
+  | { readonly kind: 'progress'; readonly percent: number };
+
 interface RunRequest {
   readonly input: string;
   readonly wasm: Uint8Array;
@@ -28,4 +33,12 @@ type Outcome =
   | { readonly kind: 'timeout' }
   | { readonly kind: 'unavailable'; readonly message: string };
 
-export type { CompileMessage, CompileReply, CompileRequest, Outcome, RunReply, RunRequest };
+export type {
+  CompileMessage,
+  CompileReply,
+  CompileRequest,
+  Outcome,
+  PrefetchMessage,
+  RunReply,
+  RunRequest,
+};

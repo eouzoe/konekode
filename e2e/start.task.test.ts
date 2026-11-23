@@ -94,8 +94,9 @@ test.describe('起步單元：最後一題與執行', () => {
     test('the free task shows what to print, says what is wrong, and compiles with the prepared header', async ({
       page,
     }) => {
-      const header = page.waitForResponse((response) =>
-        response.url().endsWith('/compiler/std.pch'),
+      const header = page.waitForResponse(
+        (response) => response.url().endsWith('/compiler/std.pch.json'),
+        { timeout: 150_000 },
       );
       const note = page.locator('[data-role="note"]');
       await open(page, 'task');

@@ -4,6 +4,7 @@ interface Beat {
   readonly auto?: number;
   readonly demo?: string;
   readonly expect?: string;
+  readonly free?: boolean;
   readonly id: string;
   readonly input?: string;
   readonly keys?: readonly string[];
@@ -83,8 +84,16 @@ const shownBeat = (task: Task, { first, say, shown }: Spoken): Beat => {
   return { ...beat, unlock: shown.teaches };
 };
 
+const freeOf = (task: Task): Pick<Beat, 'free'> => {
+  if (task.demo.length > 0) {
+    return {};
+  }
+  return { free: true };
+};
+
 const gateBeat = (task: Task, say: string): Beat => {
   const beat: Beat = {
+    ...freeOf(task),
     expect: task.expect,
     id: task.id,
     say,

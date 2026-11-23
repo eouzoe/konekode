@@ -60,6 +60,12 @@ test('the first demonstration beat resets and every beat shows the target', () =
   });
 });
 
+test('a task with no demonstration is a free task, and only that gate says so', () => {
+  const alone: Task = { ...task, demo: [], id: 'alone' };
+  const beats = flatten([{ task }, { task: alone }], { ...text, alone: 'write it yourself' });
+  expect(beats.filter((beat) => beat.free === true).map((beat) => beat.id)).toEqual(['alone']);
+});
+
 test('the path a learner follows is the demonstration plus a run', () => {
   expect(pathOf(task)).toEqual(['G', 'O', 'type:x;', 'Esc', 'run']);
   expect(pathOf({ ...task, demo: [{ id: 'only', keys: ['Esc', 'run'] }] })).toEqual(['Esc', 'run']);

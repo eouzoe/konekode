@@ -7,13 +7,29 @@ const editorKibi = 160;
 const compilerMebi = 18;
 
 const rules: readonly Rule[] = [
-  { bytes: drillKibi * kibi, gate: true, name: 'drill', wants: (step) => step.stage === 'drill' },
-  { bytes: editorKibi * kibi, gate: true, name: 'editor', wants: (step) => step.stage === 'run' },
+  {
+    bytes: drillKibi * kibi,
+    early: true,
+    gate: true,
+    lead: 0,
+    name: 'drill',
+    wants: (step) => step.stage === 'drill',
+  },
+  {
+    bytes: editorKibi * kibi,
+    early: true,
+    gate: true,
+    lead: 0,
+    name: 'editor',
+    wants: (step) => step.stage === 'run',
+  },
   {
     bytes: compilerMebi * mebi,
+    early: false,
     gate: false,
+    lead: 1,
     name: 'compiler',
-    wants: (step) => step.wait === 'run',
+    wants: (step) => step.free === true,
   },
 ];
 

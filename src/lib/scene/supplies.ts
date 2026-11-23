@@ -21,6 +21,7 @@ const loaders: Readonly<Record<string, Loader>> = {
 const stepOf = (beat: HTMLElement): Step => {
   const step: Step = {
     auto: Number(beat.dataset.auto ?? '0'),
+    free: beat.dataset.free === 'true',
     say: beat.textContent,
     stage: beat.dataset.stage ?? 'empty',
   };

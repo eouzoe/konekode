@@ -19,7 +19,14 @@ const defaultKey = ui[fullscreenKeys.pc];
 
 <Base page={pages.start} data={data} full>
   <p class="plain">{site['start.plain']} <a href={pages.home.path}>{site.name}</a></p>
-  <section class="scene" data-scene data-unit="start" data-stage={opening} data-needs={needs}>
+  <section
+    class="scene"
+    data-scene
+    data-unit="start"
+    data-stage={opening}
+    data-needs={needs}
+    data-prefetch="compiler"
+  >
     <div class="stage">
       <p class="supplying" role="status">{ui['page.supplying']}</p>
       <div class="code" data-show="code">
@@ -46,6 +53,7 @@ const defaultKey = ui[fullscreenKeys.pc];
               data-stage={beat.stage}
               data-lines={beat.lines}
               data-wait={beat.wait}
+              data-free={beat.free}
               data-snippet={beat.snippet}
               data-expect={beat.expect}
               data-input={beat.input}

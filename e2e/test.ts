@@ -9,13 +9,23 @@ interface Options {
 }
 
 const plainHttpOnly = /Prefetch request denied: URL must be secure \(HTTPS\)/u;
+const workerLoadAborted =
+  /^console: \[JavaScript Error: "NS_BINDING_ABORTED: " \{file: "chrome:\/\/juggler\/content\/content\/WorkerMain\.js" line: \d+\}\]$/u;
+const partCancelled =
+  /^console: Fetch API cannot load http:\/\/localhost:\d+\/(?:parts\/[\da-f]{64}|compiler\/parts\.json) due to access control checks\.$/u;
+const workerScriptCancelled =
+  /^uncaught: \/localhost:\d+\/_astro\/(?:compiler|prefetch)\.worker-[\w-]+\.js due to access control checks\.$/u;
 const compilerScript = /\/compiler\.worker[^/]*\.js(?:\?|$)/u;
+const partList = /\/compiler\/parts\.json$/u;
 const needed =
   'a run reached the compiler, which this test does not load; declare test.use({ compiler: true })';
 
 const withoutCompiler = async (page: Page): Promise<void> => {
   await page.route(compilerScript, async (route) => {
     await route.abort();
+  });
+  await page.route(partList, async (route) => {
+    await route.fulfill({ json: { parts: [] } });
   });
   await page.addInitScript((message) => {
     const watch = new MutationObserver(() => {
@@ -54,7 +64,12 @@ const test = base.extend<Options>({
     }
     await use(page);
     const unexpected = problems.filter(
-      (problem) => !plainHttpOnly.test(problem) && !tolerated.some((known) => known.test(problem)),
+      (problem) =>
+        !plainHttpOnly.test(problem) &&
+        !workerLoadAborted.test(problem) &&
+        !partCancelled.test(problem) &&
+        !workerScriptCancelled.test(problem) &&
+        !tolerated.some((known) => known.test(problem)),
     );
     if (unexpected.length > 0) {
       throw new Error(`the page threw or logged an error:\n${unexpected.join('\n')}`);
