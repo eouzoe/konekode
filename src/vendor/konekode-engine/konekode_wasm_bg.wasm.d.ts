@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_engine_free: (a: number, b: number) => void;
 export const collectRows: (a: number, b: number) => [number, number, number, number];
+export const engine_estimates: (a: number, b: number) => [number, number, number, number];
 export const engine_new: (a: number, b: number, c: number, d: number) => [number, number, number];
 export const engine_push: (a: number, b: number, c: number) => [number, number, number, number];
 export const engine_shows: (a: number, b: number, c: number, d: number, e: number) => [number, number];

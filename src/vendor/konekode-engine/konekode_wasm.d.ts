@@ -4,6 +4,7 @@
 export class Engine {
     free(): void;
     [Symbol.dispose](): void;
+    estimates(now: number): string;
     constructor(content: string, events: string);
     push(event: string): string;
     shows(unit: string, beat: string): string[];
@@ -21,6 +22,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_engine_free: (a: number, b: number) => void;
     readonly collectRows: (a: number, b: number) => [number, number, number, number];
+    readonly engine_estimates: (a: number, b: number) => [number, number, number, number];
     readonly engine_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly engine_push: (a: number, b: number, c: number) => [number, number, number, number];
     readonly engine_shows: (a: number, b: number, c: number, d: number, e: number) => [number, number];

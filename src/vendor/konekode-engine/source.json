@@ -1,21 +1,21 @@
 {
-  "commit": "fa10f122a82bfc1c8c1f3ac6abd047e706878749",
+  "commit": "81fd2c6fe7357c31455806123a1b5a4f67118184",
   "files": {
     "konekode_wasm.js": {
-      "built": "2026-11-21T02:49:41.141Z",
-      "sha256": "2566619e534da434858390454110c193a8ef49793584c61dad10d2cc16538366"
+      "built": "2026-11-23T15:20:33.814Z",
+      "sha256": "dac04ddcbe4d5672b810125a6cce26ea858c7347e4529e6a5b36291381ecf5c5"
     },
     "konekode_wasm.d.ts": {
-      "built": "2026-11-21T02:49:41.141Z",
-      "sha256": "d4206dd2b197f586d9b4575ed29d46aaec6c2066aca347821f50d5bae66bdcd3"
+      "built": "2026-11-23T15:20:33.814Z",
+      "sha256": "56f03e34c6bee4a49475c8dea9716e9e6871bdd913b36287580cd911f05336fb"
     },
     "konekode_wasm_bg.wasm": {
-      "built": "2026-11-21T02:49:41.141Z",
-      "sha256": "d83f92e2f66129e6d03101a028f36bb6c138cf97e691162f8a1f8036b988bc8f"
+      "built": "2026-11-23T15:20:33.810Z",
+      "sha256": "8881c37e5a22063781e906e3d5854f5e7c5be7fb507b59180b44ba2b9aed4de8"
     },
     "konekode_wasm_bg.wasm.d.ts": {
-      "built": "2026-11-21T02:49:41.141Z",
-      "sha256": "ee60e1819778fcd25f1667a7fccd9cf282082250102b24d2a85c16b0f9d08f92"
+      "built": "2026-11-23T15:20:33.814Z",
+      "sha256": "3da4059e2f074d6562e5b8570581a8a3c2bed0af2f12a73deffcf15d9894217c"
     }
   },
   "repository": "konekode-engine"
