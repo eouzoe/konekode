@@ -1,147 +1,73 @@
+import { createBirpc, type BirpcReturn } from 'birpc';
 import { gsap } from 'gsap';
-import {
-  Application,
-  Assets,
-  BlurFilter,
-  Container,
-  DOMAdapter,
-  NoiseFilter,
-  Sprite,
-  Texture,
-  TilingSprite,
-  WebWorkerAdapter,
-} from 'pixi.js';
+import { DOMAdapter, NoiseFilter, WebWorkerAdapter, type Sprite } from 'pixi.js';
 
+import { half } from './frame';
+import { flutter, lightNow, lightUp, type Lamp } from './props';
 import {
-  type SceneLook,
-  type SceneReply,
-  type SceneRequest,
-  type Size,
+  timed,
+  type Mark,
+  type Motion,
+  type PageCalls,
+  type SceneCalls,
+  type Screen,
+  type Start,
   type Time,
-  times,
 } from './protocol';
+import { ripple } from './wet';
+import {
+  atRest,
+  build,
+  fill,
+  glowLevel,
+  layout,
+  pushedAway,
+  type Levels,
+  type Setup,
+  type World,
+} from './world';
 
 DOMAdapter.set(WebWorkerAdapter);
 
-type Start = Extract<SceneRequest, { kind: 'start' }>;
-type Lookup = (path: string) => Texture;
+type Page = BirpcReturn<PageCalls, SceneCalls>;
 
-interface Frame {
-  readonly focusY: number;
-  readonly overscan: number;
-}
+const seconds = { crossfade: 2.4, leave: 1.1, pulse: 0.9, recede: 1.2 };
+const push = { zoom: 1.6 };
 
-interface Levels {
-  readonly blur: number;
-  readonly rain: number;
-  readonly shade: number;
-}
-
-interface Overlays {
-  readonly edge: Sprite;
-  readonly glow: Sprite;
-  readonly rain: TilingSprite;
-  readonly shade: Sprite;
-}
-
-interface World extends Overlays {
-  readonly app: Application;
-  readonly blur: BlurFilter;
-  readonly camera: Container;
-  readonly layers: ReadonlyMap<Time, Sprite>;
-  readonly look: SceneLook;
-  readonly sway: { pan: number; zoom: number };
-  current: Time;
-}
-
-const half = 0.5;
-const ground = '#0b0a09';
-const files = {
-  glow: '1999/extracted/singlebg__common__bg_2.png',
-  scratches: '1999/extracted/singlebg__common__bg_heibianzhuangshi.png',
-  vignette: '1999/extracted/singlebg__dialogue__dialogue_fullbg.png',
-};
-const atRest: Levels = { blur: 0, rain: 0.55, shade: 0.2 };
-const pushedAway: Levels = { blur: 14, rain: 0.2, shade: 0.62 };
 const drift = { across: -0.18, down: 0.55 };
-const glowLevel = { peak: 0.75, rest: 0.35 };
 const flickerTiming = { first: 3, least: 2, spread: 5 };
-const centred: Frame = { focusY: half, overscan: 1 };
+const lampTiming = { first: 6, least: 5, spread: 12 };
 
-const post = (reply: SceneReply): void => {
-  globalThis.postMessage(reply);
+const flutterOn = (world: World, lamp: Lamp): void => {
+  const play = (): void => {
+    const wait = lampTiming.least + Math.random() * lampTiming.spread;
+    if (world.motion === 'full') {
+      flutter(lamp).eventCallback('onComplete', () => {
+        gsap.delayedCall(wait, play);
+      });
+      return;
+    }
+    gsap.delayedCall(wait, play);
+  };
+  gsap.delayedCall(lampTiming.first + Math.random() * lampTiming.spread, play);
 };
 
-const cover = (sprite: Sprite, screen: Size, frame: Frame): void => {
-  const fit = Math.max(screen.width / sprite.texture.width, screen.height / sprite.texture.height);
-  sprite.scale.set(fit * frame.overscan);
-  sprite.anchor.set(half, frame.focusY);
-  sprite.position.set(screen.width * half, screen.height * frame.focusY);
-};
-
-const loadTextures = async (refs: string, look: SceneLook): Promise<Lookup> => {
-  const paths = [...new Set([...Object.values(look.scenes), ...Object.values(files)])];
-  const urlOf = (path: string): string => new URL(path, refs).href;
-  const loaded = await Assets.load<Texture>(paths.map((path) => urlOf(path)));
-  return (path) => loaded[urlOf(path)] ?? Texture.EMPTY;
-};
-
-const flickerOn = (glow: Sprite): void => {
+const flickerOn = (world: World): void => {
   const flick = (): void => {
-    gsap
-      .timeline({
-        onComplete: () => {
-          gsap.delayedCall(flickerTiming.least + Math.random() * flickerTiming.spread, flick);
-        },
-      })
-      .to(glow, { alpha: 0.12, duration: 0.06 })
-      .to(glow, { alpha: 0.42, duration: 0.08 })
-      .to(glow, { alpha: 0.2, duration: 0.05 })
-      .to(glow, { alpha: glowLevel.rest, duration: 0.5, ease: 'sine.out' });
+    const timeline = gsap.timeline({
+      onComplete: () => {
+        gsap.delayedCall(flickerTiming.least + Math.random() * flickerTiming.spread, flick);
+      },
+    });
+    if (world.motion === 'full') {
+      timeline
+        .to(world.glow, { alpha: 0.12, duration: 0.06 })
+        .to(world.glow, { alpha: 0.42, duration: 0.08 })
+        .to(world.glow, { alpha: 0.2, duration: 0.05 })
+        .to(world.glow, { alpha: glowLevel.rest, duration: 0.5, ease: 'sine.out' });
+    }
   };
   gsap.delayedCall(flickerTiming.first, flick);
-};
-
-const buildLayers = (camera: Container, look: SceneLook, texture: Lookup): Map<Time, Sprite> =>
-  new Map(
-    times.map((time) => {
-      const sprite = new Sprite({
-        alpha: Number(time === 'day'),
-        texture: texture(look.scenes[time]),
-      });
-      camera.addChild(sprite);
-      return [time, sprite] as const;
-    }),
-  );
-
-const buildOverlays = (stage: Container, texture: Lookup): Overlays => {
-  const shade = new Sprite({ alpha: atRest.shade, texture: Texture.WHITE, tint: ground });
-  const rain = new TilingSprite({
-    alpha: atRest.rain,
-    blendMode: 'screen',
-    texture: texture(files.scratches),
-  });
-  const glow = new Sprite({
-    alpha: glowLevel.rest,
-    blendMode: 'add',
-    texture: texture(files.glow),
-  });
-  const edge = new Sprite({ texture: texture(files.vignette) });
-  stage.addChild(shade, rain, glow, edge);
-  return { edge, glow, rain, shade };
-};
-
-const layout = (world: World): void => {
-  const { screen } = world.app;
-  for (const sprite of world.layers.values()) {
-    cover(sprite, screen, world.look);
-  }
-  world.shade.setSize(screen.width, screen.height);
-  world.rain.setSize(screen.width, screen.height);
-  world.rain.tileScale.set(screen.height / world.rain.texture.height);
-  cover(world.glow, screen, centred);
-  cover(world.edge, screen, centred);
-  world.camera.pivot.set(screen.width * half, screen.height * half);
 };
 
 const follow = (world: World, grain: NoiseFilter, step: number): void => {
@@ -149,47 +75,68 @@ const follow = (world: World, grain: NoiseFilter, step: number): void => {
   const { screen } = world.app;
   camera.scale.set(sway.zoom);
   camera.position.set(screen.width * half + sway.pan, screen.height * half);
-  rain.tilePosition.set(
-    rain.tilePosition.x + drift.across * step,
-    rain.tilePosition.y + drift.down * step,
-  );
-  grain.seed = Math.random();
+  if (world.motion === 'full') {
+    rain.tilePosition.set(
+      rain.tilePosition.x + drift.across * step,
+      rain.tilePosition.y + drift.down * step,
+    );
+    grain.seed = Math.random();
+    if (world.wet !== null) {
+      ripple(world.wet, step);
+    }
+  }
+};
+
+const setMotion = (world: World, motion: Motion): void => {
+  world.motion = motion;
+  for (const animation of world.ambient) {
+    animation.paused(motion === 'reduced');
+  }
+  if (world.wet !== null) {
+    world.wet.filter.enabled = motion === 'full';
+  }
 };
 
 const animate = (world: World): void => {
   const grain = new NoiseFilter({ noise: 0.07, seed: Math.random() });
   world.app.stage.filters = [grain];
   const forever = { ease: 'sine.inOut', repeat: -1, yoyo: true };
-  gsap.to(world.sway, { ...forever, duration: 38, zoom: 1.05 });
-  gsap.to(world.sway, { ...forever, duration: 46, pan: -26 });
+  world.ambient.push(
+    gsap.to(world.sway, { ...forever, duration: 38, zoom: 1.05 }),
+    gsap.to(world.sway, { ...forever, duration: 46, pan: -26 }),
+  );
   world.app.ticker.add((ticker) => {
     follow(world, grain, ticker.deltaTime);
   });
   if (world.look.flicker) {
-    flickerOn(world.glow);
+    flickerOn(world);
+  }
+  for (const lamp of world.props.lamps) {
+    flutterOn(world, lamp);
   }
 };
 
-const build = async ({ canvas, look, refs, screen }: Start): Promise<World> => {
-  const app = new Application();
-  await app.init({ antialias: true, background: ground, canvas, preference: 'webgpu', ...screen });
-  const texture = await loadTextures(refs, look);
-  const camera = new Container();
-  app.stage.addChild(camera);
-  const layers = buildLayers(camera, look, texture);
-  const blur = new BlurFilter({ quality: 3, strength: atRest.blur });
-  camera.filters = [blur];
-  const overlays = buildOverlays(app.stage, texture);
-  return {
-    ...overlays,
-    app,
-    blur,
-    camera,
-    current: 'day',
-    layers,
-    look,
-    sway: { pan: 0, zoom: 1 },
+const light = async (world: World, instant: boolean, page: Page): Promise<void> => {
+  const mark = (name: Mark): void => {
+    void page.mark.asEvent(name);
   };
+  if (instant || world.motion === 'reduced') {
+    lightNow(world.props, world.shade, atRest.shade);
+  } else {
+    world.cue = lightUp(world.props, world.shade, { mark, rest: atRest.shade });
+    await world.cue;
+    world.cue = null;
+  }
+  mark('revealing');
+};
+
+const showing = (world: World, time: Time): boolean => world.current === time;
+
+const crossfade = async (world: World, from: Sprite, to: Sprite): Promise<void> => {
+  world.camera.setChildIndex(to, world.camera.children.length - 1);
+  const duration = timed(world.motion, seconds.crossfade);
+  await gsap.fromTo(to, { alpha: 0 }, { alpha: 1, duration, ease: 'sine.inOut' });
+  from.alpha = 0;
 };
 
 const setTime = async (world: World, time: Time): Promise<void> => {
@@ -199,9 +146,10 @@ const setTime = async (world: World, time: Time): Promise<void> => {
     return;
   }
   world.current = time;
-  world.camera.setChildIndex(to, world.camera.children.length - 1);
-  await gsap.fromTo(to, { alpha: 0 }, { alpha: 1, duration: 2.4, ease: 'sine.inOut' });
-  from.alpha = 0;
+  await fill(world, time, to);
+  if (showing(world, time)) {
+    await crossfade(world, from, to);
+  }
 };
 
 const levelsFor = (away: boolean): Levels => {
@@ -213,7 +161,7 @@ const levelsFor = (away: boolean): Levels => {
 
 const recede = async (world: World, away: boolean): Promise<void> => {
   const target = levelsFor(away);
-  const motion = { duration: 1.2, ease: 'power2.inOut' };
+  const motion = { duration: timed(world.motion, seconds.recede), ease: 'power2.inOut' };
   await Promise.all([
     gsap.to(world.blur, { ...motion, strength: target.blur }),
     gsap.to(world.shade, { ...motion, alpha: target.shade }),
@@ -222,50 +170,88 @@ const recede = async (world: World, away: boolean): Promise<void> => {
 };
 
 const pulse = (world: World): void => {
+  const duration = timed(world.motion, seconds.pulse);
   gsap.fromTo(
     world.glow,
     { alpha: glowLevel.rest },
-    { alpha: glowLevel.peak, duration: 0.9, ease: 'sine.out', repeat: 1, yoyo: true },
+    { alpha: glowLevel.peak, duration, ease: 'sine.out', repeat: 1, yoyo: true },
   );
 };
 
-const start = async (request: Start): Promise<World> => {
-  const world = await build(request);
+const leave = async (world: World): Promise<void> => {
+  world.cue?.progress(1);
+  for (const animation of world.ambient) {
+    animation.kill();
+  }
+  const duration = timed(world.motion, seconds.leave);
+  await Promise.all([
+    gsap.to(world.sway, { duration, ease: 'power2.in', pan: 0, zoom: push.zoom }),
+    gsap.to(world.shade, { alpha: 1, duration, ease: 'power1.in' }),
+  ]);
+  world.shade.alpha = 1;
+};
+
+const resize = (world: World, screen: Screen): void => {
+  world.app.renderer.resize(screen.width, screen.height, screen.resolution);
   layout(world);
+};
+
+const start = async (setup: Setup): Promise<World> => {
+  const world = await build(setup);
   animate(world);
-  post({ kind: 'ready' });
   return world;
 };
 
-const act = async (world: World, request: Exclude<SceneRequest, Start>): Promise<void> => {
-  if (request.kind === 'resize') {
-    const { height, resolution, width } = request.screen;
-    world.app.renderer.resize(width, height, resolution);
-    layout(world);
-  } else if (request.kind === 'pulse') {
-    pulse(world);
-  } else if (request.kind === 'time') {
-    await setTime(world, request.time);
-    post({ id: request.id, kind: 'done' });
-  } else {
-    await recede(world, request.away);
-    post({ id: request.id, kind: 'done' });
-  }
-};
-
-let ready: Promise<World> | null = null;
-
-const relay = async (request: Exclude<SceneRequest, Start>): Promise<void> => {
-  if (ready !== null) {
-    await act(await ready, request);
-  }
-};
-
-globalThis.addEventListener('message', (event: MessageEvent<SceneRequest>) => {
-  const request = event.data;
-  if (request.kind === 'start') {
-    ready = start(request);
-    return;
-  }
-  void relay(request);
+const callsFor = (ready: Promise<World>, page: () => Page): SceneCalls => ({
+  finish: async () => {
+    const world = await ready;
+    world.cue?.progress(1);
+  },
+  leave: async () => {
+    await leave(await ready);
+  },
+  light: async (instant) => {
+    await light(await ready, instant, page());
+  },
+  motion: async (motion) => {
+    setMotion(await ready, motion);
+  },
+  pulse: async () => {
+    pulse(await ready);
+  },
+  recede: async (away) => {
+    await recede(await ready, away);
+  },
+  resize: async (screen) => {
+    resize(await ready, screen);
+  },
+  setTime: async (time) => {
+    await setTime(await ready, time);
+  },
 });
+
+const serve = ({ port, ...setup }: Start): void => {
+  const ready = start(setup);
+  const page: Page = createBirpc<PageCalls, SceneCalls>(
+    callsFor(ready, () => page),
+    {
+      on: (receive) => {
+        port.addEventListener('message', (message) => {
+          receive(message.data);
+        });
+        port.start();
+      },
+      post: (data) => {
+        port.postMessage(data);
+      },
+    },
+  );
+};
+
+globalThis.addEventListener(
+  'message',
+  (event: MessageEvent<Start>) => {
+    serve(event.data);
+  },
+  { once: true },
+);

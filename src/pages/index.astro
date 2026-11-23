@@ -1,112 +1,22 @@
 ---
+import '@/styles/home.css';
+
 import Base from '@/layouts/base.astro';
-import { pages, repository, site, websiteData } from '@/lib/site/pages';
+import { pages, websiteData } from '@/lib/site/pages';
 
 const data = websiteData(Astro.site ?? Astro.url);
 ---
 
-<Base page={pages.home} data={data}>
+<Base page={pages.home} data={data} full>
   <div class="home">
-    <header class="bar">
-      <p class="brand">{site.name}</p>
-      <a class="source" href={repository} rel="noopener" aria-label={site['home.source']}>
-        <svg viewBox="0 0 16 16" width="24" height="24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"
-          ></path>
-        </svg>
-      </a>
-    </header>
-
-    <section class="hero">
-      <h1>{site['home.heading']}</h1>
-      <p class="lead">{site['home.lead']}</p>
-      <a class="enter" href={pages.start.path} data-prepare>{site['home.enter']}</a>
-      <p class="aside">{site['home.enterNote']}</p>
-    </section>
-
-    <p class="now">{site['home.now']}</p>
+    <div class="scene" data-role="scene"></div>
+    <h1 class="unseen">貓貓競程</h1>
+    <button class="account" data-role="around" type="button">登入</button>    <div class="actions" data-role="around">
+      <a class="start" href={pages.start.path} data-prepare>開始</a>
+    </div>
   </div>
 </Base>
 
-<style>
-  .home {
-    display: grid;
-    grid-template-rows: auto 1fr auto;
-    min-height: calc(100dvh - 9rem);
-  }
-  .bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .brand {
-    margin: 0;
-    color: var(--soft);
-    font-size: 0.9375rem;
-    letter-spacing: 0.04em;
-  }
-  .source {
-    display: grid;
-    place-items: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    margin: -0.625rem;
-    border-radius: 50%;
-    color: var(--soft);
-  }
-  .source:hover,
-  .source:focus-visible {
-    color: var(--ink);
-  }
-  .source:focus-visible {
-    outline: 3px solid var(--ink);
-    outline-offset: -3px;
-  }
-  .hero {
-    align-self: center;
-    padding: 3rem 0;
-    text-align: center;
-  }
-  h1 {
-    margin-bottom: 1.25rem;
-    font-size: clamp(2rem, 6vw, 3rem);
-    text-wrap: balance;
-  }
-  .lead {
-    margin: 0 0 2.25rem;
-    color: var(--soft);
-    font-size: 1.1875rem;
-    text-wrap: balance;
-  }
-  .enter {
-    display: inline-block;
-    padding: 0.85rem 2rem;
-    border-radius: 0.6rem;
-    background: var(--accent);
-    color: var(--page);
-    font-size: 1.125rem;
-    font-weight: 700;
-    text-decoration: none;
-  }
-  .enter:hover,
-  .enter:focus-visible {
-    filter: brightness(1.12);
-  }
-  .enter:focus-visible {
-    outline: 3px solid var(--ink);
-    outline-offset: 3px;
-  }
-  .aside {
-    margin: 1.25rem 0 0;
-    color: var(--soft);
-    font-size: 0.9375rem;
-  }
-  .now {
-    margin: 0;
-    color: var(--soft);
-    font-size: 0.9375rem;
-    text-align: center;
-  }
-</style>
+<script>
+  import '@/art/title';
+</script>

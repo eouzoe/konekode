@@ -130,7 +130,10 @@ const listenChecks = (root: HTMLElement, handlers: Handlers): void => {
   });
 };
 
-const listenButtons = (root: HTMLElement, handlers: Handlers): void => {
+const listenButtons = (
+  root: HTMLElement,
+  handlers: Pick<Handlers, 'back' | 'next' | 'restart'>,
+): void => {
   root.querySelector('[data-role="dialogue"]')?.addEventListener('click', () => {
     if (globalThis.getSelection()?.isCollapsed ?? true) {
       handlers.next();
@@ -155,4 +158,4 @@ const listenInput = (root: HTMLElement, handlers: Handlers): void => {
   watchFullScreen(handlers.screen);
 };
 
-export { listenInput };
+export { listenButtons, listenInput };

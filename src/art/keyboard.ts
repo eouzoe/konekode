@@ -10,6 +10,8 @@ import {
   type KeyCap,
 } from '@/lib/typing/keyboard';
 
+import { paced } from './motion';
+
 interface Cap {
   readonly id: string;
   readonly label: string;
@@ -25,6 +27,7 @@ interface Keyboard {
 
 const rightShift = 'ShiftRight';
 const flashSeconds = 0.14;
+const pressSeconds = { down: 0.08, up: 0.18 };
 
 const labelOf = (cap: KeyCap): string => {
   if (cap.base.toUpperCase() === cap.shift) {
@@ -98,13 +101,13 @@ const createKeyboard = (host: HTMLElement): Keyboard => {
   const down = (key: string): void => {
     for (const cap of capsFor(key)) {
       cap.classList.add('down');
-      gsap.fromTo(cap, { translateY: 0 }, { duration: 0.08, translateY: 2 });
+      gsap.fromTo(cap, { translateY: 0 }, { duration: paced(pressSeconds.down), translateY: 2 });
     }
   };
   const up = (key: string): void => {
     for (const cap of capsFor(key)) {
       cap.classList.remove('down');
-      gsap.to(cap, { duration: 0.18, ease: 'back.out(3)', translateY: 0 });
+      gsap.to(cap, { duration: paced(pressSeconds.up), ease: 'back.out(3)', translateY: 0 });
     }
   };
   const flash = (key: string): void => {

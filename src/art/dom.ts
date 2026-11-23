@@ -22,14 +22,14 @@ const wait = async (seconds: number): Promise<void> => {
 const inSequence = async <Item>(
   items: ReadonlyArray<Item>,
   step: (item: Item) => Promise<void>,
-  live: () => boolean,
+  signal: AbortSignal,
 ): Promise<void> => {
   const [head, ...rest] = items;
-  if (head === undefined || !live()) {
+  if (head === undefined || signal.aborted) {
     return;
   }
   await step(head);
-  await inSequence(rest, step, live);
+  await inSequence(rest, step, signal);
 };
 
 const pieceOf = (part: string, latin: boolean): Node => {

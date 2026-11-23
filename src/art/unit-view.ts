@@ -2,8 +2,8 @@ import { gsap } from 'gsap';
 import { Flip } from 'gsap/Flip';
 
 import { element } from './dom';
-import { sectionAt } from './progress';
-import { createBuffer, runBufferAt, template, type Beat } from './unit';
+import { sectionAt } from './sections';
+import { beats, createBuffer, runBufferAt, template, type Beat } from './unit';
 import { parts } from './unit-parts';
 
 gsap.registerPlugin(Flip);
@@ -105,14 +105,27 @@ const setLabels = (at: number, beat: Beat): void => {
   element('snippet-code').textContent = snippet ?? '';
 };
 
+const workAt = (at: number): string | undefined =>
+  beats
+    .slice(0, at + 1)
+    .findLast((beat) => beat.keys !== undefined || beat.wait !== undefined || beat.stage !== 'run')
+    ?.id;
+
+const keepsRun = (at: number): boolean => {
+  const shown = parts.run.shown();
+  return shown !== null && shown === workAt(at);
+};
+
 const setScene = (at: number, beat: Beat): void => {
   setLabels(at, beat);
-  parts.run.clear();
   const { state } = parts.paper;
   state.lit = new Set((beat.lines ?? '').split(',').filter(Boolean).map(Number));
   state.showCursor = beat.stage === 'drill' || beat.stage === 'run';
   state.ghostOn = beat.stage === 'drill';
-  setBuffer(at, beat);
+  if (!keepsRun(at)) {
+    parts.run.clear();
+    setBuffer(at, beat);
+  }
   parts.paper.draw();
 };
 

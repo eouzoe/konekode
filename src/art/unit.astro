@@ -28,8 +28,12 @@ const picked = `${refsRoute}/1999/sprites/picked`;
       <header class="top">
         <span class="chapter"><i class="dot"></i>第一章　起步</span>
         <nav class="controls">
-          <button type="button" id="back">上一句</button>
-          <button type="button" id="restart">從頭開始</button>
+          <button type="button" id="back" data-role="back">
+            <i class="icon back"></i><small>上一句</small>
+          </button>
+          <button type="button" id="restart" data-role="restart">
+            <i class="icon restart"></i><small>從頭開始</small>
+          </button>
         </nav>
       </header>
 
@@ -66,7 +70,7 @@ const picked = `${refsRoute}/1999/sprites/picked`;
         <div class="keyboard" id="keyboard"></div>
       </section>
 
-      <footer class="dialogue" id="dialogue">
+      <footer class="dialogue" id="dialogue" data-role="dialogue">
         <div class="speaker">
           <div class="name"><span>小精靈</span><i class="rule"></i></div>
           <p class="line" id="line"></p>

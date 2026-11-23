@@ -1,21 +1,23 @@
+import { createBirpc, type BirpcReturn } from 'birpc';
+
 import { refsRoute } from '../refs';
+import type { PageCalls, SceneCalls, SceneLook, Screen, Spot, Start, Time } from './protocol';
 
-import type { SceneLook, SceneReply, SceneRequest, Screen, Time } from './protocol';
-
-interface Stage {
-  readonly pulse: () => void;
-  readonly recede: (away: boolean) => Promise<void>;
-  readonly setTime: (time: Time) => Promise<void>;
-}
+type Stage = BirpcReturn<SceneCalls, PageCalls>;
 
 interface StageOptions {
+  readonly dark?: boolean;
+  readonly edge?: boolean;
   readonly flicker?: boolean;
+  readonly focusX?: number;
   readonly focusY?: number;
+  readonly glow?: boolean;
+  readonly lamps?: readonly Spot[];
   readonly overscan?: number;
   readonly scene?: string;
+  readonly spirit?: Spot;
+  readonly wet?: number;
 }
-
-type Ask = (make: (id: number) => SceneRequest) => Promise<void>;
 
 const base = '1999/extracted/singlebg__';
 const roomScenes: Readonly<Record<Time, string>> = {
@@ -24,8 +26,8 @@ const roomScenes: Readonly<Record<Time, string>> = {
   night: `${base}storybg__bg__0xiangzineiwanshang.png`,
   overcast: `${base}storybg__bg__0xiangzineiyintian.png`,
 };
-const loginScene = `${base}loginbg__bg_denglubeijing.png`;
-const defaults = { focusY: 0.5, overscan: 1.08 };
+const storefront = '1999/edited/loginbg-street-sign.webp';
+const defaults = { focusX: 0.5, focusY: 0.5, overscan: 1.08 };
 
 const scenesOf = (scene: string | undefined): Readonly<Record<Time, string>> => {
   if (scene === undefined) {
@@ -35,10 +37,17 @@ const scenesOf = (scene: string | undefined): Readonly<Record<Time, string>> => 
 };
 
 const lookOf = (options: StageOptions): SceneLook => ({
+  dark: options.dark ?? false,
+  edge: options.edge ?? true,
   flicker: options.flicker ?? false,
+  focusX: options.focusX ?? defaults.focusX,
   focusY: options.focusY ?? defaults.focusY,
+  glow: options.glow ?? true,
+  lamps: options.lamps ?? [],
   overscan: options.overscan ?? defaults.overscan,
   scenes: scenesOf(options.scene),
+  spirit: options.spirit ?? null,
+  wet: options.wet ?? null,
 });
 
 const screenOf = (host: HTMLElement): Screen => ({
@@ -47,60 +56,52 @@ const screenOf = (host: HTMLElement): Screen => ({
   width: host.clientWidth,
 });
 
-const connect = (worker: Worker): Ask => {
-  const waiting = new Map<number, () => void>();
-  let next = 0;
-  worker.addEventListener('message', (event: MessageEvent<SceneReply>) => {
-    if (event.data.kind === 'done') {
-      waiting.get(event.data.id)?.();
-      waiting.delete(event.data.id);
-    }
+const connect = (port: MessagePort, page: PageCalls): Stage =>
+  createBirpc<SceneCalls, PageCalls>(page, {
+    on: (receive) => {
+      port.addEventListener('message', (message) => {
+        receive(message.data);
+      });
+      port.start();
+    },
+    post: (data) => {
+      port.postMessage(data);
+    },
   });
-  return async (make) => {
-    next += 1;
-    const { promise, resolve } = Promise.withResolvers<null>();
-    waiting.set(next, () => {
-      resolve(null);
-    });
-    worker.postMessage(make(next));
-    await promise;
-  };
-};
 
-const launch = (host: HTMLElement, options: StageOptions): Worker => {
+const launch = (host: HTMLElement, options: StageOptions): MessagePort => {
   const canvas = document.createElement('canvas');
   host.append(canvas);
   const worker = new Worker(new URL('scene.worker.ts', import.meta.url), { type: 'module' });
   const offscreen = canvas.transferControlToOffscreen();
-  const refs = new URL(`${refsRoute}/`, location.href).href;
-  const start: SceneRequest = {
+  const channel = new MessageChannel();
+  const start: Start = {
     canvas: offscreen,
-    kind: 'start',
     look: lookOf(options),
-    refs,
+    port: channel.port2,
+    refs: new URL(`${refsRoute}/`, location.href).href,
     screen: screenOf(host),
   };
-  worker.postMessage(start, [offscreen]);
+  worker.postMessage(start, [offscreen, channel.port2]);
+  return channel.port1;
+};
+
+const recordOn = (host: HTMLElement): PageCalls => ({
+  mark: (name) => {
+    host.dataset.mark = name;
+  },
+});
+
+const createStage = (
+  host: HTMLElement,
+  options: StageOptions = {},
+  page: PageCalls = recordOn(host),
+): Stage => {
+  const stage = connect(launch(host, options), page);
   new ResizeObserver(() => {
-    worker.postMessage({ kind: 'resize', screen: screenOf(host) } satisfies SceneRequest);
+    void stage.resize.asEvent(screenOf(host));
   }).observe(host);
-  return worker;
+  return stage;
 };
 
-const createStage = (host: HTMLElement, options: StageOptions = {}): Stage => {
-  const worker = launch(host, options);
-  const ask = connect(worker);
-  return {
-    pulse: () => {
-      worker.postMessage({ kind: 'pulse' } satisfies SceneRequest);
-    },
-    recede: async (away) => {
-      await ask((id) => ({ away, id, kind: 'recede' }));
-    },
-    setTime: async (time) => {
-      await ask((id) => ({ id, kind: 'time', time }));
-    },
-  };
-};
-
-export { createStage, loginScene, type Stage, type StageOptions };
+export { createStage, storefront, type Stage, type StageOptions };

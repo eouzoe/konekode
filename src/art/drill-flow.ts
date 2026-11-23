@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 
 import { inSequence, wait } from './dom';
+import { paced } from './motion';
 import {
   beats,
   createBuffer,
@@ -25,7 +26,7 @@ interface DrillFlow {
   readonly done: () => boolean;
   readonly hint: () => string;
   readonly nextKey: () => string | undefined;
-  readonly play: (tokens: ReadonlyArray<string>, live: () => boolean) => Promise<void>;
+  readonly play: (tokens: ReadonlyArray<string>, signal: AbortSignal) => Promise<void>;
   readonly press: (key: string) => boolean;
   readonly replayTo: (index: number) => void;
 }
@@ -176,7 +177,7 @@ const act = (session: Session, { arg, kind }: Token, instant: boolean): void => 
 
 const show = async ({ keyboard, modeLine }: DrillParts, { arg, kind }: Token): Promise<void> => {
   if (kind === 'flash') {
-    gsap.fromTo(modeLine, modeFlashFrom, modeFlash);
+    gsap.fromTo(modeLine, modeFlashFrom, { ...modeFlash, duration: paced(modeFlash.duration) });
   } else if (kind === 'wait') {
     await wait(pace.pause);
   } else if (kind === 'down') {
@@ -186,18 +187,18 @@ const show = async ({ keyboard, modeLine }: DrillParts, { arg, kind }: Token): P
   }
 };
 
-const fillSlowly = async (session: Session, live: () => boolean): Promise<void> => {
+const fillSlowly = async (session: Session, signal: AbortSignal): Promise<void> => {
   const step = async (next: Drill): Promise<void> => {
     set(session, next);
     session.parts.paper.draw();
     await wait(pace.fill);
   };
-  await inSequence(filled(session.drill), step, live);
+  await inSequence(filled(session.drill), step, signal);
 };
 
-const playToken = async (session: Session, token: Token, live: () => boolean): Promise<void> => {
+const playToken = async (session: Session, token: Token, signal: AbortSignal): Promise<void> => {
   if (token.kind === 'fill') {
-    await fillSlowly(session, live);
+    await fillSlowly(session, signal);
   } else {
     await show(session.parts, token);
     act(session, token, false);
@@ -219,12 +220,12 @@ const createDrillFlow = (parts: DrillParts): DrillFlow => {
     done: () => drillDone(session.drill),
     hint: () => hintOf(session.drill),
     nextKey: () => nextKeyOf(session.drill),
-    play: async (tokens, live) => {
-      const step = (token: Token): Promise<void> => playToken(session, token, live);
+    play: async (tokens, signal) => {
+      const step = (token: Token): Promise<void> => playToken(session, token, signal);
       await inSequence(
         tokens.map((token) => parse(token)),
         step,
-        live,
+        signal,
       );
     },
     press: (key) => press(session, key),

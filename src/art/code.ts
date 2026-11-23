@@ -26,7 +26,7 @@ interface CodeView {
 
 const ink = HighlightStyle.define([
   {
-    color: '#8c4a24',
+    color: '#f0a066',
     tag: [
       tags.keyword,
       tags.processingInstruction,
@@ -36,14 +36,14 @@ const ink = HighlightStyle.define([
       tags.bool,
     ],
   },
-  { color: '#a8592e', tag: [tags.string, tags.character, tags.number] },
-  { color: '#6d5f4d', tag: [tags.comment] },
+  { color: '#e8cf94', tag: [tags.string, tags.character, tags.number] },
+  { color: '#a3957f', tag: [tags.comment] },
 ]);
 
 const theme = EditorView.theme({
   '&': {
     background: 'transparent',
-    color: 'var(--ink)',
+    color: 'var(--light)',
     fontSize: 'var(--code-size)',
     height: '100%',
   },
@@ -52,7 +52,7 @@ const theme = EditorView.theme({
   '.cm-gutters': {
     background: 'transparent',
     border: 'none',
-    color: 'rgb(109 95 77 / 0.5)',
+    color: 'rgb(241 230 207 / 0.32)',
     fontFamily: 'var(--mono)',
   },
   '.cm-line': { lineHeight: '1.85', padding: '0 0.8em' },

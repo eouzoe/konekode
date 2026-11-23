@@ -1,5 +1,6 @@
 import { unlockedNow } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
+import { type Beat } from '@/lib/unit/format';
 
 import { beatSchema, type BeatMeta } from './machine';
 
@@ -7,6 +8,15 @@ const readMeta = (beat: HTMLElement): BeatMeta => {
   const { after, expect, id = '', wait = '', when = '' } = beat.dataset;
   return beatSchema.parse({ expect: expect ?? null, id, next: after === 'next', wait, when });
 };
+
+const metaOf = (beat: Beat): BeatMeta =>
+  beatSchema.parse({
+    expect: beat.expect ?? null,
+    id: beat.id,
+    next: beat.after === 'next',
+    wait: beat.wait ?? '',
+    when: beat.when ?? '',
+  });
 
 const grantUnlocks = (unit: string, beat: HTMLElement): void => {
   const ids = (beat.dataset.unlock ?? '').split(',').filter((id) => id !== '');
@@ -17,4 +27,4 @@ const grantUnlocks = (unit: string, beat: HTMLElement): void => {
   }
 };
 
-export { grantUnlocks, readMeta };
+export { grantUnlocks, metaOf, readMeta };

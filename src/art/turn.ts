@@ -6,7 +6,30 @@ const ignored = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab']);
 
 const isChord = (event: KeyboardEvent): boolean => event.ctrlKey || event.metaKey || event.altKey;
 
-const listen = async (keyboard: Keyboard, live: () => boolean, handle: Handler): Promise<void> => {
+const attach = (
+  keyboard: Keyboard,
+  onKey: (event: KeyboardEvent) => Promise<void>,
+  options: AddEventListenerOptions,
+): void => {
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      void onKey(event);
+    },
+    options,
+  );
+  document.addEventListener(
+    'keyup',
+    (event) => {
+      if (event.key === 'Shift') {
+        keyboard.up('Shift');
+      }
+    },
+    options,
+  );
+};
+
+const listen = async (keyboard: Keyboard, signal: AbortSignal, handle: Handler): Promise<void> => {
   const { promise, resolve } = Promise.withResolvers<null>();
   const controller = new AbortController();
   const finish = (): void => {
@@ -21,47 +44,17 @@ const listen = async (keyboard: Keyboard, live: () => boolean, handle: Handler):
       return;
     }
     event.preventDefault();
-    if ((await handle(event.key)) && live()) {
+    if (await handle(event.key)) {
       finish();
     }
   };
-  const { signal } = controller;
-  document.addEventListener(
-    'keydown',
-    (event) => {
-      if (!live()) {
-        finish();
-        return;
-      }
-      void onKey(event);
-    },
-    { signal },
-  );
-  document.addEventListener(
-    'keyup',
-    (event) => {
-      if (event.key === 'Shift') {
-        keyboard.up('Shift');
-      }
-    },
-    { signal },
-  );
+  const listening = { signal: controller.signal };
+  signal.addEventListener('abort', finish, listening);
+  attach(keyboard, onKey, listening);
+  if (signal.aborted) {
+    finish();
+  }
   await promise;
 };
 
-const waitForNext = async (skip: string): Promise<void> => {
-  const { promise, resolve } = Promise.withResolvers<null>();
-  const controller = new AbortController();
-  const go = (event: Event): void => {
-    if (event.target instanceof Element && event.target.closest(skip) !== null) {
-      return;
-    }
-    controller.abort();
-    resolve(null);
-  };
-  document.addEventListener('keydown', go, { signal: controller.signal });
-  document.addEventListener('pointerdown', go, { signal: controller.signal });
-  await promise;
-};
-
-export { listen, waitForNext };
+export { listen };

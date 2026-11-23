@@ -1,15 +1,13 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import type { AstroIntegration } from 'astro';
 import sirv from 'sirv';
 
 import { refsRoute } from './src/art/refs';
 
-import type { AstroIntegration } from 'astro';
-
 const pages = [
   { entrypoint: './src/art/unit.astro', pattern: '/art/unit' },
-  { entrypoint: './src/art/home.astro', pattern: '/art/home' },
   { entrypoint: './src/parts/gallery.astro', pattern: '/parts' },
 ];
 

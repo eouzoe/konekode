@@ -1,6 +1,7 @@
 import { gsap } from 'gsap';
 
 import { element } from './dom';
+import { paced } from './motion';
 import { outputOf, type Beat } from './unit';
 
 import type { Paper } from './paper';
@@ -14,12 +15,13 @@ interface RunParts {
 interface RunFlow {
   readonly celebrate: () => Promise<void>;
   readonly clear: () => void;
-  readonly execute: (beat: Beat, live: () => boolean) => Promise<boolean>;
+  readonly execute: (beat: Beat, signal: AbortSignal) => Promise<string | undefined>;
+  readonly note: (text: string) => void;
+  readonly shown: () => string | null;
 }
 
 const words = {
   cannotRun: '這個寫法原型裡跑不了，網站上會真的編譯。',
-  different: '和題目要的不一樣，再看看程式？',
 };
 
 const press = { duration: 0.08, repeat: 1, scale: 0.95, yoyo: true };
@@ -35,59 +37,77 @@ const expectedOf = (beat: Beat): string | undefined => {
   return beat.expect;
 };
 
-const verdictOf = (right: boolean): string => {
-  if (right) {
-    return '';
-  }
-  return words.different;
-};
-
 const showCell = (box: HTMLElement, text: string | undefined): void => {
   box.parentElement?.toggleAttribute('hidden', text === undefined);
   box.textContent = text ?? '';
 };
 
+interface Boxes {
+  readonly done: HTMLElement;
+  readonly io: HTMLElement;
+  readonly output: HTMLElement;
+  readonly verdict: HTMLElement;
+}
+
+const boxesOf = (): Boxes => ({
+  done: element('done'),
+  io: element('io'),
+  output: element('output'),
+  verdict: element('verdict'),
+});
+
+const prepare = (boxes: Boxes, beat: Beat, source: string): string | undefined => {
+  gsap.set(boxes.io, { autoAlpha: 1 });
+  showCell(element('input'), beat.input);
+  showCell(element('expect'), expectedOf(beat));
+  boxes.output.textContent = '';
+  boxes.verdict.textContent = '';
+  return outputOf(source, beat.input ?? '');
+};
+
+const reveal = async (boxes: Boxes, output: string): Promise<void> => {
+  boxes.output.textContent = output;
+  await gsap.fromTo(
+    boxes.output,
+    { autoAlpha: 0, filter: 'blur(4px)' },
+    { ...appear, duration: paced(appear.duration) },
+  );
+};
+
 const createRunFlow = ({ paper, stage }: RunParts): RunFlow => {
-  const io = element('io');
-  const outputBox = element('output');
-  const verdict = element('verdict');
-  const done = element('done');
-  const prepare = (beat: Beat): void => {
-    gsap.set(io, { autoAlpha: 1 });
-    showCell(element('input'), beat.input);
-    showCell(element('expect'), expectedOf(beat));
-  };
-  const show = async (output: string, beat: Beat): Promise<boolean> => {
-    outputBox.textContent = output;
-    await gsap.fromTo(outputBox, { autoAlpha: 0, filter: 'blur(4px)' }, appear);
-    const right = beat.expect === undefined || output.trim() === beat.expect.trim();
-    verdict.textContent = verdictOf(right);
-    return right;
-  };
-  const execute = async (beat: Beat, live: () => boolean): Promise<boolean> => {
-    prepare(beat);
-    const output = outputOf(paper.state.buffer.text, beat.input ?? '');
-    await gsap.fromTo('.run-hint', { scale: 1 }, press);
-    if (!live()) {
-      return false;
+  const boxes = boxesOf();
+  const held: { shown: string | null } = { shown: null };
+  const execute = async (beat: Beat, signal: AbortSignal): Promise<string | undefined> => {
+    const output = prepare(boxes, beat, paper.state.buffer.text);
+    await gsap.fromTo('.run-hint', { scale: 1 }, { ...press, duration: paced(press.duration) });
+    if (signal.aborted) {
+      return undefined;
     }
     if (output === undefined) {
-      outputBox.textContent = '';
-      verdict.textContent = words.cannotRun;
-      return false;
+      boxes.verdict.textContent = words.cannotRun;
+      return undefined;
     }
-    return show(output, beat);
+    held.shown = beat.id;
+    await reveal(boxes, output);
+    return output;
   };
   const celebrate = async (): Promise<void> => {
-    stage.pulse();
-    await gsap.timeline().fromTo(done, stampStart, stamp).add(paper.shake(), stampShake);
+    void stage.pulse();
+    await gsap
+      .timeline()
+      .fromTo(boxes.done, stampStart, { ...stamp, duration: paced(stamp.duration) })
+      .add(paper.shake(), paced(stampShake));
   };
   const clear = (): void => {
-    gsap.set([done, io], { autoAlpha: 0 });
-    outputBox.textContent = '';
-    verdict.textContent = '';
+    gsap.set([boxes.done, boxes.io], { autoAlpha: 0 });
+    boxes.output.textContent = '';
+    boxes.verdict.textContent = '';
+    held.shown = null;
   };
-  return { celebrate, clear, execute };
+  const note = (text: string): void => {
+    boxes.verdict.textContent = text;
+  };
+  return { celebrate, clear, execute, note, shown: () => held.shown };
 };
 
 export { createRunFlow, type RunFlow };
