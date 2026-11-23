@@ -1,3 +1,5 @@
+import init, { Engine, keptKinds } from 'konekode-engine';
+
 import { report } from '@/lib/fault/fault';
 import { onRecorded, openLog } from '@/lib/record/current';
 import { type LearningEvent } from '@/lib/record/event';
@@ -15,7 +17,6 @@ import {
 } from '@/lib/zod';
 import { contentId } from '@/units/content';
 import { engineContent } from '@/units/index';
-import init, { Engine, keptKinds } from '@/vendor/konekode-engine/konekode_wasm';
 
 const componentSchema = object({
   completed: int(),

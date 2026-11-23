@@ -10,6 +10,7 @@
   };
 
   packages = with pkgs; [
+    gh
     just
     vim
   ];

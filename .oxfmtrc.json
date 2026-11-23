@@ -22,7 +22,6 @@
     "dist-dev",
     ".astro",
     ".wrangler",
-    "public/google*.html",
-    "src/vendor"
+    "public/google*.html"
   ]
 }

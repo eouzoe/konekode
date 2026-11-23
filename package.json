@@ -23,6 +23,7 @@
     "@yowasp/clang": "^22.0.0-git20542-10",
     "astro": "^7.4.13",
     "gsap": "3.15.1",
+    "konekode-engine": "https://github.com/eouzoe/konekode-engine/releases/download/v0.1.2/konekode-engine-0.1.2.tgz",
     "pixi.js": "8.23.0",
     "serwist": "9.5.15",
     "ts-fsrs": "6.0.0",

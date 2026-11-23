@@ -77,7 +77,7 @@
     "node": true,
     "es2025": true
   },
-  "ignorePatterns": ["dist", "dist-dev", ".astro", "node_modules", "src/legacy", "src/vendor"],
+  "ignorePatterns": ["dist", "dist-dev", ".astro", "node_modules", "src/legacy"],
   "overrides": [
     {
       "files": ["src/**/*.ts", "src/**/*.astro"],

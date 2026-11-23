@@ -34,8 +34,8 @@ format:
 test:
     bun test src worker
 
-engine-update engine="../konekode-engine":
-    bun src/lib/learner/engine.build.ts {{ engine }}
+engine-verify:
+    bun src/lib/learner/engine.verify.ts
 
 results:
     bun src/units/results.build.ts
