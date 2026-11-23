@@ -1,0 +1,82 @@
+---
+import './style.css';
+
+import { refsRoute } from './refs';
+
+const picked = `${refsRoute}/1999/sprites/picked`;
+---
+
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>美術：起步單元</title>
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="desk"></div>
+
+    <div id="ui" data-stage="empty">
+      <header class="top">
+        <span class="chapter"><i class="dot"></i>第一章　起步</span>
+        <nav class="controls">
+          <button type="button" id="back">上一句</button>
+          <button type="button" id="restart">從頭開始</button>
+        </nav>
+      </header>
+
+      <section class="work" id="work">
+        <aside class="side">
+          <span class="tape"><b id="tape-number">01</b><span id="tape-title"></span></span>
+          <p class="hint" id="hint"></p>
+          <figure class="snippet" id="snippet" hidden>
+            <figcaption>要加進去的</figcaption>
+            <pre id="snippet-code"></pre>
+          </figure>
+        </aside>
+
+        <div class="sheet" id="sheet">
+          <div class="sheet-head">
+            <img src={`${picked}/diamond.png`} alt="" />
+            <span>PROGRAM</span><small>程式</small>
+            <b class="keycap" id="keycap"></b>
+          </div>
+          <div class="editor" id="editor"></div>
+          <div class="sheet-foot">
+            <span class="mode" id="mode">-- NORMAL --</span>
+            <div class="io" id="io">
+              <span class="io-cell"><small>輸入</small><pre id="input"></pre></span>
+              <span class="io-cell"><small>輸出</small><pre id="output"></pre></span>
+              <span class="io-cell"><small>應該輸出</small><pre id="expect"></pre></span>
+              <span class="verdict" id="verdict"></span>
+            </div>
+            <span class="run-hint"><kbd>Enter</kbd>執行</span>
+          </div>
+          <img class="done" id="done" src={`${picked}/done.png`} alt="完成" />
+        </div>
+
+        <div class="keyboard" id="keyboard"></div>
+      </section>
+
+      <footer class="dialogue" id="dialogue">
+        <div class="speaker">
+          <div class="name"><span>小精靈</span><i class="rule"></i></div>
+          <p class="line" id="line"></p>
+        </div>
+        <span class="more" id="more"></span>
+      </footer>
+    </div>
+
+    <script>
+      import './unit-page';
+    </script>
+  </body>
+</html>

@@ -6,6 +6,7 @@ import { constants, createBrotliCompress } from 'node:zlib';
 
 import { defineConfig } from 'astro/config';
 
+import { artStudio } from './art.config';
 import { finishOffline } from './src/lib/site/offline.build';
 import { textEditing } from './text.config';
 
@@ -91,6 +92,7 @@ export default defineConfig({
       name: 'pack-large-assets',
     },
     textEditing(),
+    artStudio(),
   ],
   site: 'https://cp.konekode.workers.dev',
   vite: {

@@ -1,0 +1,36 @@
+{
+  "first": [
+    { "id": "first-hello", "mood": "greet", "say": "歡迎來到貓貓競程！" },
+    { "id": "first-what", "mood": "explain", "say": "這裡是我們一起學競技程式的地方。" },
+    { "id": "first-cp", "mood": "explain", "say": "競技程式，就是用程式解題目的比賽。" },
+    {
+      "id": "first-path",
+      "mood": "point",
+      "say": "我們會從第一行程式開始，一章一章往上走。",
+      "show": "route"
+    },
+    {
+      "id": "first-look",
+      "mood": "point",
+      "say": "看看這個東東，這就是我們等一下要做的事。",
+      "show": "demo"
+    },
+    { "id": "first-calm", "mood": "reassure", "say": "完全沒寫過程式也沒關係！我們會一起從頭來。" },
+    {
+      "go": "start",
+      "id": "first-invite",
+      "mood": "invite",
+      "say": "準備好的話，就從第一章「起步」開始吧！"
+    }
+  ],
+  "back": [
+    { "id": "back-hello", "mood": "greet", "say": "歡迎回來！" },
+    {
+      "id": "back-where",
+      "mood": "explain",
+      "say": "上次我們停在「{section}」這一段。",
+      "show": "route"
+    },
+    { "go": "continue", "id": "back-go", "mood": "invite", "say": "那我們就從那裡接著做吧！" }
+  ]
+}

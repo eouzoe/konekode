@@ -1,0 +1,103 @@
+---
+import './home.css';
+
+import { refsRoute } from './refs';
+
+const sprites = `${refsRoute}/1999/sprites`;
+---
+
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>貓貓競程｜專屬於你的競技程式互動教學</title>
+    <meta name="description" content="來跟貓貓學競程吧！小精靈陪你走上競程旅途。" />
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Cormorant+Garamond:ital,wght@0,500;1,400&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body data-look="art">
+    <div id="stage" data-label="場景（1999 背景）"></div>
+    <div class="veil" id="veil"></div>
+
+    <main class="home">
+      <header class="bar" data-label="品牌列">
+        <div class="brand">
+          <h1><i class="dot"></i>貓貓競程</h1>
+          <p class="tagline">專屬於你的競技程式互動教學</p>
+        </div>
+        <button
+          class="menu-button"
+          id="menu-button"
+          type="button"
+          aria-label="選單"
+          aria-expanded="false"
+        >
+          <img src={`${sprites}/picked/diamond-dark.png`} alt="" />
+        </button>
+        <nav class="menu" id="menu" hidden data-label="二級選單">
+          <a
+            class="menu-item"
+            href="https://github.com/eouzoe/konekode"
+            rel="noopener"
+            aria-label="GitHub 上的原始碼"
+          >
+            <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"
+              ><path
+                fill="currentColor"
+                d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"
+              ></path></svg
+            >
+          </a>
+          <span class="menu-item todo">設定<small>還沒做（工作單 029）</small></span>
+          <span class="menu-item todo">關於<small>還沒寫</small></span>
+        </nav>
+      </header>
+
+      <figure class="sprite" id="sprite" data-label="小精靈（佔位）">
+        <img src={`${sprites}/ui_modules__v3a7_teaching/15.png`} alt="" />
+        <figcaption id="mood"></figcaption>
+      </figure>
+
+      <aside class="route" id="route" data-label="路線的縮小版">
+        <span class="tape"><b>01</b>第一章　起步</span>
+        <ol class="steps" id="steps"></ol>
+        <p class="next-chapter"><b>02</b>第二章　運算與條件判斷<small>準備中</small></p>
+        <a class="whole" href="#">完整的路線<small>還沒做</small></a>
+      </aside>
+
+      <section class="reads" id="reads" data-label="文章區（名稱與架構待定，只先佔位）">
+        <span class="reads-head">名稱待定</span>
+        <a href="#" class="read">EGOI 對升學的作用</a>
+        <a href="#" class="read">EGOI 的賽制與紅利</a>
+        <a href="#" class="read">自學這條路</a>
+        <a href="#" class="read">各種賽道選擇的後果</a>
+        <small class="todo-note">題目取自 2026-11-18 他列的；文章都還沒寫</small>
+      </section>
+
+      <div class="demo" id="demo" data-label="單元實際的樣子（自動播）">
+        <div class="demo-sheet">
+          <div class="demo-code" id="demo-code"></div>
+          <div class="demo-out"><small>輸出</small><b id="demo-output"></b></div>
+        </div>
+      </div>
+
+      <footer class="dialogue" id="dialogue" data-label="小精靈的對話">
+        <div class="speaker">
+          <div class="name"><span>小精靈</span><i class="rule"></i></div>
+          <p class="line" id="line"></p>
+        </div>
+        <span class="more" id="more"></span>
+      </footer>
+    </main>
+
+    <script>
+      import './home-page';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,561 @@
+@font-face {
+  font-family: 'STZhongsong';
+  src: url('/art-refs/fonts/stzhongs.ttf') format('truetype');
+  font-display: block;
+}
+
+:root {
+  --ink: #2b241c;
+  --ink-soft: #6d5f4d;
+  --copper: #b4703f;
+  --accent: #c4552f;
+  --light: #f1e6cf;
+  --light-soft: rgb(241 230 207 / 0.6);
+  --serif: 'STZhongsong', serif;
+  --latin: 'Cormorant Garamond', serif;
+  --mono: 'JetBrains Mono', monospace;
+  --code-size: clamp(15px, 1.3vw, 20px);
+  --side: 25vw;
+  --gap: 4vw;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+body {
+  background: #0b0a09;
+  color: var(--light);
+  font-family: var(--serif);
+  overflow: hidden;
+  height: 100vh;
+  font-variant-numeric: lining-nums;
+}
+
+#stage,
+#desk,
+#ui {
+  position: fixed;
+  inset: 0;
+}
+#desk {
+  background: url('/art-refs/1999/extracted/singlebg__v3a7_teaching__systemmanual_bg2.png') center /
+    cover;
+}
+
+.top {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2rem var(--gap) 0;
+  letter-spacing: 0.4em;
+  font-size: 0.82rem;
+  z-index: 3;
+}
+.chapter {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  color: var(--light-soft);
+}
+.dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.controls {
+  display: flex;
+  gap: 2.2rem;
+}
+.controls button {
+  border: none;
+  background: none;
+  color: rgb(241 230 207 / 0.55);
+  font: inherit;
+  letter-spacing: 0.3em;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.controls button:hover {
+  color: var(--light);
+}
+
+.work {
+  position: absolute;
+  inset: 0;
+}
+
+.side {
+  position: absolute;
+  left: var(--gap);
+  top: 13vh;
+  width: var(--side);
+  display: grid;
+  gap: 1.4rem;
+  justify-items: start;
+}
+.tape {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.7rem 2.6rem 0.9rem 1.5rem;
+  background: url('/art-refs/1999/sprites/picked/tape-dark.png') center / 100% 100% no-repeat;
+  letter-spacing: 0.3em;
+  font-size: 0.95rem;
+}
+.tape b {
+  font-family: var(--latin);
+  font-size: 1.9rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  font-variant-numeric: lining-nums;
+}
+.hint {
+  color: #f0b48e;
+  font-size: 0.98rem;
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+  min-height: 1.8em;
+}
+.snippet {
+  width: 100%;
+  border-style: solid;
+  border-width: 22px 24px 22px 24px;
+  border-image: url('/art-refs/1999/sprites/picked/paper.png') 180 235 180 220 fill / 48px 60px 48px
+    56px stretch;
+  color: var(--ink);
+  filter: drop-shadow(0 1rem 1.4rem rgb(0 0 0 / 0.55));
+}
+.snippet figcaption {
+  font-size: 0.78rem;
+  letter-spacing: 0.3em;
+  color: var(--copper);
+  padding: 0.5rem 0.6rem 0.2rem;
+}
+.snippet pre {
+  font-family: var(--mono);
+  font-size: calc(var(--code-size) * 0.92);
+  line-height: 1.8;
+  padding: 0.2rem 0.6rem 0.6rem;
+  white-space: pre-wrap;
+}
+
+.sheet {
+  position: absolute;
+  left: calc(var(--gap) * 2 + var(--side));
+  right: var(--gap);
+  top: 10vh;
+  bottom: 6vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border-style: solid;
+  border-width: 42px 50px 44px 48px;
+  border-image: url('/art-refs/1999/sprites/picked/paper.png') 180 235 180 220 fill / 90px 117px
+    90px 110px stretch;
+  color: var(--ink);
+  filter: drop-shadow(0 1.8rem 2.6rem rgb(0 0 0 / 0.6));
+}
+#ui[data-stage='drill'] .sheet {
+  bottom: 35vh;
+}
+#ui[data-stage='drill'] .cm-line {
+  line-height: 1.7;
+}
+#ui[data-stage='drill'] .cm-gutters {
+  display: none;
+}
+#ui[data-stage='drill'] .run-hint,
+#ui[data-stage='drill'] .io {
+  visibility: hidden;
+}
+.cm-content,
+.snippet pre,
+.io-cell pre,
+.line .latin,
+.keycap {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    'calt' 0,
+    'liga' 0;
+}
+.cm-bar.normal {
+  width: 0.6em;
+  background: rgb(43 36 28 / 0.75);
+  animation: none;
+}
+.sheet-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.8rem 0.3rem;
+}
+.sheet-head img {
+  width: 1.1rem;
+}
+.sheet-head span {
+  font-family: var(--latin);
+  letter-spacing: 0.45em;
+  font-size: 0.9rem;
+  color: var(--copper);
+}
+.sheet-head small {
+  letter-spacing: 0.3em;
+  color: var(--copper);
+}
+.keycap {
+  position: absolute;
+  right: 0.8rem;
+  top: 0;
+  min-width: 2.6rem;
+  padding: 0.35rem 0.8rem 0.55rem;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ink);
+  border-style: solid;
+  border-width: 6px 10px 12px 8px;
+  border-image: url('/art-refs/1999/sprites/picked/key.png') 14 22 24 16 fill / 6px 10px 12px 8px
+    stretch;
+}
+.editor {
+  min-height: 0;
+  margin-top: 0.3rem;
+}
+.editor .cm-editor {
+  height: 100%;
+}
+.cm-lit {
+  background: rgb(196 85 47 / 0.1);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.cm-block {
+  background: var(--ink);
+  color: var(--light) !important;
+}
+.cm-block * {
+  color: var(--light) !important;
+}
+.cm-bar {
+  display: inline-block;
+  width: 2px;
+  height: 1.25em;
+  margin-right: -2px;
+  vertical-align: -0.25em;
+  background: var(--accent);
+  animation: blink 1.1s steps(1) infinite;
+}
+.cm-ghost {
+  color: rgb(109 95 77 / 0.32);
+  white-space: pre;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.sheet-foot {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  margin: 0 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid rgb(180 112 63 / 0.45);
+  min-height: 3.2rem;
+}
+.mode {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 1.1rem 0.4rem 0.8rem;
+  color: var(--light);
+  background: url('/art-refs/1999/sprites/picked/tape-dark.png') center / 100% 100% no-repeat;
+}
+.mode.insert {
+  background-image: url('/art-refs/1999/sprites/picked/brush-orange.png');
+  color: var(--ink);
+}
+.mode[hidden] {
+  visibility: hidden;
+  display: inline;
+}
+.io {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1.6rem;
+}
+.io-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.7rem;
+}
+.io-cell[hidden] {
+  display: none;
+}
+.io-cell small {
+  letter-spacing: 0.25em;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.io-cell pre {
+  font-family: var(--mono);
+  font-size: var(--code-size);
+  font-weight: 500;
+}
+.verdict {
+  color: var(--accent);
+  font-size: 0.88rem;
+  letter-spacing: 0.05em;
+}
+.run-hint {
+  display: inline-flex;
+  gap: 0.6rem;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  white-space: nowrap;
+}
+.run-hint kbd {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0;
+  color: var(--ink);
+  padding: 0.2rem 0.7rem 0.4rem;
+  border-style: solid;
+  border-width: 5px 8px 10px 6px;
+  border-image: url('/art-refs/1999/sprites/picked/key.png') 14 22 24 16 fill / 5px 8px 10px 6px
+    stretch;
+}
+#ui[data-stage='code'] .sheet-foot {
+  visibility: hidden;
+}
+.done {
+  position: absolute;
+  right: 7%;
+  bottom: 22%;
+  width: clamp(8rem, 13vw, 12rem);
+  pointer-events: none;
+}
+
+.keyboard {
+  position: absolute;
+  left: calc(var(--gap) * 2 + var(--side));
+  right: var(--gap);
+  top: 67vh;
+  bottom: 5vh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.35rem;
+}
+.kb-row {
+  display: flex;
+  gap: 0.35rem;
+}
+.kb-key {
+  display: grid;
+  place-items: center;
+  width: clamp(1.9rem, 2.7vw, 2.6rem);
+  height: clamp(1.8rem, 2.5vw, 2.4rem);
+  padding-bottom: 0.15rem;
+  font-family: var(--mono);
+  font-size: clamp(0.62rem, 0.75vw, 0.8rem);
+  color: var(--ink);
+  border-style: solid;
+  border-width: 5px 8px 9px 6px;
+  border-image: url('/art-refs/1999/sprites/picked/key.png') 14 22 24 16 fill / 5px 8px 9px 6px
+    stretch;
+  white-space: nowrap;
+}
+.kb-key.wide {
+  width: clamp(2.6rem, 3.6vw, 3.4rem);
+}
+.kb-key.wider {
+  width: clamp(4rem, 5.8vw, 5.6rem);
+}
+.kb-key.space {
+  width: clamp(14rem, 20vw, 20rem);
+}
+.kb-key.next {
+  filter: drop-shadow(0 0 0.35rem rgb(230 120 70 / 0.95));
+  color: var(--accent);
+  font-weight: 500;
+}
+.kb-key.down {
+  border-image-source: url('/art-refs/1999/sprites/picked/brush-orange.png');
+  border-image-slice: 20 40 20 40 fill;
+  color: var(--light);
+}
+
+.dialogue {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2.6rem 21% 3rem;
+  background: linear-gradient(180deg, transparent, rgb(8 7 6 / 0.78) 40%, rgb(8 7 6 / 0.92));
+}
+#ui:not([data-stage='empty']) .dialogue {
+  left: var(--gap);
+  right: auto;
+  bottom: 7vh;
+  width: var(--side);
+  padding: 0;
+  background: none;
+}
+#ui:not([data-stage='empty']) .line {
+  font-size: 1.08rem;
+}
+#ui:not([data-stage='empty']) .more {
+  right: 0;
+  bottom: -1.6rem;
+}
+.name {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+}
+.name span {
+  font-size: 1.5rem;
+  letter-spacing: 0.18em;
+  color: var(--light);
+  white-space: nowrap;
+}
+.name .rule {
+  flex: 1;
+  height: 1px;
+  margin-bottom: 0.45rem;
+  background: linear-gradient(90deg, rgb(241 230 207 / 0.55), rgb(241 230 207 / 0.08));
+}
+.line {
+  font-size: 1.3rem;
+  line-height: 1.9;
+  letter-spacing: 0.05em;
+  min-height: 1.9em;
+}
+.line .latin {
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.9em;
+  color: #f0b48e;
+}
+.more {
+  position: absolute;
+  right: 8%;
+  bottom: 3.4rem;
+  border-left: 0.5rem solid transparent;
+  border-right: 0.5rem solid transparent;
+  border-top: 0.65rem solid var(--light-soft);
+  animation: bob 1.8s ease-in-out infinite;
+}
+@keyframes bob {
+  50% {
+    transform: translateY(0.3rem);
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --code-size: 13px;
+    --gap: 0.8rem;
+  }
+  .top {
+    padding: 1rem var(--gap) 0;
+    font-size: 0.72rem;
+  }
+  .controls {
+    gap: 1rem;
+  }
+  .dialogue {
+    padding: 2rem 1rem 2.4rem;
+  }
+  .line {
+    font-size: 1rem;
+  }
+  .more {
+    right: 1.2rem;
+    bottom: 1.6rem;
+  }
+  .side {
+    top: 3.6rem;
+    left: var(--gap);
+    right: var(--gap);
+    width: auto;
+    gap: 0.5rem;
+  }
+  .tape {
+    padding: 0.4rem 1.8rem 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  .tape b {
+    font-size: 1.3rem;
+  }
+  .hint,
+  .snippet {
+    display: none;
+  }
+  .sheet,
+  #ui[data-stage='drill'] .sheet {
+    left: 0.3rem;
+    right: 0.3rem;
+    top: 7.6rem;
+    bottom: 11rem;
+    border-width: 28px 28px 30px 28px;
+    border-image-width: 60px 70px 60px 66px;
+  }
+  #ui[data-stage='drill'] .sheet {
+    bottom: 22rem;
+  }
+  .keyboard {
+    left: 0.2rem;
+    right: 0.2rem;
+    top: auto;
+    bottom: 10rem;
+    height: 11rem;
+  }
+  .kb-row {
+    gap: 0.15rem;
+  }
+  .kb-key {
+    width: 1.55rem;
+    height: 1.9rem;
+    font-size: 0.5rem;
+    border-width: 3px 5px 6px 4px;
+    border-image-width: 3px 5px 6px 4px;
+  }
+  .kb-key.wide {
+    width: 2rem;
+  }
+  .kb-key.wider {
+    width: 3rem;
+  }
+  .kb-key.space {
+    width: 10rem;
+  }
+  .run-hint {
+    display: none;
+  }
+  #ui:not([data-stage='empty']) .dialogue {
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    bottom: 1.2rem;
+  }
+  #ui:not([data-stage='empty']) .line {
+    font-size: 0.95rem;
+  }
+  #ui:not([data-stage='empty']) .more {
+    bottom: -0.4rem;
+  }
+}
