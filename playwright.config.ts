@@ -1,6 +1,12 @@
+import { createHash } from 'node:crypto';
+
 import { defineConfig, devices } from '@playwright/test';
 
-const port = 8788;
+const firstPort = 20_000;
+const portCount = 20_000;
+const workspace = import.meta.dirname;
+const port =
+  firstPort + (createHash('sha256').update(workspace).digest().readUInt32BE() % portCount);
 const second = 1000;
 const testSeconds = 420;
 const serverSeconds = 90;
