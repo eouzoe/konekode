@@ -8,6 +8,7 @@ import { send, studentEditor } from './gate-view';
 import { currentId, type Current } from './scene-view';
 import { storedPosition, storedSummary } from './stored';
 import { expect } from './test';
+import { isHeld, passUntil } from './time';
 
 const path = '/learn/start/';
 const spriteEditor = '[data-code-runner] [data-role="editor"][data-actor="sprite"]';
@@ -68,6 +69,22 @@ interface Setup {
 
 const draftAt = (text: string, needle: string): Saved => ({ cursor: text.indexOf(needle), text });
 
+const readyScene = '[data-scene][data-ready="true"]';
+const graceMs = 5000;
+
+const sceneSettles = async (page: Page): Promise<void> => {
+  const scene = page.locator(readyScene);
+  if (!isHeld(page)) {
+    await scene.waitFor();
+    return;
+  }
+  try {
+    await scene.waitFor({ timeout: graceMs });
+  } catch {
+    await passUntil(page, async () => (await scene.count()) > 0, { label: 'the unit' });
+  }
+};
+
 const open = async (
   page: Page,
   position: string | null = null,
@@ -106,7 +123,7 @@ const open = async (
     { ids: [...(setup.unlocked ?? [])], ref: position, saved: setup.draft ?? null, unit: unitName },
   );
   await page.goto(path);
-  await page.locator('[data-scene][data-ready="true"]').waitFor();
+  await sceneSettles(page);
 };
 
 const writeProgram = async (page: Page, source: string): Promise<void> => {

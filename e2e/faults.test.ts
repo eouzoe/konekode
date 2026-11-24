@@ -8,6 +8,7 @@ import {
 } from '../src/lib/record/browser';
 import { say, type UiKey } from '../src/lib/text/ui';
 import { currentId } from './scene-view';
+import { open as openLesson } from './start-support';
 import { expect, test, type Page } from './test';
 import { laterStarts } from './time';
 
@@ -142,6 +143,29 @@ const waitsAtMostForATrouble = async (page: Page, sent: readonly Sent[]): Promis
   await expect(page.locator(notice)).toHaveText(say(openTroubles.get(trouble) ?? 'notice.blocked'));
 };
 
+const neverAnswers = ({ name, version }: { name: string; version: number }): void => {
+  if (!location.pathname.startsWith('/learn/')) {
+    return;
+  }
+  const holding = indexedDB.open(name, version);
+  holding.addEventListener('success', () => {
+    Reflect.set(globalThis, 'held', holding.result);
+  });
+  indexedDB.deleteDatabase(name);
+};
+
+test.describe('when a test holds the page clock', () => {
+  test.use({ heldTime: true });
+
+  test('a unit whose database never answers still opens, because the test lets page time pass', async ({
+    page,
+  }) => {
+    await page.addInitScript(neverAnswers, { name: databaseName, version: schemaVersion });
+    await openLesson(page);
+    await expect(page.locator('[data-beat]:not([hidden])').first()).toBeVisible();
+  });
+});
+
 test.describe('when the browser cannot keep what the learner does', () => {
   test('the learner is told once, we hear of it at once, and what they did still reaches us', async ({
     page,
@@ -209,16 +233,7 @@ test.describe('when the browser cannot keep what the learner does', () => {
   test('a database that never answers does not leave the unit waiting forever either', async ({
     page,
   }) => {
-    await page.addInitScript(
-      ({ name, version }) => {
-        const holding = indexedDB.open(name, version);
-        holding.addEventListener('success', () => {
-          Reflect.set(globalThis, 'held', holding.result);
-        });
-        indexedDB.deleteDatabase(name);
-      },
-      { name: databaseName, version: schemaVersion },
-    );
+    await page.addInitScript(neverAnswers, { name: databaseName, version: schemaVersion });
     await waitsAtMostForATrouble(page, watchUploads(page));
   });
 
