@@ -10,7 +10,8 @@
     ".astro/types.d.ts",
     "src/**/*.ts",
     "src/**/*.astro",
-    "worker/**/*.ts",
+    "backend/**/*.ts",
+    "alchemy.run.ts",
     "e2e/**/*.ts",
     "*.config.ts"
   ],

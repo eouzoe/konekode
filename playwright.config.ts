@@ -7,6 +7,8 @@ const portCount = 20_000;
 const workspace = import.meta.dirname;
 const port =
   firstPort + (createHash('sha256').update(workspace).digest().readUInt32BE() % portCount);
+const stage = 'e2e';
+const fresh = `for (const path of ['.alchemy/local', '.alchemy/state/Konekode/${stage}']) require('node:fs').rmSync(path, { force: true, recursive: true })`;
 const second = 1000;
 const testSeconds = 420;
 const serverSeconds = 90;
@@ -34,7 +36,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `bun x wrangler d1 migrations apply cp-intake --local && bun x wrangler d1 execute cp-intake --local --command "DELETE FROM intake; DELETE FROM intake_usage; DELETE FROM intake_actor_usage" && bun x wrangler dev --port ${String(port)}`,
+    command: `bun -e "${fresh}" && bun x alchemy dev --stage ${stage} --no-input`,
+    env: {
+      ALCHEMY_FAST_DISTILLED: '1',
+      BUN_OPTIONS: '--conditions=distilled-lazy',
+      KONEKODE_LOCAL: '1',
+      SITE_PORT: String(port),
+    },
     reuseExistingServer: true,
     timeout: serverSeconds * second,
     url: `http://localhost:${String(port)}/learn/start/`,

@@ -3,6 +3,7 @@ dist/
 dist-dev/
 .astro/
 .wrangler/
+.alchemy/
 .devenv/
 devenv.local.nix
 .env

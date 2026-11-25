@@ -24,13 +24,6 @@ const dayLength = 10;
 const dayMillis = 86_400_000;
 const millis = 1000;
 
-const readUsage = 'SELECT bytes, batches FROM intake_usage WHERE network = ? AND day = ?';
-const addUsage = `INSERT INTO intake_usage (network, day, bytes, batches) VALUES (?, ?, ?, 1)
-ON CONFLICT (network, day) DO UPDATE SET bytes = bytes + excluded.bytes, batches = batches + 1`;
-const readActorUsage = 'SELECT bytes, batches FROM intake_actor_usage WHERE actor = ? AND day = ?';
-const addActorUsage = `INSERT INTO intake_actor_usage (actor, day, bytes, batches) VALUES (?, ?, ?, 1)
-ON CONFLICT (actor, day) DO UPDATE SET bytes = bytes + excluded.bytes, batches = batches + 1`;
-
 const parts = (text: string): string[] => text.split(':').filter((part) => part !== '');
 
 const expand = (ip: string): string[] => {
@@ -82,13 +75,9 @@ const secondsToNextDay = (now: number): number =>
 
 export {
   accountOf,
-  addActorUsage,
-  addUsage,
   dayLimits,
   hasRoom,
   networkOf,
-  readActorUsage,
-  readUsage,
   secondsToNextDay,
   usageOf,
   type Account,

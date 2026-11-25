@@ -147,6 +147,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: production
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: false
     steps:
       - name: actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -160,7 +163,50 @@ jobs:
         with:
           name: dist
           path: dist
-      - run: bun x wrangler deploy --name cp
+      - run: bun x alchemy deploy --stage prod --yes --no-input
+        env:
+          ALCHEMY_FAST_DISTILLED: '1'
+          BUN_OPTIONS: --conditions=distilled-lazy
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - run: bun backend/check-stage.ts prod "$(git rev-parse --short HEAD)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  deploy-dev:
+    name: 部署 dev
+    needs: e2e-fast
+    if: github.event_name == 'push' && github.ref_name == 'dev' && vars.DEPLOY == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: preview
+    concurrency:
+      group: deploy-${{ github.ref_name }}
+      cancel-in-progress: false
+    steps:
+      - name: actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: oven-sh/setup-bun v2.2.0
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: actions/download-artifact v8.0.2
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: dist
+          path: dist
+      - run: bun x alchemy deploy --stage dev --yes --no-input
+        env:
+          ALCHEMY_FAST_DISTILLED: '1'
+          BUN_OPTIONS: --conditions=distilled-lazy
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          KONEKODE_PREVIEW_VIEWER: ${{ secrets.KONEKODE_PREVIEW_VIEWER }}
+      - run: bun backend/check-stage.ts dev "$(git rev-parse --short HEAD)"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          KONEKODE_CHECK_CLIENT_ID: ${{ secrets.KONEKODE_CHECK_CLIENT_ID }}
+          KONEKODE_CHECK_CLIENT_SECRET: ${{ secrets.KONEKODE_CHECK_CLIENT_SECRET }}

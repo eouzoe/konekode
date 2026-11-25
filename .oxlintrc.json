@@ -102,7 +102,16 @@
       }
     },
     {
-      "files": ["src/**/*.test.ts", "worker/**/*.test.ts", "**/*.build.ts", "src/units/contest.ts"],
+      "files": [
+        "src/**/*.test.ts",
+        "backend/**/*.test.ts",
+        "**/*.build.ts",
+        "src/units/contest.ts",
+        "backend/stages.ts",
+        "backend/checks.ts",
+        "backend/check-stage.ts",
+        "backend/migration.ts"
+      ],
       "globals": {
         "Bun": "readonly"
       }
@@ -160,6 +169,21 @@
       "files": ["src/units/**"],
       "rules": {
         "eslint/max-lines": "off"
+      }
+    },
+    {
+      "files": ["backend/**/*.ts", "alchemy.run.ts"],
+      "rules": {
+        "new-cap": [
+          "error",
+          {
+            "capIsNewExceptionPattern": "^(Schema|Context|D1)\\.[A-Z]",
+            "capIsNewExceptions": ["Stack", "Telemetry", "Worker"]
+          }
+        ]
+      },
+      "globals": {
+        "HTMLRewriter": "readonly"
       }
     }
   ]

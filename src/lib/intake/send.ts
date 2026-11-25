@@ -1,14 +1,13 @@
-interface Ticket {
-  readonly actor: string;
-  readonly kind: 'events' | 'replay';
-  readonly seq: number;
-  readonly session: string;
-  readonly site: string;
-}
+import { type Ticket as Envelope } from '../../../backend/contract';
+import { intakePath, status } from '../../../backend/limits';
+
+const { stored } = status;
+
+type Ticket = Omit<Envelope, 'encoding'>;
 
 interface Packed {
   readonly body: ArrayBuffer;
-  readonly encoding: 'gzip' | 'identity';
+  readonly encoding: Envelope['encoding'];
 }
 
 interface Answer {
@@ -16,13 +15,10 @@ interface Answer {
   readonly status: number;
 }
 
-const endpoint = '/api/intake';
-const stored = 204;
-const bodyLimit = 1_000_000;
 const keepaliveLimit = 60_000;
 const unreached: Answer = { retryAfter: null, status: 0 };
 
-const address = (ticket: Ticket, encoding: string): string => {
+const address = (ticket: Ticket, encoding: Envelope['encoding']): string => {
   const query = new URLSearchParams({
     actor: ticket.actor,
     encoding,
@@ -31,7 +27,7 @@ const address = (ticket: Ticket, encoding: string): string => {
     session: ticket.session,
     site: ticket.site,
   });
-  return `${endpoint}?${query.toString()}`;
+  return `${intakePath}?${query.toString()}`;
 };
 
 const squeeze = (bytes: Uint8Array<ArrayBuffer>): Promise<ArrayBuffer> => {
@@ -90,8 +86,9 @@ const uploadNow = (ticket: Ticket, text: string): Promise<Answer> => {
 const uploadLast = (ticket: Ticket, text: string): boolean =>
   navigator.sendBeacon(address(ticket, 'identity'), text);
 
+export { bodyLimit } from '../../../backend/limits';
 export {
-  bodyLimit,
+  address,
   keepaliveLimit,
   pack,
   post,

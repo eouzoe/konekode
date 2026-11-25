@@ -1,0 +1,164 @@
+diff --git a/dist/core/workers/globals/entry.worker.mjs b/dist/core/workers/globals/entry.worker.mjs
+index 8c5bc21c1e08a4871140a727bac6b8cd97504d32..63e3f747089aa87e3c782d3f918a0aa80e6684f2 100644
+--- a/dist/core/workers/globals/entry.worker.mjs
++++ b/dist/core/workers/globals/entry.worker.mjs
+@@ -4,7 +4,7 @@ import worker2 from "../response.shared-CWhyk3qo.mjs";
+ 
+ export const main = "globals/entry.worker.mjs";
+ export const modules = {
+-  "globals/entry.worker.mjs": "import{i as PostalMime,r as RAW_EMAIL}from\"../SendEmailOptions.shared-CQYgaEO9.mjs\";import{i as SystemError,n as makeErrorResponse}from\"../response.shared-CWhyk3qo.mjs\";const HEADER_CF_BLOB=`MF-CF-Blob`,BINDING_USER_WORKER_DIRECT=`USER_WORKER_DIRECT`,HEADER_ACCESS_BLOB=`MF-Access-Blob`,HEADER_ORIGINAL_URL=`Alchemy-Runtime-Original-URL`,HEADER_PROXY_SHARED_SECRET=`Alchemy-Runtime-Proxy-Shared-Secret`;function renderEmailHeaders(headers){return headers?`\\n  headers:\\n${[...headers.entries()].map(([k,v])=>`    ${k}: ${v}`).join(`\n`)}`:``}function joinPath(base,...segments){let separator=base.includes(`\\\\`)?`\\\\`:`/`;return[base.replace(/[\\\\/]+$/,``),...segments].join(separator)}function isEmailReplyable(email,incomingEmailHeaders){let autoResponseSuppress=incomingEmailHeaders.get(`x-auto-response-suppress`)?.toLowerCase();if(autoResponseSuppress!==void 0&&autoResponseSuppress!==`none`)return!1;let autoSubmittedValue=incomingEmailHeaders.get(`auto-submitted`)?.toLowerCase();return autoSubmittedValue!==void 0&&autoSubmittedValue!==`no`?!1:email.inReplyTo===void 0&&email.references===void 0?!0:email.inReplyTo!==void 0&&email.references!==void 0?(email.references.match(/@/g)?.length??0)>=100?(console.error(`The incoming email's \"References\" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/`),!1):!0:!1}async function validateReply(incomingMessage,replyMessage){let rawEmail=replyMessage[RAW_EMAIL],rawEmailBuffer=new Uint8Array(await new Response(rawEmail).arrayBuffer()),parsedReply;try{parsedReply=await PostalMime.parse(rawEmailBuffer)}catch(e){throw Error(`could not parse email: ${e.message}`,{cause:e})}if(parsedReply.from?.address!==replyMessage.from)throw Error(`From: header does not match mail from`);if(parsedReply.messageId===void 0)throw Error(`invalid message-id`);if(new Headers(parsedReply.headers.map(header=>[header.key,header.value])).get(`received`)!==null)throw Error(`invalid headers set`);if(parsedReply.inReplyTo===void 0)throw Error(`no In-Reply-To header found in reply message`);if(parsedReply.inReplyTo!==incomingMessage.messageId)throw Error(`In-Reply-To does not match original Message-ID`);let incomingReferences=incomingMessage.references??``;if(parsedReply.references!==void 0){if(!(parsedReply.references.includes(incomingMessage.messageId)&&parsedReply.references.includes(incomingReferences)))throw Error(`provided References header is invalid`)}else{let replyReferences=`References: ${incomingMessage.messageId}${incomingReferences.length>0?` `:``}${incomingReferences}\\r\\n`,encodedReferences=new TextEncoder().encode(replyReferences),finalReplyEmail=new Uint8Array(encodedReferences.byteLength+rawEmailBuffer.byteLength);return finalReplyEmail.set(encodedReferences,0),finalReplyEmail.set(rawEmailBuffer,encodedReferences.byteLength),finalReplyEmail}return rawEmailBuffer}function synthesizeLocalMessageId(){return`${crypto.randomUUID().replaceAll(`-`,``)}@example.com`}async function handleEmail(params,request,env){let from=params.get(`from`),to=params.get(`to`);if(!request.body||!from||!to)return new Response(\"Invalid email. Your request must include URL parameters specifying the `from` and `to` addresses, as well as an email in the body\",{status:400});let rawBody=request.clone().body;if(rawBody===null)return new Response(`Cloned request body is null`,{status:500});let incomingEmailRaw=new Uint8Array(await request.arrayBuffer());if(incomingEmailRaw.byteLength>26214400)return new Response(`Email message size is bigger than the production size limit of 25MiB. Local development has a lower limit of 1Mib.`,{status:400});if(incomingEmailRaw.byteLength>1048576)return new Response(`Email message size is within the production size limit of 25MiB, but exceeds the lower 1Mib limit for testing locally.`,{status:400});let parsedIncomingEmail;try{parsedIncomingEmail=await PostalMime.parse(incomingEmailRaw)}catch(e){let error=e;return new Response(`Email could not be parsed: ${error.name}: ${error.message}`,{status:400})}if(parsedIncomingEmail.messageId===void 0)return new Response(`Email could not be parsed: invalid or no message id provided`,{status:400});from!==parsedIncomingEmail.from?.address&&console.warn(`Provided MAIL FROM address doesn't match the email message's \"From\" header:\\n  MAIL FROM: ${from}\\n  \"From\" header: ${parsedIncomingEmail.from?.address}`),parsedIncomingEmail.to?.map(addr=>addr.address).includes(to)||console.warn(`Provided RCPT TO address doesn't match any \"To\" header in the email message:\\n  RCPT TO: ${to}\\n  \"To\" header: ${parsedIncomingEmail.to?.map(addr=>addr.address).join(`, `)}`);let incomingEmailHeaders=new Headers(parsedIncomingEmail.headers.map(header=>[header.key,header.value])),maybeClientError,message={from,to,raw:rawBody,rawSize:incomingEmailRaw.byteLength,headers:incomingEmailHeaders,setReject:reason=>{console.error(`Email handler rejected message with the following reason: \"${reason}\"`),maybeClientError=reason},forward:async(rcptTo,headers)=>(console.log(`Email handler forwarded message with\\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`),{messageId:synthesizeLocalMessageId()}),reply:async replyMessage=>{if(!isEmailReplyable(parsedIncomingEmail,incomingEmailHeaders))throw Error(`Original email is not replyable`);let finalReply=await validateReply(parsedIncomingEmail,replyMessage),disk=env.EMAIL_DISK,directory=env.EMAIL_DIRECTORY;if(disk===void 0||directory===void 0)throw Error(`Cannot persist the email reply: the runtime storage has no disk path.`);let fileName=`${crypto.randomUUID()}.eml`;await disk.fetch(new URL(fileName,`http://placeholder/`).toString(),{method:`PUT`,body:finalReply});let file=joinPath(directory,fileName);return console.log(`Email handler replied to sender with the following message:\\n  ${file}`),{messageId:synthesizeLocalMessageId()}}};return await env[BINDING_USER_WORKER_DIRECT].email(message),maybeClientError===void 0?new Response(`Worker successfully processed email`,{status:200}):new Response(`Worker rejected email with the following reason: ${maybeClientError}`,{status:400})}function parseForwardedProto(value){let protocol=value?.split(`,`)[0]?.trim().toLowerCase();if(protocol===`http`||protocol===`https`)return`${protocol}:`}var entry_worker_default$1={async fetch(request,env){let url=new URL(request.url),originalUrl=null,secret=request.headers.get(HEADER_PROXY_SHARED_SECRET);if(secret!==null){if(!secret||secret!==env.PROXY_SHARED_SECRET)return new Response(`Invalid proxy shared secret`,{status:400});originalUrl=request.headers.get(HEADER_ORIGINAL_URL),originalUrl!==null&&(url=new URL(originalUrl))}if(originalUrl===null){let protocol=parseForwardedProto(request.headers.get(`X-Forwarded-Proto`));protocol!==void 0&&(url.protocol=protocol,url.host=request.headers.get(`Host`)??url.host)}if(url.pathname===`/cdn-cgi/handler/queue`)try{let json=await request.json(),result=await env[BINDING_USER_WORKER_DIRECT].queue(json.queue,json.messages.map(message=>({...message,timestamp:new Date(message.timestamp)})),json.metadata);return Response.json({ok:!0,result})}catch(error){return makeErrorResponse(SystemError.make({subtag:`UserQueueHandler`,message:`User worker's queue handler threw: ${error instanceof Error?error.message:String(error)}`,cause:error}))}if(url.pathname===`/cdn-cgi/local/scheduled`||url.pathname===`/cdn-cgi/handler/scheduled`||url.pathname===`/cdn-cgi/mf/scheduled`)try{let time=url.searchParams.get(`time`),result=await env[BINDING_USER_WORKER_DIRECT].scheduled({scheduledTime:time?new Date(parseInt(time)):void 0,cron:url.searchParams.get(`cron`)??void 0});return url.searchParams.get(`format`)===`json`?Response.json(result,{status:result.outcome===`ok`?200:500}):new Response(result.outcome,{status:result.outcome===`ok`?200:500})}catch(error){return makeErrorResponse(SystemError.make({subtag:`UserScheduledHandler`,message:`User worker's scheduled handler threw: ${error instanceof Error?error.message:String(error)}`,cause:error}))}if(url.pathname===`/cdn-cgi/local/email`||url.pathname===`/cdn-cgi/handler/email`)try{return await handleEmail(url.searchParams,request,env)}catch(e){return new Response(e?.stack??String(e),{status:500})}if(url.pathname.startsWith(`/cdn-cgi/handler/`))return new Response(`\"${url.pathname}\" is not a valid handler. Did you mean to use \"/cdn-cgi/local/scheduled\" or \"/cdn-cgi/local/email\"?`,{status:404});let clientIp=request.cf?.clientIp,clientCfBlobHeader=request.headers.get(HEADER_CF_BLOB),cf=clientCfBlobHeader?JSON.parse(clientCfBlobHeader):{...env.CF_BLOB,clientAcceptEncoding:request.headers.get(`Accept-Encoding`)??``},headers=new Headers(request.headers);if(headers.delete(HEADER_CF_BLOB),headers.delete(HEADER_ORIGINAL_URL),headers.delete(HEADER_PROXY_SHARED_SECRET),headers.delete(HEADER_ACCESS_BLOB),env.ACCESS_BLOB!==void 0&&headers.set(HEADER_ACCESS_BLOB,JSON.stringify(env.ACCESS_BLOB)),secret!==null&&headers.set(`Host`,url.host),clientIp&&!headers.get(`CF-Connecting-IP`)){let ip=clientIp.match(/\\[(?<ip>.*?)\\]:\\d+/)?.groups?.ip??clientIp.match(/(?<ip>.*?):\\d+/)?.groups?.ip;ip&&headers.set(`CF-Connecting-IP`,ip)}let userRequest=new Request(new Request(url,request),{headers,cf});return url.pathname===`/cdn-cgi/alchemy/module-runner/init`?await env[BINDING_USER_WORKER_DIRECT].fetch(userRequest):combineRepeatedHeaders(await env.USER_WORKER.fetch(userRequest))}};const combineRepeatedHeaders=response=>{if(response.status===101)return response;let combined=new Response(response.body,response);for(let[name,value]of response.headers)name!==`set-cookie`&&combined.headers.set(name,value);return combined};var entry_worker_default=entry_worker_default$1??{};export{entry_worker_default as default};",
++  "globals/entry.worker.mjs": "import{i as PostalMime,r as RAW_EMAIL}from\"../SendEmailOptions.shared-CQYgaEO9.mjs\";import{i as SystemError,n as makeErrorResponse}from\"../response.shared-CWhyk3qo.mjs\";const HEADER_CF_BLOB=`MF-CF-Blob`,BINDING_USER_WORKER_DIRECT=`USER_WORKER_DIRECT`,HEADER_ACCESS_BLOB=`MF-Access-Blob`,HEADER_ORIGINAL_URL=`Alchemy-Runtime-Original-URL`,HEADER_PROXY_SHARED_SECRET=`Alchemy-Runtime-Proxy-Shared-Secret`;function renderEmailHeaders(headers){return headers?`\\n  headers:\\n${[...headers.entries()].map(([k,v])=>`    ${k}: ${v}`).join(`\n`)}`:``}function joinPath(base,...segments){let separator=base.includes(`\\\\`)?`\\\\`:`/`;return[base.replace(/[\\\\/]+$/,``),...segments].join(separator)}function isEmailReplyable(email,incomingEmailHeaders){let autoResponseSuppress=incomingEmailHeaders.get(`x-auto-response-suppress`)?.toLowerCase();if(autoResponseSuppress!==void 0&&autoResponseSuppress!==`none`)return!1;let autoSubmittedValue=incomingEmailHeaders.get(`auto-submitted`)?.toLowerCase();return autoSubmittedValue!==void 0&&autoSubmittedValue!==`no`?!1:email.inReplyTo===void 0&&email.references===void 0?!0:email.inReplyTo!==void 0&&email.references!==void 0?(email.references.match(/@/g)?.length??0)>=100?(console.error(`The incoming email's \"References\" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/`),!1):!0:!1}async function validateReply(incomingMessage,replyMessage){let rawEmail=replyMessage[RAW_EMAIL],rawEmailBuffer=new Uint8Array(await new Response(rawEmail).arrayBuffer()),parsedReply;try{parsedReply=await PostalMime.parse(rawEmailBuffer)}catch(e){throw Error(`could not parse email: ${e.message}`,{cause:e})}if(parsedReply.from?.address!==replyMessage.from)throw Error(`From: header does not match mail from`);if(parsedReply.messageId===void 0)throw Error(`invalid message-id`);if(new Headers(parsedReply.headers.map(header=>[header.key,header.value])).get(`received`)!==null)throw Error(`invalid headers set`);if(parsedReply.inReplyTo===void 0)throw Error(`no In-Reply-To header found in reply message`);if(parsedReply.inReplyTo!==incomingMessage.messageId)throw Error(`In-Reply-To does not match original Message-ID`);let incomingReferences=incomingMessage.references??``;if(parsedReply.references!==void 0){if(!(parsedReply.references.includes(incomingMessage.messageId)&&parsedReply.references.includes(incomingReferences)))throw Error(`provided References header is invalid`)}else{let replyReferences=`References: ${incomingMessage.messageId}${incomingReferences.length>0?` `:``}${incomingReferences}\\r\\n`,encodedReferences=new TextEncoder().encode(replyReferences),finalReplyEmail=new Uint8Array(encodedReferences.byteLength+rawEmailBuffer.byteLength);return finalReplyEmail.set(encodedReferences,0),finalReplyEmail.set(rawEmailBuffer,encodedReferences.byteLength),finalReplyEmail}return rawEmailBuffer}function synthesizeLocalMessageId(){return`${crypto.randomUUID().replaceAll(`-`,``)}@example.com`}async function handleEmail(params,request,env){let from=params.get(`from`),to=params.get(`to`);if(!request.body||!from||!to)return new Response(\"Invalid email. Your request must include URL parameters specifying the `from` and `to` addresses, as well as an email in the body\",{status:400});let rawBody=request.clone().body;if(rawBody===null)return new Response(`Cloned request body is null`,{status:500});let incomingEmailRaw=new Uint8Array(await request.arrayBuffer());if(incomingEmailRaw.byteLength>26214400)return new Response(`Email message size is bigger than the production size limit of 25MiB. Local development has a lower limit of 1Mib.`,{status:400});if(incomingEmailRaw.byteLength>1048576)return new Response(`Email message size is within the production size limit of 25MiB, but exceeds the lower 1Mib limit for testing locally.`,{status:400});let parsedIncomingEmail;try{parsedIncomingEmail=await PostalMime.parse(incomingEmailRaw)}catch(e){let error=e;return new Response(`Email could not be parsed: ${error.name}: ${error.message}`,{status:400})}if(parsedIncomingEmail.messageId===void 0)return new Response(`Email could not be parsed: invalid or no message id provided`,{status:400});from!==parsedIncomingEmail.from?.address&&console.warn(`Provided MAIL FROM address doesn't match the email message's \"From\" header:\\n  MAIL FROM: ${from}\\n  \"From\" header: ${parsedIncomingEmail.from?.address}`),parsedIncomingEmail.to?.map(addr=>addr.address).includes(to)||console.warn(`Provided RCPT TO address doesn't match any \"To\" header in the email message:\\n  RCPT TO: ${to}\\n  \"To\" header: ${parsedIncomingEmail.to?.map(addr=>addr.address).join(`, `)}`);let incomingEmailHeaders=new Headers(parsedIncomingEmail.headers.map(header=>[header.key,header.value])),maybeClientError,message={from,to,raw:rawBody,rawSize:incomingEmailRaw.byteLength,headers:incomingEmailHeaders,setReject:reason=>{console.error(`Email handler rejected message with the following reason: \"${reason}\"`),maybeClientError=reason},forward:async(rcptTo,headers)=>(console.log(`Email handler forwarded message with\\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`),{messageId:synthesizeLocalMessageId()}),reply:async replyMessage=>{if(!isEmailReplyable(parsedIncomingEmail,incomingEmailHeaders))throw Error(`Original email is not replyable`);let finalReply=await validateReply(parsedIncomingEmail,replyMessage),disk=env.EMAIL_DISK,directory=env.EMAIL_DIRECTORY;if(disk===void 0||directory===void 0)throw Error(`Cannot persist the email reply: the runtime storage has no disk path.`);let fileName=`${crypto.randomUUID()}.eml`;await disk.fetch(new URL(fileName,`http://placeholder/`).toString(),{method:`PUT`,body:finalReply});let file=joinPath(directory,fileName);return console.log(`Email handler replied to sender with the following message:\\n  ${file}`),{messageId:synthesizeLocalMessageId()}}};return await env[BINDING_USER_WORKER_DIRECT].email(message),maybeClientError===void 0?new Response(`Worker successfully processed email`,{status:200}):new Response(`Worker rejected email with the following reason: ${maybeClientError}`,{status:400})}function parseForwardedProto(value){let protocol=value?.split(`,`)[0]?.trim().toLowerCase();if(protocol===`http`||protocol===`https`)return`${protocol}:`}var entry_worker_default$1={async fetch(request,env){let url=new URL(request.url),originalUrl=null,secret=request.headers.get(HEADER_PROXY_SHARED_SECRET);if(secret!==null){if(!secret||secret!==env.PROXY_SHARED_SECRET)return new Response(`Invalid proxy shared secret`,{status:400});originalUrl=request.headers.get(HEADER_ORIGINAL_URL),originalUrl!==null&&(url=new URL(originalUrl))}if(originalUrl===null){let protocol=parseForwardedProto(request.headers.get(`X-Forwarded-Proto`));protocol!==void 0&&(url.protocol=protocol,url.host=request.headers.get(`Host`)??url.host)}if(url.pathname===`/cdn-cgi/handler/queue`)try{let json=await request.json(),result=await env[BINDING_USER_WORKER_DIRECT].queue(json.queue,json.messages.map(message=>({...message,timestamp:new Date(message.timestamp)})),json.metadata);return Response.json({ok:!0,result})}catch(error){return makeErrorResponse(SystemError.make({subtag:`UserQueueHandler`,message:`User worker's queue handler threw: ${error instanceof Error?error.message:String(error)}`,cause:error}))}if(url.pathname===`/cdn-cgi/local/scheduled`||url.pathname===`/cdn-cgi/handler/scheduled`||url.pathname===`/cdn-cgi/mf/scheduled`)try{let time=url.searchParams.get(`time`),result=await env[BINDING_USER_WORKER_DIRECT].scheduled({scheduledTime:time?new Date(parseInt(time)):void 0,cron:url.searchParams.get(`cron`)??void 0});return url.searchParams.get(`format`)===`json`?Response.json(result,{status:result.outcome===`ok`?200:500}):new Response(result.outcome,{status:result.outcome===`ok`?200:500})}catch(error){return makeErrorResponse(SystemError.make({subtag:`UserScheduledHandler`,message:`User worker's scheduled handler threw: ${error instanceof Error?error.message:String(error)}`,cause:error}))}if(url.pathname===`/cdn-cgi/local/email`||url.pathname===`/cdn-cgi/handler/email`)try{return await handleEmail(url.searchParams,request,env)}catch(e){return new Response(e?.stack??String(e),{status:500})}if(url.pathname.startsWith(`/cdn-cgi/handler/`))return new Response(`\"${url.pathname}\" is not a valid handler. Did you mean to use \"/cdn-cgi/local/scheduled\" or \"/cdn-cgi/local/email\"?`,{status:404});let clientIp=request.cf?.clientIp,clientCfBlobHeader=request.headers.get(HEADER_CF_BLOB),cf=clientCfBlobHeader?JSON.parse(clientCfBlobHeader):{...env.CF_BLOB,clientAcceptEncoding:request.headers.get(`Accept-Encoding`)??``},headers=new Headers(request.headers);if(headers.delete(HEADER_CF_BLOB),headers.delete(HEADER_ORIGINAL_URL),headers.delete(HEADER_PROXY_SHARED_SECRET),headers.delete(HEADER_ACCESS_BLOB),env.ACCESS_BLOB!==void 0&&headers.set(HEADER_ACCESS_BLOB,JSON.stringify(env.ACCESS_BLOB)),secret!==null&&headers.set(`Host`,url.host),clientIp&&!headers.get(`CF-Connecting-IP`)){let ip=clientIp.match(/\\[(?<ip>.*?)\\]:\\d+/)?.groups?.ip??clientIp.match(/(?<ip>.*?):\\d+/)?.groups?.ip;ip&&headers.set(`CF-Connecting-IP`,ip)}let userRequest=new Request(new Request(url,request),{headers,cf});return url.pathname===`/cdn-cgi/alchemy/module-runner/init`?await env[BINDING_USER_WORKER_DIRECT].fetch(userRequest):combineRepeatedHeaders(ensureAcceptableEncoding(request.headers.get(`Accept-Encoding`),await env.USER_WORKER.fetch(userRequest)))}};const combineRepeatedHeaders=response=>{if(response.status===101)return response;let combined=new Response(response.body,response);for(let[name,value]of response.headers)name!==`set-cookie`&&combined.headers.set(name,value);return combined};const compressedByCloudflareFL = new Set([\n  \"text/html\",\n  \"text/richtext\",\n  \"text/plain\",\n  \"text/css\",\n  \"text/x-script\",\n  \"text/x-component\",\n  \"text/x-java-source\",\n  \"text/x-markdown\",\n  \"application/javascript\",\n  \"application/x-javascript\",\n  \"text/javascript\",\n  \"text/js\",\n  \"image/x-icon\",\n  \"image/vnd.microsoft.icon\",\n  \"application/x-perl\",\n  \"application/x-httpd-cgi\",\n  \"text/xml\",\n  \"application/xml\",\n  \"application/rss+xml\",\n  \"application/vnd.api+json\",\n  \"application/x-protobuf\",\n  \"application/json\",\n  \"multipart/bag\",\n  \"multipart/mixed\",\n  \"application/xhtml+xml\",\n  \"font/ttf\",\n  \"font/otf\",\n  \"font/x-woff\",\n  \"image/svg+xml\",\n  \"application/vnd.ms-fontobject\",\n  \"application/ttf\",\n  \"application/x-ttf\",\n  \"application/otf\",\n  \"application/x-otf\",\n  \"application/truetype\",\n  \"application/opentype\",\n  \"application/x-opentype\",\n  \"application/font-woff\",\n  \"application/eot\",\n  \"application/font\",\n  \"application/font-sfnt\",\n  \"application/wasm\",\n  \"application/javascript-binast\",\n  \"application/manifest+json\",\n  \"application/ld+json\",\n  \"application/graphql+json\",\n  \"application/geo+json\"\n]);\nconst isCompressedByCloudflareFL = (contentTypeHeader) => {\n  if (!contentTypeHeader)\n    return true;\n  const [contentType = \"\"] = contentTypeHeader.split(\";\");\n  return compressedByCloudflareFL.has(contentType.trim().toLowerCase());\n};\nconst acceptEncodingElement = /^(?<coding>[a-z]+|\\*)(?:\\s*;\\s*q=(?<weight>\\d+(?:.\\d+)?))?$/;\nconst parseAcceptEncoding = (header) => {\n  const encodings = [];\n  for (const element of header.split(\",\")) {\n    const groups = acceptEncodingElement.exec(element.trim())?.groups;\n    if (groups?.coding !== undefined) {\n      encodings.push({\n        coding: groups.coding,\n        weight: groups.weight === undefined ? 1 : parseFloat(groups.weight)\n      });\n    }\n  }\n  return encodings.sort((a, b) => b.weight - a.weight);\n};\nconst ensureAcceptableEncoding = (clientAcceptEncoding, response) => {\n  if (clientAcceptEncoding === null || response.body === null)\n    return response;\n  const encodings = parseAcceptEncoding(clientAcceptEncoding);\n  if (encodings.length === 0)\n    return response;\n  const contentEncoding = response.headers.get(\"Content-Encoding\");\n  const contentType = response.headers.get(\"Content-Type\");\n  if (!isCompressedByCloudflareFL(contentType) || contentEncoding !== null && contentEncoding !== \"gzip\" && contentEncoding !== \"br\") {\n    return response;\n  }\n  let desiredEncoding;\n  let identityDisallowed = false;\n  for (const encoding of encodings) {\n    if (encoding.weight === 0) {\n      if (encoding.coding === \"identity\" || encoding.coding === \"*\")\n        identityDisallowed = true;\n    } else if (encoding.coding === \"gzip\" || encoding.coding === \"br\") {\n      desiredEncoding = encoding.coding;\n      break;\n    } else if (encoding.coding === \"identity\") {\n      break;\n    }\n  }\n  if (desiredEncoding === undefined) {\n    if (identityDisallowed) {\n      return new Response(\"Unsupported Media Type\", {\n        status: 415,\n        headers: { \"Accept-Encoding\": \"br, gzip\" }\n      });\n    }\n    if (contentEncoding === null)\n      return response;\n    const identity = new Response(response.body, response);\n    identity.headers.delete(\"Content-Encoding\");\n    return identity;\n  }\n  if (contentEncoding === desiredEncoding)\n    return response;\n  const encoded = new Response(response.body, response);\n  encoded.headers.set(\"Content-Encoding\", desiredEncoding);\n  return encoded;\n};\nvar entry_worker_default=entry_worker_default$1??{};export{entry_worker_default as default};",
+   "SendEmailOptions.shared-CQYgaEO9.mjs": worker0,
+   "Schema-DT4ltgvH.mjs": worker1,
+   "response.shared-CWhyk3qo.mjs": worker2,
+diff --git a/src/core/globals/entry.worker.ts b/src/core/globals/entry.worker.ts
+index 68ffcd73cf7e3f4b9a4f0fe4f573858764abc334..afef2dd76732acaa57f469d41d245ac96ac2d46d 100644
+--- a/src/core/globals/entry.worker.ts
++++ b/src/core/globals/entry.worker.ts
+@@ -564,13 +564,143 @@ export default <ExportedHandler<Env>>{
+     }
+     // The experimental and standard workers-types `Response` disagree too.
+     return combineRepeatedHeaders(
+-      (await env.USER_WORKER.fetch(
+-        userRequest as unknown as typeof request,
+-      )) as unknown as Response,
++      ensureAcceptableEncoding(
++        request.headers.get("Accept-Encoding"),
++        (await env.USER_WORKER.fetch(
++          userRequest as unknown as typeof request,
++        )) as unknown as Response,
++      ),
+     );
+   },
+ };
+ 
++const compressedByCloudflareFL = new Set([
++  "text/html",
++  "text/richtext",
++  "text/plain",
++  "text/css",
++  "text/x-script",
++  "text/x-component",
++  "text/x-java-source",
++  "text/x-markdown",
++  "application/javascript",
++  "application/x-javascript",
++  "text/javascript",
++  "text/js",
++  "image/x-icon",
++  "image/vnd.microsoft.icon",
++  "application/x-perl",
++  "application/x-httpd-cgi",
++  "text/xml",
++  "application/xml",
++  "application/rss+xml",
++  "application/vnd.api+json",
++  "application/x-protobuf",
++  "application/json",
++  "multipart/bag",
++  "multipart/mixed",
++  "application/xhtml+xml",
++  "font/ttf",
++  "font/otf",
++  "font/x-woff",
++  "image/svg+xml",
++  "application/vnd.ms-fontobject",
++  "application/ttf",
++  "application/x-ttf",
++  "application/otf",
++  "application/x-otf",
++  "application/truetype",
++  "application/opentype",
++  "application/x-opentype",
++  "application/font-woff",
++  "application/eot",
++  "application/font",
++  "application/font-sfnt",
++  "application/wasm",
++  "application/javascript-binast",
++  "application/manifest+json",
++  "application/ld+json",
++  "application/graphql+json",
++  "application/geo+json",
++]);
++
++const isCompressedByCloudflareFL = (contentTypeHeader: string | null): boolean => {
++  if (!contentTypeHeader) return true;
++  const [contentType = ""] = contentTypeHeader.split(";");
++  return compressedByCloudflareFL.has(contentType.trim().toLowerCase());
++};
++
++interface AcceptedEncoding {
++  readonly coding: string;
++  readonly weight: number;
++}
++
++const acceptEncodingElement = /^(?<coding>[a-z]+|\*)(?:\s*;\s*q=(?<weight>\d+(?:.\d+)?))?$/;
++
++const parseAcceptEncoding = (header: string): AcceptedEncoding[] => {
++  const encodings: AcceptedEncoding[] = [];
++  for (const element of header.split(",")) {
++    const groups = acceptEncodingElement.exec(element.trim())?.groups;
++    if (groups?.coding !== undefined) {
++      encodings.push({
++        coding: groups.coding,
++        weight: groups.weight === undefined ? 1 : parseFloat(groups.weight),
++      });
++    }
++  }
++  return encodings.sort((a, b) => b.weight - a.weight);
++};
++
++/**
++ * Cloudflare's edge compresses responses of the content types above with
++ * gzip or brotli, as the client accepts. Ported from Miniflare's entry
++ * worker: setting `Content-Encoding` makes workerd encode the body.
++ */
++const ensureAcceptableEncoding = (
++  clientAcceptEncoding: string | null,
++  response: Response,
++): Response => {
++  if (clientAcceptEncoding === null || response.body === null) return response;
++  const encodings = parseAcceptEncoding(clientAcceptEncoding);
++  if (encodings.length === 0) return response;
++  const contentEncoding = response.headers.get("Content-Encoding");
++  const contentType = response.headers.get("Content-Type");
++  if (
++    !isCompressedByCloudflareFL(contentType) ||
++    (contentEncoding !== null && contentEncoding !== "gzip" && contentEncoding !== "br")
++  ) {
++    return response;
++  }
++  let desiredEncoding: string | undefined;
++  let identityDisallowed = false;
++  for (const encoding of encodings) {
++    if (encoding.weight === 0) {
++      if (encoding.coding === "identity" || encoding.coding === "*") identityDisallowed = true;
++    } else if (encoding.coding === "gzip" || encoding.coding === "br") {
++      desiredEncoding = encoding.coding;
++      break;
++    } else if (encoding.coding === "identity") {
++      break;
++    }
++  }
++  if (desiredEncoding === undefined) {
++    if (identityDisallowed) {
++      return new Response("Unsupported Media Type", {
++        status: 415,
++        headers: { "Accept-Encoding": "br, gzip" },
++      });
++    }
++    if (contentEncoding === null) return response;
++    const identity = new Response(response.body, response);
++    identity.headers.delete("Content-Encoding");
++    return identity;
++  }
++  if (contentEncoding === desiredEncoding) return response;
++  const encoded = new Response(response.body, response);
++  encoded.headers.set("Content-Encoding", desiredEncoding);
++  return encoded;
++};
++
+ /**
+  * Sends each repeated response header (other than `Set-Cookie`) as one
+  * comma-joined line. HTTP treats the two forms as equivalent, but Bun's HTTP

@@ -7,6 +7,8 @@ dev: pch
 edit: pch
     PUBLIC_MODE=dev bun --bun run dev
 
+lean := "BUN_OPTIONS=--conditions=distilled-lazy ALCHEMY_FAST_DISTILLED=1"
+
 version := `git rev-parse --short HEAD` + `test -z "$(git status --porcelain)" || printf %s -dirty`
 
 build: pch
@@ -17,7 +19,7 @@ build-dev: pch
     cp -r dev-assets/fonts dist-dev/fonts
 
 serve-dev: build-dev
-    bun x wrangler dev --assets dist-dev --port 8789
+    {{ lean }} KONEKODE_LOCAL=1 SITE_PORT=8789 SITE_ASSETS=./dist-dev bun x alchemy dev --stage serve_dev
 
 preview:
     bun --bun run preview
@@ -32,7 +34,7 @@ format:
     bun x oxfmt --write .
 
 test:
-    bun test src worker
+    bun test src backend
 
 engine-verify:
     bun src/lib/learner/engine.verify.ts
@@ -50,8 +52,17 @@ e2e *args: build
 e2e-run *args:
     __EGL_VENDOR_LIBRARY_DIRS="$E2E_MESA/share/glvnd/egl_vendor.d" LD_LIBRARY_PATH="$E2E_GLVND/lib:$E2E_MESA/lib" LIBGL_ALWAYS_SOFTWARE=1 bun x playwright test {{args}}
 
-deploy: check e2e
-    bun x wrangler deploy
+deploy stage: check e2e
+    {{ lean }} secretspec run -- bun x alchemy deploy --stage {{stage}}
+
+check-stage stage version="":
+    bun backend/check-stage.ts '{{ stage }}' '{{ version }}'
+
+migration name:
+    bun backend/migration.ts '{{ name }}'
+
+preview-clean:
+    {{ lean }} secretspec run -- bun backend/stages.ts
 
 clean:
     rm -rf .astro dist dist-dev

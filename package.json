@@ -12,17 +12,23 @@
     "format:check": "oxfmt --check ."
   },
   "dependencies": {
+    "@alchemy.run/cloudflare": "2.0.0-beta.87",
+    "@alchemy.run/drizzle": "2.0.0-beta.87",
     "@bjorn3/browser_wasi_shim": "^0.4.2",
     "@codemirror/lang-cpp": "^6.0.3",
     "@codemirror/language": "^6.13.1",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
+    "@effect/sql-d1": "4.1.5",
     "@fingerprintjs/fingerprintjs": "5.3.0",
     "@lezer/highlight": "^1.2.5",
     "@rrweb/record": "2.2.2",
     "@yowasp/clang": "^22.0.0-git20542-10",
+    "alchemy": "2.0.0-beta.87",
     "astro": "^7.4.13",
     "brotli-dec-wasm": "^2.3.2",
+    "drizzle-orm": "1.0.0-rc.5",
+    "effect": "4.1.5",
     "gsap": "3.15.1",
     "isbot": "^5.2.3",
     "konekode-engine": "https://github.com/eouzoe/konekode-engine/releases/download/v0.1.2/konekode-engine-0.1.2.tgz",
@@ -34,9 +40,12 @@
   },
   "devDependencies": {
     "@astrojs/ts-content-mapper": "^0.2.0",
+    "@effect/platform-bun": "4.1.5",
+    "@effect/platform-node": "4.1.5",
     "@playwright/test": "1.64.1",
     "@types/bun": "^1.4.4",
     "@xstate/test": "2.0.0-beta.1",
+    "drizzle-kit": "1.0.0-rc.5",
     "fast-check": "^4.10.3",
     "oxfmt": "^0.79.0",
     "oxlint": "^1.94.0",
@@ -44,11 +53,13 @@
     "sirv": "^3.0.2",
     "typescript": "7.1.0-beta",
     "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000",
-    "vite-plus": "^1.7.0",
-    "wrangler": "^4.165.0"
+    "vite-plus": "^1.7.0"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000"
   },
-  "packageManager": "bun@1.4.4"
+  "packageManager": "bun@1.4.4",
+  "patchedDependencies": {
+    "@alchemy.run/cloudflare-runtime@2.0.0-beta.87": "patches/@alchemy.run%2Fcloudflare-runtime@2.0.0-beta.87.patch"
+  }
 }
