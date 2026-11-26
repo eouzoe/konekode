@@ -1,6 +1,6 @@
-import { Command, Subscription, UiSchema } from '@effect/ui';
+import { Command, Component, Subscription, UiSchema } from '@effect/ui';
 import { Html, HtmlSubscription } from '@effect/ui/html';
-import { Duration, Effect, Queue, Schema, Stream } from 'effect';
+import { Duration, Effect, Layer, Schema, Stream } from 'effect';
 
 import { createBuffer } from '@/lib/edit/buffer';
 import { effectOf } from '@/lib/edit/effect';
@@ -8,7 +8,6 @@ import { between, goalOf } from '@/lib/edit/goal';
 import { press as pressDesk, type Session } from '@/lib/edit/session';
 import { diagnose } from '@/lib/run/diagnose';
 import { busyStatus } from '@/lib/run/outcome';
-import { watchLoading } from '@/lib/run/runner';
 import { effectText, freeHint, quietHint, wrongHint } from '@/lib/run/view';
 import { fullscreenMark } from '@/lib/scene/conditions';
 import { fullscreenKeys } from '@/lib/site/device';
@@ -31,19 +30,6 @@ import { Progress } from '@/parts/progress';
 import { Snippet } from '@/parts/snippet';
 import { beats, starter, template } from '@/units/start';
 
-import {
-  NoteCheck,
-  NoteReached,
-  NoteUnlock,
-  OpenEngine,
-  RestartUnit,
-  RunProgram,
-  RunView,
-  Runner,
-  WaitBeforeAuto,
-  WaitBeforeStep,
-  WarmCompiler,
-} from './commands';
 import {
   Happened,
   PlayCue,
@@ -68,6 +54,7 @@ import {
   type Where,
 } from './flow';
 import { drillHint, keyboardOf, keyOf, modeLabel } from './keys';
+import { Compiler, Learner, RunView, Runner } from './services';
 import { drillStart, drillStep, rulesOf, runStart, runStep, studentTurn } from './sprite';
 
 const Mode = Schema.Literals(['insert', 'normal']);
@@ -179,6 +166,121 @@ const LessonDef = Html.component({
   props: LessonProps,
 });
 
+const Unit = { unit: Schema.String };
+
+const WaitBeforeStep = Command.make(
+  'WaitBeforeStep',
+  { args: { delay: Schema.Number, token: Schema.Number }, mode: 'switch' },
+  ({ delay, token }) =>
+    Effect.as(Effect.sleep(Duration.millis(delay)), LessonMessage.CompletedWaitStep({ token })),
+);
+
+const WaitBeforeAuto = Command.make(
+  'WaitBeforeAuto',
+  { args: { delay: Schema.Number, token: Schema.Number }, mode: 'switch' },
+  ({ delay, token }) =>
+    Effect.as(Effect.sleep(Duration.millis(delay)), LessonMessage.CompletedWaitAuto({ token })),
+);
+
+class OpenEngine extends Command.Service<OpenEngine>()('lesson/OpenEngine', {
+  args: Unit,
+  success: LessonMessage,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* opening() {
+      const learner = yield* Learner;
+      return ({ unit }) =>
+        Effect.map(learner.open(unit), (progress) => LessonMessage.CompletedOpenEngine(progress));
+    }),
+  );
+}
+
+class RunProgram extends Command.Service<RunProgram>()('lesson/RunProgram', {
+  args: { by: Runner, input: Schema.String, source: Schema.String, token: Schema.Number },
+  mode: 'queue',
+  success: LessonMessage,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* running() {
+      const compiler = yield* Compiler;
+      return ({ by, input, source, token }) =>
+        Effect.map(compiler.run(source, input), (ran) =>
+          LessonMessage.CompletedRunProgram({ ...ran, by, token }),
+        );
+    }),
+  );
+}
+
+class WarmCompiler extends Command.Service<WarmCompiler>()('lesson/WarmCompiler', {
+  args: {},
+  success: Component.Noop,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* warming() {
+      const compiler = yield* Compiler;
+      return () => Effect.as(compiler.warm, Component.noop);
+    }),
+  );
+}
+
+class NoteReached extends Command.Service<NoteReached>()('lesson/NoteReached', {
+  args: { beat: Schema.String, unit: Schema.String },
+  success: Component.Noop,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* noting() {
+      const learner = yield* Learner;
+      return ({ beat, unit }) => Effect.as(learner.reached(unit, beat), Component.noop);
+    }),
+  );
+}
+
+class NoteCheck extends Command.Service<NoteCheck>()('lesson/NoteCheck', {
+  args: { beat: Schema.String, unit: Schema.String },
+  success: Component.Noop,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* noting() {
+      const learner = yield* Learner;
+      return ({ beat, unit }) => Effect.as(learner.checked(unit, beat), Component.noop);
+    }),
+  );
+}
+
+class NoteUnlock extends Command.Service<NoteUnlock>()('lesson/NoteUnlock', {
+  args: { item: Schema.String, unit: Schema.String },
+  success: Component.Noop,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* noting() {
+      const learner = yield* Learner;
+      return ({ item, unit }) => Effect.as(learner.unlocked(unit, item), Component.noop);
+    }),
+  );
+}
+
+class RestartUnit extends Command.Service<RestartUnit>()('lesson/RestartUnit', {
+  args: Unit,
+  success: Component.Noop,
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* restarting() {
+      const learner = yield* Learner;
+      return ({ unit }) => Effect.as(learner.restart(unit), Component.noop);
+    }),
+  );
+}
+
+const LessonCommands = Layer.mergeAll(
+  OpenEngine.layer,
+  RunProgram.layer,
+  WarmCompiler.layer,
+  NoteReached.layer,
+  NoteCheck.layer,
+  NoteUnlock.layer,
+  RestartUnit.layer,
+);
+
 const revealPace = 30;
 const complete = 100;
 const segmenter = new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' });
@@ -228,24 +330,14 @@ const intentOf = (key: string): 'backward' | 'forward' | 'none' => {
   return 'none';
 };
 
-const stepCommand = (token: number, delay: number) =>
-  WaitBeforeStep.make({ delay, token }).pipe(
-    Command.map((done) => LessonMessage.CompletedWaitStep({ token: done })),
-  );
+const stepCommand = (token: number, delay: number) => WaitBeforeStep.make({ delay, token });
 
-const autoCommand = (token: number, delay: number) =>
-  WaitBeforeAuto.make({ delay, token }).pipe(
-    Command.map((done) => LessonMessage.CompletedWaitAuto({ token: done })),
-  );
+const autoCommand = (token: number, delay: number) => WaitBeforeAuto.make({ delay, token });
 
 const cue = (happened: Happened) => PlayCue.make({ happened });
 
 const runCommand = (by: 'sprite' | 'student', source: string, input: string, token: number) =>
-  RunProgram.make({ by, input, source, token }).pipe(
-    Command.map((result) => LessonMessage.CompletedRunProgram(result)),
-  );
-
-const quiet = <A>(command: Command.Command<A>) => command.pipe(Command.asNoop);
+  RunProgram.make({ by, input, source, token });
 
 const withFlow = (model: LessonModel, flow: Flow): LessonModel => ({ ...model, ...flow });
 
@@ -285,11 +377,11 @@ const enter = (model: LessonModel, unit: string, calm: boolean) => {
   const playing = (drill?.queue.length ?? 0) > 0 || (demo?.queue.length ?? 0) > 0;
   return {
     commands: [
-      quiet(NoteReached.make({ beat: beat?.id ?? '', unit })),
+      NoteReached.make({ beat: beat?.id ?? '', unit }),
       cue(Happened.ReachedBeat({ beat: beat?.id ?? '', stage: beat?.stage ?? 'empty' })),
       ...(beat?.unlock ?? [])
         .filter((item) => !model.unlocked.includes(item))
-        .map((item) => quiet(NoteUnlock.make({ item, unit }))),
+        .map((item) => NoteUnlock.make({ item, unit })),
       ...(playing ? [stepCommand(token, 0)] : []),
       ...(beat?.auto === undefined ? [] : [autoCommand(token, beat.auto)]),
     ],
@@ -350,7 +442,7 @@ const drillKey = (model: LessonModel, key: string, unit: string, where: Where, c
         ? []
         : [
             pressedCue,
-            quiet(NoteCheck.make({ beat: beat.id, unit })),
+            NoteCheck.make({ beat: beat.id, unit }),
             cue(Happened.PassedCheck({ beat: beat.id, kind: 'drill' })),
           ],
     model: flow === null ? updated : withFlow(updated, flow),
@@ -683,12 +775,14 @@ const Lesson = LessonDef.make({
   subscriptions: ({ model }) => [
     model.opening &&
       model.loaded < complete &&
-      Subscription.make('compiler', 'loading', () =>
-        Stream.callback<ReturnType<typeof LessonMessage.LoadedCompiler>>((queue) =>
-          Effect.sync(() => {
-            watchLoading((percent) => {
-              Queue.offerUnsafe(queue, LessonMessage.LoadedCompiler({ percent }));
-            });
+      Subscription.make(
+        'compiler',
+        Stream.unwrap(
+          Effect.gen(function* loading() {
+            const compiler = yield* Compiler;
+            return Stream.map(compiler.loading, (percent) =>
+              LessonMessage.LoadedCompiler({ percent }),
+            );
           }),
         ),
       ),
@@ -719,10 +813,8 @@ const Lesson = LessonDef.make({
       $.model.opening
         ? $.model
         : $.evolve({ opening: true }).run(
-            OpenEngine.make({ unit: $.props.unit }).pipe(
-              Command.map((opened) => LessonMessage.CompletedOpenEngine(opened)),
-            ),
-            quiet(WarmCompiler.make()),
+            OpenEngine.make({ unit: $.props.unit }),
+            WarmCompiler.make({}),
           ),
     ChangedFullscreen: ($, { full }) => {
       const model = { ...$.model, full };
@@ -753,7 +845,7 @@ const Lesson = LessonDef.make({
       );
       return $.set(out.model).run(...out.commands);
     },
-    ClickedRestart: ($) => $.run(quiet(RestartUnit.make({ unit: $.props.unit }))),
+    ClickedRestart: ($) => $.run(RestartUnit.make({ unit: $.props.unit })),
     CompletedOpenEngine: ($, { passed, position, unlocked }) => {
       const index = startAt(beats, position, whereOf($.model, $.props.fine));
       const out = enter(
@@ -787,7 +879,7 @@ const Lesson = LessonDef.make({
       }
       const out = arrive(ran, flow, $.props.unit, $.props.calm);
       return $.set(out.model).run(
-        quiet(NoteCheck.make({ beat: beat.id, unit: $.props.unit })),
+        NoteCheck.make({ beat: beat.id, unit: $.props.unit }),
         finishedRun,
         cue(Happened.PassedCheck({ beat: beat.id, kind: 'run' })),
         ...out.commands,
@@ -871,4 +963,19 @@ const Lesson = LessonDef.make({
       ),
 });
 
-export { Lesson, LessonMessage, LessonModel, initial };
+export {
+  Lesson,
+  LessonCommands,
+  LessonMessage,
+  LessonModel,
+  NoteCheck,
+  NoteReached,
+  NoteUnlock,
+  OpenEngine,
+  RestartUnit,
+  RunProgram,
+  WaitBeforeAuto,
+  WaitBeforeStep,
+  WarmCompiler,
+  initial,
+};

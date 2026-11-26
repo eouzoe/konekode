@@ -2,9 +2,9 @@ import { HtmlHydrate } from '@effect/ui/html';
 import { Effect, Layer, Schema } from 'effect';
 
 import { beginSession } from '@/lib/intake/session';
-import { services } from '@/parts/cues';
 
 import { Lesson } from './lesson';
+import { live } from './live';
 
 const root = document.querySelector<HTMLElement>('#lesson');
 if (root !== null) {
@@ -18,7 +18,7 @@ if (root !== null) {
   const state = Schema.decodeUnknownSync(
     Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)),
   )(document.querySelector('#lesson-state')?.textContent ?? '{}');
-  Layer.launch(HtmlHydrate.hydrate(Lesson, props, root, state).pipe(Layer.provide(services))).pipe(
+  Layer.launch(HtmlHydrate.hydrate(Lesson, props, root, state).pipe(Layer.provide(live))).pipe(
     Effect.runFork,
   );
 }

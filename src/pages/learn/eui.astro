@@ -3,13 +3,13 @@ import { HtmlServer } from '@effect/ui/html';
 import { Effect } from 'effect';
 
 import { Lesson } from '@/eui/lesson';
-import { services } from '@/parts/cues';
+import { live } from '@/eui/live';
 import Base from '@/layouts/base.astro';
 import { lessonData, pages } from '@/lib/site/pages';
 
 const data = lessonData(Astro.site ?? Astro.url, pages.start);
 const props = { calm: false, fine: true, full: false, unit: 'start' };
-const rendered = await Effect.runPromise(HtmlServer.renderToHtml(Lesson, props, { static: true }).pipe(Effect.provide(services)));
+const rendered = await Effect.runPromise(HtmlServer.renderToHtml(Lesson, props, { static: true }).pipe(Effect.provide(live)));
 const state = HtmlServer.serializeState(rendered.state);
 ---
 

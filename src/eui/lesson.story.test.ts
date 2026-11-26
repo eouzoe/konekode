@@ -3,16 +3,17 @@ import { expect, test } from 'bun:test';
 import { Component } from '@effect/ui';
 import { Story } from '@effect/ui/testing';
 
+import { PlayCue } from './contract';
 import {
+  Lesson,
+  LessonMessage,
   NoteCheck,
   NoteReached,
   NoteUnlock,
   OpenEngine,
   WaitBeforeStep,
   WarmCompiler,
-} from './commands';
-import { PlayCue } from './contract';
-import { Lesson, LessonMessage } from './lesson';
+} from './lesson';
 
 const props = { calm: true, fine: true, full: false, unit: 'start' };
 const newline = '\n';
@@ -21,29 +22,32 @@ test('story: the drill gate passes only after the whole template is typed and Es
   const story = Story.start(Lesson, props);
   const settle = (): void => {
     for (const entry of story.pending.slice()) {
-      if (entry.command.name === 'NoteCheck') {
-        story.resolve(NoteCheck, undefined);
+      if (entry.command.name === 'lesson/NoteCheck') {
+        story.resolve(NoteCheck, Component.noop);
       }
-      if (entry.command.name === 'NoteReached') {
-        story.resolve(NoteReached, undefined);
+      if (entry.command.name === 'lesson/NoteReached') {
+        story.resolve(NoteReached, Component.noop);
       }
-      if (entry.command.name === 'WarmCompiler') {
-        story.resolve(WarmCompiler, true);
+      if (entry.command.name === 'lesson/WarmCompiler') {
+        story.resolve(WarmCompiler, Component.noop);
       }
       if (entry.command.name === 'cues/PlayCue') {
         story.resolve(PlayCue, Component.noop);
       }
-      if (entry.command.name === 'NoteUnlock') {
-        story.resolve(NoteUnlock, undefined);
+      if (entry.command.name === 'lesson/NoteUnlock') {
+        story.resolve(NoteUnlock, Component.noop);
       }
     }
   };
   const booting = story.subscriptions;
   story.send(LessonMessage.Booted());
-  story.resolve(OpenEngine, { passed: [], position: 'type-template', unlocked: [] });
+  story.resolve(
+    OpenEngine,
+    LessonMessage.CompletedOpenEngine({ passed: [], position: 'type-template', unlocked: [] }),
+  );
   settle();
   if (story.pending.some((entry) => entry.command.name === 'WaitBeforeStep')) {
-    story.resolve(WaitBeforeStep, story.model.token);
+    story.resolve(WaitBeforeStep, LessonMessage.CompletedWaitStep({ token: story.model.token }));
   }
   const { target, position } = story.model.drill;
   story.send(LessonMessage.PressedKey({ key: 'i' }));

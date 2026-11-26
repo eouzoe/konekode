@@ -21,20 +21,22 @@ import {
 import { expectedChar } from '@/lib/typing/drill';
 import { beats, template } from '@/units/start';
 
+import { PlayCue } from './contract';
 import {
+  Lesson,
+  LessonMessage,
+  LessonModel,
   NoteCheck,
   NoteReached,
   NoteUnlock,
   OpenEngine,
   RestartUnit,
   RunProgram,
-  Runner,
   WaitBeforeAuto,
   WaitBeforeStep,
   WarmCompiler,
-} from './commands';
-import { PlayCue } from './contract';
-import { Lesson, LessonMessage, LessonModel } from './lesson';
+} from './lesson';
+import { Runner } from './services';
 
 type Step =
   | { readonly key: string; readonly type: 'key' }
@@ -112,40 +114,47 @@ const settleOne = (story: Lessons, step: Extract<Step, { type: 'settle' }>): voi
   }
   const beat = beats[story.model.index];
   switch (entry.command.name) {
-    case 'WaitBeforeStep':
-      story.resolve(WaitBeforeStep, Schema.decodeUnknownSync(Issued)(entry.command.args).token);
+    case 'WaitBeforeStep': {
+      const { token } = Schema.decodeUnknownSync(Issued)(entry.command.args);
+      story.resolve(WaitBeforeStep, LessonMessage.CompletedWaitStep({ token }));
       return;
-    case 'WaitBeforeAuto':
-      story.resolve(WaitBeforeAuto, Schema.decodeUnknownSync(Issued)(entry.command.args).token);
+    }
+    case 'WaitBeforeAuto': {
+      const { token } = Schema.decodeUnknownSync(Issued)(entry.command.args);
+      story.resolve(WaitBeforeAuto, LessonMessage.CompletedWaitAuto({ token }));
       return;
-    case 'RunProgram': {
+    }
+    case 'lesson/RunProgram': {
       const { by, token } = Schema.decodeUnknownSync(IssuedRun)(entry.command.args);
-      story.resolve(RunProgram, {
-        by,
-        finished: step.finished,
-        output: step.expected ? (beat?.expect ?? '') : step.output,
-        token,
-        view: { state: step.finished ? 'ok' : 'error', status: '', text: step.output },
-      });
+      story.resolve(
+        RunProgram,
+        LessonMessage.CompletedRunProgram({
+          by,
+          finished: step.finished,
+          output: step.expected ? (beat?.expect ?? '') : step.output,
+          token,
+          view: { state: step.finished ? 'ok' : 'error', status: '', text: step.output },
+        }),
+      );
       return;
     }
     case 'cues/PlayCue':
       story.resolve(PlayCue, Component.noop);
       return;
-    case 'NoteCheck':
-      story.resolve(NoteCheck, undefined);
+    case 'lesson/NoteCheck':
+      story.resolve(NoteCheck, Component.noop);
       return;
-    case 'NoteReached':
-      story.resolve(NoteReached, undefined);
+    case 'lesson/NoteReached':
+      story.resolve(NoteReached, Component.noop);
       return;
-    case 'NoteUnlock':
-      story.resolve(NoteUnlock, undefined);
+    case 'lesson/NoteUnlock':
+      story.resolve(NoteUnlock, Component.noop);
       return;
-    case 'RestartUnit':
-      story.resolve(RestartUnit, undefined);
+    case 'lesson/RestartUnit':
+      story.resolve(RestartUnit, Component.noop);
       return;
-    case 'WarmCompiler':
-      story.resolve(WarmCompiler, true);
+    case 'lesson/WarmCompiler':
+      story.resolve(WarmCompiler, Component.noop);
       return;
     default:
       throw new Error(`no answer for ${entry.command.name}`);
@@ -153,15 +162,15 @@ const settleOne = (story: Lessons, step: Extract<Step, { type: 'settle' }>): voi
 };
 
 const definitions = {
-  NoteCheck,
-  NoteReached,
-  NoteUnlock,
-  RestartUnit,
-  RunProgram,
   WaitBeforeAuto,
   WaitBeforeStep,
-  WarmCompiler,
   'cues/PlayCue': PlayCue,
+  'lesson/NoteCheck': NoteCheck,
+  'lesson/NoteReached': NoteReached,
+  'lesson/NoteUnlock': NoteUnlock,
+  'lesson/RestartUnit': RestartUnit,
+  'lesson/RunProgram': RunProgram,
+  'lesson/WarmCompiler': WarmCompiler,
 } as const;
 
 const isDefined = (name: string): name is keyof typeof definitions => name in definitions;
@@ -248,7 +257,7 @@ const holds = (story: Lessons, before: LessonModel): void => {
     expect(model.passed).not.toContain(beat?.id);
   }
   if (model.busy) {
-    expect(story.pending.some((entry) => entry.command.name === 'RunProgram')).toBe(true);
+    expect(story.pending.some((entry) => entry.command.name === 'lesson/RunProgram')).toBe(true);
   }
 };
 
@@ -274,11 +283,14 @@ const gates = beats.filter((beat) => beat.wait !== undefined).map((beat) => beat
 const opened = (at: number): Lessons => {
   const story = Story.start(Lesson, props);
   story.send(LessonMessage.Booted());
-  story.resolve(OpenEngine, {
-    passed: beats.slice(0, at).flatMap((beat) => (beat.wait === undefined ? [] : [beat.id])),
-    position: beats[at]?.id ?? null,
-    unlocked: [],
-  });
+  story.resolve(
+    OpenEngine,
+    LessonMessage.CompletedOpenEngine({
+      passed: beats.slice(0, at).flatMap((beat) => (beat.wait === undefined ? [] : [beat.id])),
+      position: beats[at]?.id ?? null,
+      unlocked: [],
+    }),
+  );
   return story;
 };
 
