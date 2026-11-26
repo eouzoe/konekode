@@ -12,7 +12,23 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["@types/bun"]
+    "types": ["@types/bun"],
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "effectFn": ["untraced"],
+        "namespaceImportPackages": ["effect", "@effect/*"],
+        "diagnosticSeverity": {
+          "globalErrorInEffectFailure": "off",
+          "unstableApiUsage": "off",
+          "experimentalApiUsage": "off",
+          "effectFnOpportunity": "error"
+        },
+        "includeSuggestionsInTsc": false,
+        "ignoreEffectWarningsInTscExitCode": true,
+        "ignoreEffectErrorsInTscExitCode": false
+      }
+    ]
   },
   "include": [
     ".astro/types.d.ts",

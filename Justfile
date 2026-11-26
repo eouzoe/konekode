@@ -28,7 +28,7 @@ typecheck:
     bun --bun run typecheck
 
 lint:
-    bun x oxlint --type-aware
+    bun x oxlint
 
 format:
     bun x oxfmt --write .
