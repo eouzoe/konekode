@@ -185,6 +185,22 @@
       "globals": {
         "HTMLRewriter": "readonly"
       }
+    },
+    {
+      "files": ["src/eui/**/*.ts"],
+      "rules": {
+        "eslint/new-cap": "off",
+        "eslint/no-ternary": "off",
+        "eslint/id-length": "off",
+        "eslint/max-params": "off",
+        "unicorn/max-nested-calls": "off",
+        "eslint/max-statements": "off",
+        "eslint/max-lines": "off",
+        "import/max-dependencies": "off",
+        "eslint/no-redeclare": "off",
+        "unicorn/no-useless-undefined": "off",
+        "unicorn/no-useless-spread": "off"
+      }
     }
   ]
 }
