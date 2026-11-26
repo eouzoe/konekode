@@ -1,6 +1,5 @@
 import { expect, type Page } from '@playwright/test';
 
-import { type Rules } from '../src/lib/edit/buffer';
 import { effectOf } from '../src/lib/edit/effect';
 import { isGuided, press, type Pressed, type Session } from '../src/lib/edit/session';
 import {
@@ -14,10 +13,12 @@ import {
 import { begin, readView, rulesAt, send, viewOf } from './gate-view';
 import { isHeld, passUntil } from './time';
 
+import type { Rules } from '../src/lib/edit/buffer';
+
 const halves = 2;
 
 interface Walk {
-  readonly actions: string[];
+  readonly actions: Array<string>;
   effect: string;
   hint: string;
   readonly page: Page;

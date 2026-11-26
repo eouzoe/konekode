@@ -25,7 +25,7 @@ const starter = starterOf('start') ?? '';
 const startOf = (gate: string): Buffer =>
   run(createBuffer(starter), keysOf(planOf('start', gate)?.history ?? []), rules);
 
-const pathOf = (gate: string): string[] => keysOf(planOf('start', gate)?.path ?? []);
+const pathOf = (gate: string): Array<string> => keysOf(planOf('start', gate)?.path ?? []);
 
 const sound = (buffer: Buffer): string => {
   const { auto, cursor, mode, pending, text, typing } = buffer;

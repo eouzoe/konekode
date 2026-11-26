@@ -1,4 +1,4 @@
-import { type Buffer } from './buffer';
+import type { Buffer } from './buffer';
 
 interface Effect {
   readonly count: number;

@@ -10,7 +10,7 @@ import {
 } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
-import { type Buffer } from './unit';
+import type { Buffer } from './unit';
 
 interface Look {
   readonly buffer: Buffer;
@@ -83,7 +83,7 @@ class Inline extends WidgetType {
 
 const setLook = StateEffect.define<Look>();
 
-const litLines = (look: Look, state: EditorState): Range<Decoration>[] =>
+const litLines = (look: Look, state: EditorState): Array<Range<Decoration>> =>
   [...look.lines]
     .filter((number) => number >= 1 && number <= state.doc.lines)
     .map((number) => Decoration.line({ class: 'cm-lit' }).range(state.doc.line(number).from));
@@ -95,7 +95,7 @@ const caretClass = (look: Look): string => {
   return 'cm-bar';
 };
 
-const cursorMark = (look: Look, state: EditorState): Range<Decoration>[] => {
+const cursorMark = (look: Look, state: EditorState): Array<Range<Decoration>> => {
   if (!look.showCursor) {
     return [];
   }
@@ -107,7 +107,7 @@ const cursorMark = (look: Look, state: EditorState): Range<Decoration>[] => {
   return [Decoration.mark({ class: 'cm-block' }).range(at, at + 1)];
 };
 
-const ghostMark = (look: Look, state: EditorState): Range<Decoration>[] => {
+const ghostMark = (look: Look, state: EditorState): Array<Range<Decoration>> => {
   if (look.ghost === '') {
     return [];
   }

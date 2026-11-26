@@ -1,5 +1,6 @@
-import { type Ticket as Envelope } from '../../../backend/contract';
 import { intakePath, status } from '../../../backend/limits';
+
+import type { Ticket as Envelope } from '../../../backend/contract';
 
 const { stored } = status;
 

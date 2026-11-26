@@ -33,7 +33,7 @@ const stepOf = (beat: HTMLElement): Step => {
 
 const supplyScene = (
   root: HTMLElement,
-  beats: readonly HTMLElement[],
+  beats: ReadonlyArray<HTMLElement>,
   onSettle: () => void,
 ): Supply => {
   const supply = createSupply({

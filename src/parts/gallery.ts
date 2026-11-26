@@ -2,16 +2,6 @@ import { UiSchema, type View } from '@effect/ui';
 import { Html } from '@effect/ui/html';
 import { Schema } from 'effect';
 
-import {
-  type ActionVariant,
-  type CellState,
-  type DialogueState,
-  type KeyCapView,
-  type KeyState,
-  type NoticeKind,
-  type PaperState,
-  type ProgressState,
-} from '@/eui/contract';
 import { ShowCode } from '@/eui/editor';
 
 import { Action } from './action';
@@ -24,6 +14,17 @@ import { Paper } from './paper';
 import { Progress } from './progress';
 import { Snippet } from './snippet';
 
+import type {
+  ActionVariant,
+  CellState,
+  DialogueState,
+  KeyCapView,
+  KeyState,
+  NoticeKind,
+  PaperState,
+  ProgressState,
+} from '@/eui/contract';
+
 const GalleryMessage = UiSchema.TaggedEnum({
   PressedAction: { variant: Schema.String },
   PressedDialogue: {},
@@ -31,13 +32,13 @@ const GalleryMessage = UiSchema.TaggedEnum({
 
 const GalleryModel = Schema.Struct({ last: Schema.String, presses: Schema.Number });
 
-const variants: readonly ActionVariant[] = ['primary', 'secondary', 'quiet', 'icon'];
-const dialogueStates: readonly DialogueState[] = ['revealing', 'shown', 'student'];
-const paperStates: readonly PaperState[] = ['reading', 'editing', 'running', 'passed'];
-const cellStates: readonly CellState[] = ['empty', 'value', 'ok', 'error'];
-const keyStates: readonly KeyState[] = ['idle', 'wanted', 'right', 'wrong'];
-const notices: readonly NoticeKind[] = ['unsaved', 'blocked', 'broken'];
-const progresses: readonly { readonly percent: number; readonly state: ProgressState }[] = [
+const variants: ReadonlyArray<ActionVariant> = ['primary', 'secondary', 'quiet', 'icon'];
+const dialogueStates: ReadonlyArray<DialogueState> = ['revealing', 'shown', 'student'];
+const paperStates: ReadonlyArray<PaperState> = ['reading', 'editing', 'running', 'passed'];
+const cellStates: ReadonlyArray<CellState> = ['empty', 'value', 'ok', 'error'];
+const keyStates: ReadonlyArray<KeyState> = ['idle', 'wanted', 'right', 'wrong'];
+const notices: ReadonlyArray<NoticeKind> = ['unsaved', 'blocked', 'broken'];
+const progresses: ReadonlyArray<{ readonly percent: number; readonly state: ProgressState }> = [
   { percent: 40, state: 'running' },
   { percent: 100, state: 'done' },
   { percent: 70, state: 'failed' },
@@ -45,7 +46,7 @@ const progresses: readonly { readonly percent: number; readonly state: ProgressS
 const sample =
   '#include <bits/stdc++.h>\nusing namespace std;\n\nint main()\n{\n    cout << 11;\n}';
 
-const capsOf = (state: KeyState): readonly (readonly KeyCapView[])[] => [
+const capsOf = (state: KeyState): ReadonlyArray<ReadonlyArray<KeyCapView>> => [
   [
     { key: 'i', label: 'I', state, wide: false },
     { key: 'Escape', label: 'Esc', state, wide: false },
@@ -127,18 +128,16 @@ const Gallery = GalleryDef.make({
         ),
         Paper(h, {
           body: [
-            h.div
-              .class('screen')
-              .onMount(
-                ShowCode({
-                  cursor: 0,
-                  flash: '',
-                  flashes: 0,
-                  hints: [],
-                  mode: 'normal',
-                  text: sample,
-                }),
-              ),
+            h.div.class('screen').onMount(
+              ShowCode({
+                cursor: 0,
+                flash: '',
+                flashes: 0,
+                hints: [],
+                mode: 'normal',
+                text: sample,
+              }),
+            ),
           ],
           hint: '',
           mode: '-- NORMAL --',

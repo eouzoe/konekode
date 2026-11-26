@@ -30,7 +30,7 @@ type Due = Infer<typeof dueSchema>;
 
 const missing = -1;
 
-const dueAt = (steps: readonly Step[], rule: Rule): number => {
+const dueAt = (steps: ReadonlyArray<Step>, rule: Rule): number => {
   const wanted = steps.findIndex((step) => rule.wants(step));
   if (wanted === missing) {
     return wanted;
@@ -38,7 +38,7 @@ const dueAt = (steps: readonly Step[], rule: Rule): number => {
   return Math.max(wanted - rule.lead, 0);
 };
 
-const dues = (steps: readonly Step[], rules: readonly Rule[]): Due[] =>
+const dues = (steps: ReadonlyArray<Step>, rules: ReadonlyArray<Rule>): Array<Due> =>
   rules
     .map((rule) => ({
       by: dueAt(steps, rule),
@@ -50,7 +50,7 @@ const dues = (steps: readonly Step[], rules: readonly Rule[]): Due[] =>
     .filter((due) => due.by >= 0)
     .toSorted((left, right) => left.by - right.by);
 
-const readDues = (raw: string | undefined): Due[] => {
+const readDues = (raw: string | undefined): Array<Due> => {
   if (raw === undefined || raw === '') {
     return [];
   }
@@ -67,7 +67,7 @@ const graphemes = (text: string): number => [...segmenter.segment(text)].length;
 const readingMs = (step: Step): number =>
   Math.max(pace.floorMs, graphemes(step.say) * pace.graphemeMs) + (step.auto ?? 0);
 
-const msBetween = (steps: readonly Step[], from: number, to: number): number =>
+const msBetween = (steps: ReadonlyArray<Step>, from: number, to: number): number =>
   steps.slice(Math.max(from, 0), Math.max(to, 0)).reduce((sum, step) => sum + readingMs(step), 0);
 
 interface Link {
@@ -85,14 +85,14 @@ interface Moment {
   readonly at: number;
   readonly due: Due;
   readonly link: Link;
-  readonly steps: readonly Step[];
+  readonly steps: ReadonlyArray<Step>;
 }
 
 const timeToStart = ({ at, due, link, steps }: Moment): boolean =>
   due.by <= at ||
   (due.early && msBetween(steps, at, due.by) <= Math.max(pace.leadMs, downloadMs(due.bytes, link)));
 
-const overdue = (dueList: readonly Due[], at: number): Due[] =>
+const overdue = (dueList: ReadonlyArray<Due>, at: number): Array<Due> =>
   dueList.filter((due) => due.gate && due.by <= at);
 
 export {

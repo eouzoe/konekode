@@ -1,7 +1,8 @@
 import { array, object, string } from '@/lib/zod';
 
 import { listPath } from './packed';
-import { type PrefetchMessage } from './protocol';
+
+import type { PrefetchMessage } from './protocol';
 
 const listSchema = object({ parts: array(string().regex(/^[\da-f]{64}$/u)) });
 
@@ -12,7 +13,7 @@ const complete = 100;
 interface Run {
   readonly controller: AbortController;
   done: number;
-  readonly queue: string[];
+  readonly queue: Array<string>;
   readonly total: number;
 }
 
@@ -68,7 +69,7 @@ const lane = async (run: Run): Promise<void> => {
   await lane(run);
 };
 
-const fetchList = async (controller: AbortController): Promise<string[]> => {
+const fetchList = async (controller: AbortController): Promise<Array<string>> => {
   const timer = setTimeout(() => {
     controller.abort();
   }, quietMs);

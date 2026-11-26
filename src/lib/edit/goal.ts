@@ -1,6 +1,7 @@
-import { type Rules } from './buffer';
-import { type Session } from './session';
 import { knownKeys, run } from './step';
+
+import type { Rules } from './buffer';
+import type { Session } from './session';
 
 interface Insert {
   readonly column: number;
@@ -38,8 +39,8 @@ interface Gap {
 type Op = readonly [kind: 'add' | 'drop' | 'keep', text: string];
 
 interface Hunk {
-  readonly adds: string[];
-  readonly drops: number[];
+  readonly adds: Array<string>;
+  readonly drops: Array<number>;
 }
 
 const newline = '\n';
@@ -61,7 +62,7 @@ const sharedStart = (left: string, right: string): number => {
   return at;
 };
 
-const widen = (gaps: Gap[], gap: Gap): void => {
+const widen = (gaps: Array<Gap>, gap: Gap): void => {
   const [nearest] = gaps;
   if (nearest?.inner === gap.inner) {
     gaps[0] = { inner: gap.inner, outer: gap.outer, text: gap.text + nearest.text };
@@ -72,11 +73,11 @@ const widen = (gaps: Gap[], gap: Gap): void => {
 
 interface Scan {
   readonly at: number;
-  readonly gaps: Gap[];
+  readonly gaps: Array<Gap>;
 }
 
 const scan = (inner: string, outer: string, start: number): Scan => {
-  const gaps: Gap[] = [];
+  const gaps: Array<Gap> = [];
   let at = inner.length - 1;
   for (let from = outer.length - 1; from >= start; from -= 1) {
     const text = outer.charAt(from);
@@ -89,7 +90,7 @@ const scan = (inner: string, outer: string, start: number): Scan => {
   return { at, gaps };
 };
 
-const embed = (inner: string, outer: string): Gap[] | null => {
+const embed = (inner: string, outer: string): Array<Gap> | null => {
   const start = sharedStart(inner, outer);
   const { at, gaps } = scan(inner, outer, start);
   if (at >= start) {
@@ -98,16 +99,16 @@ const embed = (inner: string, outer: string): Gap[] | null => {
   return gaps;
 };
 
-const kept = (ops: readonly Op[]): number => ops.filter(([kind]) => kind === 'keep').length;
+const kept = (ops: ReadonlyArray<Op>): number => ops.filter(([kind]) => kind === 'keep').length;
 
-const better = (first: Op[], second: Op[]): Op[] => {
+const better = (first: Array<Op>, second: Array<Op>): Array<Op> => {
   if (kept(second) > kept(first)) {
     return second;
   }
   return first;
 };
 
-const align = (old: readonly string[], next: readonly string[]): Op[] => {
+const align = (old: ReadonlyArray<string>, next: ReadonlyArray<string>): Array<Op> => {
   const [first, ...rest] = old;
   const [head, ...tail] = next;
   if (first === undefined) {
@@ -122,7 +123,7 @@ const align = (old: readonly string[], next: readonly string[]): Op[] => {
   return better([['drop', first], ...align(rest, next)], [['add', head], ...align(old, tail)]);
 };
 
-const inline = (line: number, old: string, next: string): Hint[] | null => {
+const inline = (line: number, old: string, next: string): Array<Hint> | null => {
   const added = embed(old, next);
   if (added !== null) {
     return added.map((gap) => ({ column: gap.inner, kind: 'insert', line, text: gap.text }));
@@ -139,14 +140,14 @@ const inline = (line: number, old: string, next: string): Hint[] | null => {
   }));
 };
 
-const replaced = (line: number, after: number, text: string): Hint[] => [
+const replaced = (line: number, after: number, text: string): Array<Hint> => [
   { kind: 'drop', line },
   { before: after, kind: 'line', text },
 ];
 
-const settle = (old: readonly string[], hunk: Hunk, here: number): Hint[] => {
+const settle = (old: ReadonlyArray<string>, hunk: Hunk, here: number): Array<Hint> => {
   const after = (hunk.drops.at(fromEnd) ?? here - 1) + 1;
-  const hints: Hint[] = [];
+  const hints: Array<Hint> = [];
   for (const [at, line] of hunk.drops.entries()) {
     const next = hunk.adds[at];
     if (next === undefined) {
@@ -162,12 +163,12 @@ const settle = (old: readonly string[], hunk: Hunk, here: number): Hint[] => {
 };
 
 interface Walk {
-  readonly hints: Hint[];
+  readonly hints: Array<Hint>;
   hunk: Hunk;
   line: number;
 }
 
-const walk = (state: Walk, old: readonly string[], [kind, text]: Op): void => {
+const walk = (state: Walk, old: ReadonlyArray<string>, [kind, text]: Op): void => {
   if (kind === 'add') {
     state.hunk.adds.push(text);
     return;
@@ -181,7 +182,7 @@ const walk = (state: Walk, old: readonly string[], [kind, text]: Op): void => {
   state.line += 1;
 };
 
-const compare = (old: readonly string[], next: readonly string[]): Hint[] => {
+const compare = (old: ReadonlyArray<string>, next: ReadonlyArray<string>): Array<Hint> => {
   const state: Walk = { hints: [], hunk: { adds: [], drops: [] }, line: 0 };
   for (const op of [...align(old, next), ['keep', ''] as const]) {
     walk(state, old, op);
@@ -189,7 +190,7 @@ const compare = (old: readonly string[], next: readonly string[]): Hint[] => {
   return state.hints;
 };
 
-const linesStill = (hints: readonly Hint[]): Hint[] => {
+const linesStill = (hints: ReadonlyArray<Hint>): Array<Hint> => {
   const dropped = new Set<number>();
   for (const hint of hints) {
     if (hint.kind === 'drop') {
@@ -201,17 +202,17 @@ const linesStill = (hints: readonly Hint[]): Hint[] => {
   );
 };
 
-const between = (text: string, final: string): Hint[] =>
+const between = (text: string, final: string): Array<Hint> =>
   linesStill(compare(text.split(newline), final.split(newline)));
 
-const goalOf = (session: Session, rules: Rules): Hint[] => {
+const goalOf = (session: Session, rules: Rules): Array<Hint> => {
   if (session.path.length === 0) {
     return [];
   }
   return between(session.buffer.text, finalText(session, rules));
 };
 
-const rewrite = (text: string, hints: readonly Hint[]): string => {
+const rewrite = (text: string, hints: ReadonlyArray<Hint>): string => {
   let column = text.length;
   let result = '';
   const inside = hints.filter((hint) => hint.kind === 'insert' || hint.kind === 'remove');
@@ -227,9 +228,9 @@ const rewrite = (text: string, hints: readonly Hint[]): string => {
   return text.slice(0, column) + result;
 };
 
-const fulfil = (text: string, hints: readonly Hint[]): string => {
+const fulfil = (text: string, hints: ReadonlyArray<Hint>): string => {
   const old = text.split(newline);
-  const result: string[] = [];
+  const result: Array<string> = [];
   for (let line = 0; line <= old.length; line += 1) {
     const here = hints.filter((hint) => 'line' in hint && hint.line === line);
     result.push(

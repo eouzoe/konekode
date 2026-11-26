@@ -23,7 +23,7 @@ const tokenFromEnv = (): Token | null => {
   return { id, secret };
 };
 
-const backendFlags = (): string[] => {
+const backendFlags = (): Array<string> => {
   if (process.env.KONEKODE_LOCAL === '1') {
     return ['--backend', 'local'];
   }

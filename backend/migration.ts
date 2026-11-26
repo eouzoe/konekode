@@ -4,15 +4,15 @@ const numbered = /^(?<number>\d{4})_/u;
 const width = 4;
 const argumentsStart = 2;
 
-const nextNumber = (files: readonly string[]): string => {
+const nextNumber = (files: ReadonlyArray<string>): string => {
   const used = files.map((file) => Number(numbered.exec(file)?.groups?.number ?? '0'));
   return String(Math.max(0, ...used) + 1).padStart(width, '0');
 };
 
-const flatName = (files: readonly string[], name: string): string =>
+const flatName = (files: ReadonlyArray<string>, name: string): string =>
   `${nextNumber(files)}_${name}.sql`;
 
-const newestFor = (directories: readonly string[], name: string): string | undefined => {
+const newestFor = (directories: ReadonlyArray<string>, name: string): string | undefined => {
   const [newest] = directories
     .filter((directory) => directory.endsWith(`_${name}`))
     .toSorted()
@@ -20,7 +20,7 @@ const newestFor = (directories: readonly string[], name: string): string | undef
   return newest;
 };
 
-const entries = (directory: string): string[] => [
+const entries = (directory: string): Array<string> => [
   ...new Bun.Glob('*').scanSync({ cwd: directory, onlyFiles: false }),
 ];
 

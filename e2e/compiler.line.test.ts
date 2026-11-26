@@ -130,7 +130,7 @@ test.describe('a crawler', () => {
   test.use({ compiler: true, userAgent: crawler });
 
   test('never fetches the compiler, even on a lesson', async ({ page }) => {
-    const asked: string[] = [];
+    const asked: Array<string> = [];
     page.on('request', (request) => {
       if (part.test(request.url()) || listing.test(request.url())) {
         asked.push(request.url());
@@ -148,7 +148,7 @@ test.describe('when the compiler is fetched', () => {
   test.use({ compiler: true });
 
   test('a page without a code runner never fetches it', async ({ page }) => {
-    const asked: string[] = [];
+    const asked: Array<string> = [];
     page.on('request', (request) => {
       if (part.test(request.url()) || listing.test(request.url())) {
         asked.push(request.url());
@@ -166,8 +166,8 @@ test.describe('when the compiler is fetched', () => {
     page,
   }) => {
     test.setTimeout(firstRun);
-    const parts: { caching: string | null; encoding: string | null; size: number }[] = [];
-    const wholes: string[] = [];
+    const parts: Array<{ caching: string | null; encoding: string | null; size: number }> = [];
+    const wholes: Array<string> = [];
     const marks: { started: Promise<number> | null } = { started: null };
     page.on('request', (request) => {
       if (whole.test(new URL(request.url()).pathname)) {
@@ -189,7 +189,7 @@ test.describe('when the compiler is fetched', () => {
       });
     });
     await page.addInitScript(() => {
-      const ticks: number[] = [];
+      const ticks: Array<number> = [];
       Reflect.set(globalThis, 'drawTicks', ticks);
       const tick = (now: number): void => {
         ticks.push(now);
@@ -233,7 +233,7 @@ test.describe('when the compiler is fetched', () => {
 
   test('a lesson starts fetching it only after the page has loaded', async ({ page }) => {
     let loadedAt = 0;
-    const askedAt: number[] = [];
+    const askedAt: Array<number> = [];
     page.on('load', () => {
       loadedAt = performance.now();
     });

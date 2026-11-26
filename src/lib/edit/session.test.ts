@@ -22,7 +22,7 @@ const begin = (gate: string, rules: Rules): Session => {
   return { at: 0, buffer: start, path: expand(plan?.path ?? []) };
 };
 
-const others = (session: Session): string[] =>
+const others = (session: Session): Array<string> =>
   alphabet.filter((key) => key !== expectedNow(session)?.key);
 
 test('there are guided gates to check', () => {

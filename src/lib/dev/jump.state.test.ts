@@ -1,11 +1,12 @@
 import { expect, test } from 'bun:test';
 
 import { unitState } from '@/lib/learner/progress';
-import { type LearningEvent } from '@/lib/record/event';
 
 import { jumpTo, type Stop } from './jump';
 
-const stops: readonly Stop[] = [
+import type { LearningEvent } from '@/lib/record/event';
+
+const stops: ReadonlyArray<Stop> = [
   { id: 'a' },
   { id: 'gate-1', wait: 'run' },
   { id: 'b' },

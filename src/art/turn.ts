@@ -1,4 +1,4 @@
-import { type Keyboard } from './keyboard';
+import type { Keyboard } from './keyboard';
 
 type Handler = (key: string) => Promise<boolean> | boolean;
 

@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
-import { type Due, type Link, type Step } from './plan';
 import { createSupply, type Loader } from './supply';
 
+import type { Due, Link, Step } from './plan';
+
 const sentence: Step = { say: '一二三四五六七八九十', stage: 'empty' };
-const steps: readonly Step[] = Array.from({ length: 20 }, () => sentence);
+const steps: ReadonlyArray<Step> = Array.from({ length: 20 }, () => sentence);
 const fast: Link = { bitsPerMs: 100_000, latencyMs: 10 };
 
 const due = (name: string, by: number, gate = true): Due => ({
@@ -21,11 +22,11 @@ interface Pending {
   readonly reject: (error: Error) => void;
 }
 
-const harness = (dues: readonly Due[]) => {
-  const started: Pending[] = [];
-  const settles: number[] = [];
-  const failures: string[] = [];
-  const connected: boolean[] = [];
+const harness = (dues: ReadonlyArray<Due>) => {
+  const started: Array<Pending> = [];
+  const settles: Array<number> = [];
+  const failures: Array<string> = [];
+  const connected: Array<boolean> = [];
   const loader =
     (name: string): Loader =>
     async () => {

@@ -10,7 +10,7 @@ interface Ran {
   readonly out: string;
 }
 
-const run = async (command: readonly string[], input = ''): Promise<Ran> => {
+const run = async (command: ReadonlyArray<string>, input = ''): Promise<Ran> => {
   const child = Bun.spawn([...command], {
     env,
     stderr: 'pipe',

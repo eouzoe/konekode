@@ -1,22 +1,22 @@
-import { type Page } from '@playwright/test';
-
 import { catalog } from '../src/lib/complete/catalog';
 import { createEngine } from '../src/lib/complete/engine';
 import { createBuffer, type Rules } from '../src/lib/edit/buffer';
 import { goalOf, type Hint } from '../src/lib/edit/goal';
 import { expand, keysOf } from '../src/lib/edit/path';
-import { type Session } from '../src/lib/edit/session';
 import { knownKeys, run } from '../src/lib/edit/step';
 import { nextKey } from '../src/lib/run/view';
 import { beatsOf, planOf, starterOf } from '../src/units/index';
 
+import type { Session } from '../src/lib/edit/session';
+import type { Page } from '@playwright/test';
+
 interface View {
   readonly effect: string;
-  readonly ghosts: readonly string[];
+  readonly ghosts: ReadonlyArray<string>;
   readonly hint: string;
   readonly mode: string;
   readonly next: string;
-  readonly struck: readonly string[];
+  readonly struck: ReadonlyArray<string>;
   readonly text: string;
   readonly wrong: boolean;
 }
@@ -51,7 +51,7 @@ const begin = (gate: string, rules: Rules): Session => {
   return { at: 0, buffer: start, path: expand(plan?.path ?? []) };
 };
 
-const struckIn = (line: string, at: number, hints: readonly Hint[]): string => {
+const struckIn = (line: string, at: number, hints: ReadonlyArray<Hint>): string => {
   const here = hints.filter((hint) => hint.kind !== 'line' && hint.line === at);
   if (here.some((hint) => hint.kind === 'drop')) {
     return line;
@@ -68,7 +68,7 @@ const struckIn = (line: string, at: number, hints: readonly Hint[]): string => {
     .join('');
 };
 
-const struckOf = (session: Session, rules: Rules): string[] => {
+const struckOf = (session: Session, rules: Rules): Array<string> => {
   const hints = goalOf(session, rules);
   return session.buffer.text
     .split(newline)
@@ -76,7 +76,7 @@ const struckOf = (session: Session, rules: Rules): string[] => {
     .filter((part) => part !== '');
 };
 
-const ghostsOf = (session: Session, rules: Rules): string[] =>
+const ghostsOf = (session: Session, rules: Rules): Array<string> =>
   goalOf(session, rules)
     .flatMap((hint) => {
       if (hint.kind === 'line' || hint.kind === 'insert') {

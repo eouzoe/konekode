@@ -13,10 +13,10 @@ const escapeKey = 'Escape';
 const shiftKey = 'Shift';
 const spaceKey = 'Space';
 
-const toCaps = (text: string): KeyCap[] =>
+const toCaps = (text: string): Array<KeyCap> =>
   text.split(' ').map((pair) => ({ base: pair.charAt(0), shift: pair.charAt(1) }));
 
-const rows: readonly (readonly KeyCap[])[] = [
+const rows: ReadonlyArray<ReadonlyArray<KeyCap>> = [
   toCaps('`~ 1! 2@ 3# 4$ 5% 6^ 7& 8* 9( 0) -_ =+'),
   toCaps(String.raw`qQ wW eE rR tT yY uU iI oO pP [{ ]} \|`),
   toCaps('aA sS dD fF gG hH jJ kK lL ;: \'"'),

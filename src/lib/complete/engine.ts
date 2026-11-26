@@ -1,18 +1,18 @@
-import { type Item, type PairItem } from './catalog';
+import type { Item, PairItem } from './catalog';
 
 interface Engine {
-  readonly brackets: () => string[];
+  readonly brackets: () => Array<string>;
   readonly keys: () => ReadonlySet<string>;
   readonly linePair: (open: string) => PairItem | null;
-  readonly pairs: () => PairItem[];
+  readonly pairs: () => Array<PairItem>;
 }
 
-const createEngine = (items: readonly Item[], unlocked: () => ReadonlySet<string>): Engine => {
-  const available = (): Item[] => {
+const createEngine = (items: ReadonlyArray<Item>, unlocked: () => ReadonlySet<string>): Engine => {
+  const available = (): Array<Item> => {
     const ids = unlocked();
     return items.filter((item) => ids.has(item.id));
   };
-  const pairs = (): PairItem[] => available().filter((item) => item.kind === 'pair');
+  const pairs = (): Array<PairItem> => available().filter((item) => item.kind === 'pair');
   return {
     brackets: () =>
       pairs()

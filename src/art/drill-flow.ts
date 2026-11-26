@@ -1,8 +1,6 @@
 import { gsap } from 'gsap';
 
 import { inSequence, wait } from './dom';
-import { type Keyboard } from './keyboard';
-import { type Paper } from './paper';
 import {
   beats,
   createBuffer,
@@ -20,11 +18,14 @@ import {
   type Drill,
 } from './unit';
 
+import type { Keyboard } from './keyboard';
+import type { Paper } from './paper';
+
 interface DrillFlow {
   readonly done: () => boolean;
   readonly hint: () => string;
   readonly nextKey: () => string | undefined;
-  readonly play: (tokens: readonly string[], live: () => boolean) => Promise<void>;
+  readonly play: (tokens: ReadonlyArray<string>, live: () => boolean) => Promise<void>;
   readonly press: (key: string) => boolean;
   readonly replayTo: (index: number) => void;
 }
@@ -56,7 +57,8 @@ const feedbackWords: Partial<Record<Drill['feedback'], string>> = {
   'no-delete': messages.noDelete,
 };
 
-const tokensOf = (demo: string | undefined): string[] => (demo ?? '').split(' ').filter(Boolean);
+const tokensOf = (demo: string | undefined): Array<string> =>
+  (demo ?? '').split(' ').filter(Boolean);
 
 const parse = (text: string): Token => {
   const [kind = '', arg = ''] = text.split(':');
@@ -118,7 +120,7 @@ const applyKey = (drill: Drill, key: string): Drill => {
   return drillPress(drill, charOfKey.get(key) ?? key);
 };
 
-const filled = (drill: Drill): Drill[] => {
+const filled = (drill: Drill): Array<Drill> => {
   if (drillTyped(drill)) {
     return [];
   }

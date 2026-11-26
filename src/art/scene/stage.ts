@@ -1,11 +1,6 @@
 import { refsRoute } from '../refs';
-import {
-  type SceneLook,
-  type SceneReply,
-  type SceneRequest,
-  type Screen,
-  type Time,
-} from './protocol';
+
+import type { SceneLook, SceneReply, SceneRequest, Screen, Time } from './protocol';
 
 interface Stage {
   readonly pulse: () => void;

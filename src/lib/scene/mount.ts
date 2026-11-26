@@ -1,11 +1,7 @@
 import { createActor, type Actor, type SnapshotFrom } from 'xstate';
 
-import { type UnitState } from '@/lib/learner/engine';
-import { type Supply } from '@/lib/supply/supply';
-
 import { isFullScreen } from './conditions';
 import { direct, stageRun } from './demo';
-import { type Early } from './early';
 import { fillExpect, fillInput, markLines, mismatchNote, showBeats } from './fill';
 import { listenInput } from './input';
 import { sceneMachine, type Check } from './machine';
@@ -14,14 +10,18 @@ import { createReveal, type Reveal } from './reveal';
 import { noteCheck, noteReached, restart, type ReadUnit } from './session';
 import { supplyScene } from './supplies';
 
+import type { Early } from './early';
+import type { UnitState } from '@/lib/learner/engine';
+import type { Supply } from '@/lib/supply/supply';
+
 type Move = 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'SCREEN';
 
 interface Scene {
   readonly actor: Actor<typeof sceneMachine>;
-  readonly beats: readonly HTMLElement[];
+  readonly beats: ReadonlyArray<HTMLElement>;
   readonly expect: HTMLElement | null;
   index: number;
-  readonly lines: readonly HTMLElement[];
+  readonly lines: ReadonlyArray<HTMLElement>;
   readonly note: HTMLElement | null;
   passed: number;
   readonly reveal: Reveal;
@@ -115,7 +115,7 @@ const show = (scene: Scene): void => {
   equip(scene);
 };
 
-const notePassed = (scene: Scene, passed: readonly string[]): void => {
+const notePassed = (scene: Scene, passed: ReadonlyArray<string>): void => {
   for (const id of passed.slice(scene.passed)) {
     noteCheck(scene.unit, id);
   }
@@ -214,7 +214,7 @@ interface Held {
   scene: Scene | null;
 }
 
-const supplyFor = (root: HTMLElement, beats: readonly HTMLElement[], held: Held): Supply =>
+const supplyFor = (root: HTMLElement, beats: ReadonlyArray<HTMLElement>, held: Held): Supply =>
   supplyScene(root, beats, () => {
     if (held.scene?.root.dataset.supplying === 'true') {
       equip(held.scene);
@@ -222,7 +222,7 @@ const supplyFor = (root: HTMLElement, beats: readonly HTMLElement[], held: Held)
   });
 
 const startActor = (
-  beats: readonly HTMLElement[],
+  beats: ReadonlyArray<HTMLElement>,
   state: UnitState,
 ): Actor<typeof sceneMachine> => {
   const metas = beats.map((beat) => readMeta(beat));

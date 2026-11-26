@@ -6,7 +6,7 @@ interface Run {
 }
 
 interface Layer {
-  readonly rows: readonly string[];
+  readonly rows: ReadonlyArray<string>;
   readonly top: number;
 }
 
@@ -69,8 +69,8 @@ const talk: Layer = {
   top: 13,
 };
 
-const rowRuns = (row: string, line: number): Run[] => {
-  const runs: Run[] = [];
+const rowRuns = (row: string, line: number): Array<Run> => {
+  const runs: Array<Run> = [];
   let start = 0;
   for (let end = 1; end <= row.length; end += 1) {
     const code = row.charAt(start);
@@ -85,7 +85,7 @@ const rowRuns = (row: string, line: number): Run[] => {
   return runs;
 };
 
-const runsOf = (layer: Layer): Run[] =>
+const runsOf = (layer: Layer): Array<Run> =>
   layer.rows.flatMap((row, at) => rowRuns(row, layer.top + at));
 
 export { blink, body, empty, palette, runsOf, size, talk, type Layer, type Run };

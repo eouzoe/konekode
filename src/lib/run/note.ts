@@ -1,9 +1,9 @@
-import { type Pressed } from '@/lib/edit/session';
 import { report } from '@/lib/fault/fault';
 import { usedAt } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
 
-import { type Outcome } from './protocol';
+import type { Outcome } from './protocol';
+import type { Pressed } from '@/lib/edit/session';
 
 interface Place {
   readonly beat: string;

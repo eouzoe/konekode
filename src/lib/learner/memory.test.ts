@@ -20,7 +20,7 @@ interface Visit {
 const minute = 60_000;
 const start = 1_800_000_000_000;
 
-const after = (visits: readonly Visit[]): Memory => {
+const after = (visits: ReadonlyArray<Visit>): Memory => {
   let at = start;
   let memory: Memory | null = null;
   for (const visit of visits) {
@@ -34,7 +34,7 @@ const after = (visits: readonly Visit[]): Memory => {
 };
 
 const daysUntilDue = (memory: Memory): number => (dueAt(memory) - memory.at) / dayLength;
-const untilDue = (visits: readonly Visit[]): number => daysUntilDue(after(visits));
+const untilDue = (visits: ReadonlyArray<Visit>): number => daysUntilDue(after(visits));
 
 const helped = (gap: number): Visit => ({ evidence: 'helped', gap });
 const unaided = (gap: number): Visit => ({ evidence: 'unaided', gap });

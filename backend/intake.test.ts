@@ -7,7 +7,8 @@ import { accountOf, dayLimits, networkOf, secondsToNextDay, type Usage } from '.
 import { ticket, type Ticket } from './contract';
 import { intakeFor } from './intake';
 import { bodyLimit, intakeContentType, intakePath } from './limits';
-import { type Parcel, type Storage } from './store';
+
+import type { Parcel, Storage } from './store';
 
 const actor = '11111111-1111-4111-8111-111111111111';
 const session = '22222222-2222-4222-8222-222222222222';
@@ -34,12 +35,12 @@ const query = (changes: Record<string, string> = {}): URLSearchParams =>
   });
 
 interface Fake {
-  readonly kept: Parcel[];
+  readonly kept: Array<Parcel>;
   readonly store: Storage;
 }
 
 const recording = (network: Usage = unused, own: Usage = unused): Fake => {
-  const kept: Parcel[] = [];
+  const kept: Array<Parcel> = [];
   const store: Storage = {
     keep: (parcel) =>
       Effect.sync(() => {

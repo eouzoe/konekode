@@ -43,7 +43,7 @@ interface DialogueLine {
 }
 
 interface DialogueOptions<Msg> {
-  readonly lines: readonly DialogueLine[];
+  readonly lines: ReadonlyArray<DialogueLine>;
   readonly more: boolean;
   readonly note: string;
   readonly onPress: Msg;
@@ -93,7 +93,7 @@ interface KeyCapView {
 
 interface KeyboardOptions {
   readonly mode: string;
-  readonly rows: readonly (readonly KeyCapView[])[];
+  readonly rows: ReadonlyArray<ReadonlyArray<KeyCapView>>;
 }
 
 type NoticeKind = 'blocked' | 'broken' | 'unsaved';

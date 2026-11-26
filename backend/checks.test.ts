@@ -3,12 +3,13 @@ import { expect, test } from 'bun:test';
 import { Effect } from 'effect';
 import { HttpRouter } from 'effect/http';
 
-import { type Usage } from './budget';
 import { checkAll, report, type Result, type Target } from './checks';
 import { intakeFor } from './intake';
 import { intakeClosed, intakeOpen } from './limits';
 import site, { type Env, type Fetcher } from './site';
-import { type Storage } from './store';
+
+import type { Usage } from './budget';
+import type { Storage } from './store';
 
 const origin = 'https://cp-preview.example.workers.dev';
 const apiAddress = 'https://cp-api.example.workers.dev/';
@@ -122,7 +123,7 @@ const target = (live: boolean): Target => ({
   version,
 });
 
-const failed = (results: readonly Result[]): string[] =>
+const failed = (results: ReadonlyArray<Result>): Array<string> =>
   results.filter((each) => !each.passed).map((each) => each.name);
 
 test('a preview built and declared as intended passes every check', async () => {

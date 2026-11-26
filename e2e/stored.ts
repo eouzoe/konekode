@@ -1,5 +1,6 @@
-import { type Page } from '@playwright/test';
 import { array, number, object, string } from 'zod';
+
+import type { Page } from '@playwright/test';
 
 const storedEvent = object({
   at: number(),

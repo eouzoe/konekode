@@ -127,7 +127,7 @@ const playStep = async (run: Run, step: string): Promise<void> => {
   }
 };
 
-const playFrom = async (run: Run, queue: readonly string[]): Promise<void> => {
+const playFrom = async (run: Run, queue: ReadonlyArray<string>): Promise<void> => {
   const [step, ...rest] = queue;
   if (step === undefined || !isCurrent(run)) {
     return;
@@ -155,7 +155,7 @@ const record = (session: Session, parts: Parts, attempt: ReturnType<typeof attem
   }
 };
 
-const words = (script: string): string[] => script.split(' ').filter((word) => word !== '');
+const words = (script: string): Array<string> => script.split(' ').filter((word) => word !== '');
 
 const play = async (session: Session, parts: Parts, script: Script): Promise<void> => {
   Object.assign(session, { beat: script.beat, token: session.token + 1 });

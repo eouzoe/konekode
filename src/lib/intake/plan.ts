@@ -1,6 +1,6 @@
 import { faultKind, faultSummaryKind, type LearningEvent } from '@/lib/record/event';
 
-import { type Batch } from './pending';
+import type { Batch } from './pending';
 
 interface Timing {
   readonly batchSize: number;
@@ -37,7 +37,7 @@ const urgentKinds: ReadonlySet<string> = new Set([faultKind, faultSummaryKind]);
 const isUrgent = (batch: Batch): boolean =>
   batch.events.some((event) => urgentKinds.has(event.kind));
 
-const isDue = (batches: readonly Batch[], now: number, rule: Timing = timing): boolean =>
+const isDue = (batches: ReadonlyArray<Batch>, now: number, rule: Timing = timing): boolean =>
   batches.some(
     (batch) =>
       isUrgent(batch) ||
@@ -46,11 +46,11 @@ const isDue = (batches: readonly Batch[], now: number, rule: Timing = timing): b
   );
 
 const fitBytes = (
-  events: readonly LearningEvent[],
+  events: ReadonlyArray<LearningEvent>,
   limit: number = timing.finalBytes,
-): LearningEvent[] => {
+): Array<LearningEvent> => {
   let total = brackets;
-  const kept: LearningEvent[] = [];
+  const kept: Array<LearningEvent> = [];
   for (const event of events) {
     const size = encoder.encode(JSON.stringify(event)).byteLength + Math.min(kept.length, 1);
     if (total + size > limit) {
@@ -64,7 +64,7 @@ const fitBytes = (
 
 const byteLength = (text: string): number => encoder.encode(text).byteLength;
 
-const prefixBatch = (batch: Batch, events: readonly LearningEvent[]): Batch | null => {
+const prefixBatch = (batch: Batch, events: ReadonlyArray<LearningEvent>): Batch | null => {
   const final = events.at(fromEnd);
   if (final === undefined) {
     return null;

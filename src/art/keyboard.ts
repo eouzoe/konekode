@@ -33,12 +33,12 @@ const labelOf = (cap: KeyCap): string => {
   return `${cap.shift} ${cap.base}`;
 };
 
-const capsOf = (row: readonly KeyCap[]): Cap[] =>
+const capsOf = (row: ReadonlyArray<KeyCap>): Array<Cap> =>
   row.map((cap) => ({ id: cap.base, label: labelOf(cap) }));
 
 const [numbers = [], upper = [], home = [], lower = []] = rows;
 
-const layout: readonly (readonly Cap[])[] = [
+const layout: ReadonlyArray<ReadonlyArray<Cap>> = [
   [{ id: escapeKey, label: 'Esc', size: 'wide' }, ...capsOf(numbers)],
   capsOf(upper),
   [...capsOf(home), { id: enterKey, label: 'Enter', size: 'wider' }],
@@ -75,14 +75,14 @@ const build = (host: HTMLElement): Map<string, HTMLElement> => {
   return caps;
 };
 
-const withShift = (key: string): string[] => {
+const withShift = (key: string): Array<string> => {
   if (findKey(key)?.shift === true) {
     return [key, shiftKey];
   }
   return [key];
 };
 
-const idsOf = (key: string): string[] => {
+const idsOf = (key: string): Array<string> => {
   if (key === shiftKey) {
     return [shiftKey, rightShift];
   }
@@ -91,7 +91,7 @@ const idsOf = (key: string): string[] => {
 
 const createKeyboard = (host: HTMLElement): Keyboard => {
   const caps = build(host);
-  const capsFor = (key: string): HTMLElement[] =>
+  const capsFor = (key: string): Array<HTMLElement> =>
     idsOf(key)
       .map((id) => caps.get(id))
       .filter((cap) => cap !== undefined);

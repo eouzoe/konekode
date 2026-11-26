@@ -4,12 +4,12 @@ const wasmName = /(?<name>[\w.-]+\.wasm)/gu;
 const compiler = 'llvm';
 const entry = /<(?:script[^>]+src|link[^>]+href)="\/(?<path>_astro\/[^"]+)"/gu;
 
-const namesIn = (text: string, pattern: RegExp): string[] =>
+const namesIn = (text: string, pattern: RegExp): Array<string> =>
   [...text.matchAll(pattern)]
     .map((match) => match.groups?.name ?? '')
     .filter((name) => name !== '');
 
-const neighbours = async (dir: URL, name: string): Promise<string[]> => {
+const neighbours = async (dir: URL, name: string): Promise<Array<string>> => {
   if (!name.endsWith('.js')) {
     return [];
   }
@@ -20,7 +20,7 @@ const neighbours = async (dir: URL, name: string): Promise<string[]> => {
 
 const closure = async (
   dir: URL,
-  start: readonly string[],
+  start: ReadonlyArray<string>,
   seen: ReadonlySet<string>,
 ): Promise<ReadonlySet<string>> => {
   const fresh = [...new Set(start)].filter((name) => !seen.has(name));
@@ -31,12 +31,12 @@ const closure = async (
   return closure(dir, next.flat(), new Set([...seen, ...fresh]));
 };
 
-const coreFiles = async (dir: URL, start: readonly string[]): Promise<string[]> =>
+const coreFiles = async (dir: URL, start: ReadonlyArray<string>): Promise<Array<string>> =>
   [...(await closure(dir, start, new Set()))].toSorted().map((name) => `/${assets}${name}`);
 
 const pagePath = (file: string): string => `/${file.replace(/index\.html$/u, '')}`;
 
-const pageCore = async (dir: URL, file: string): Promise<[string, string[]]> => {
+const pageCore = async (dir: URL, file: string): Promise<[string, Array<string>]> => {
   const html = await Bun.file(new URL(file, dir)).text();
   const entries = [...html.matchAll(entry)]
     .map((match) => match.groups?.path ?? '')
@@ -45,7 +45,7 @@ const pageCore = async (dir: URL, file: string): Promise<[string, string[]]> => 
   return [pagePath(file), await coreFiles(dir, entries)];
 };
 
-const coreOf = async (dir: URL): Promise<Record<string, string[]>> => {
+const coreOf = async (dir: URL): Promise<Record<string, Array<string>>> => {
   const glob = new Bun.Glob('**/index.html');
   const files = await Array.fromAsync(glob.scan({ cwd: Bun.fileURLToPath(dir) }));
   const pages = await Promise.all(files.map((file) => pageCore(dir, file)));

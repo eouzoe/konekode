@@ -2,7 +2,8 @@ import { object, string, type infer as Infer } from '@/lib/zod';
 
 import { watchFullScreen } from './conditions';
 import { readIntent, wouldLeave, type Intent } from './keys';
-import { type Check } from './machine';
+
+import type { Check } from './machine';
 
 interface Handlers {
   readonly back: () => void;

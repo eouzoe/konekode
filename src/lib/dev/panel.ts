@@ -46,7 +46,7 @@ const make = <Tag extends keyof HTMLElementTagNameMap>(
   return element;
 };
 
-const apply = async (unit: string, entries: readonly Entry[]): Promise<void> => {
+const apply = async (unit: string, entries: ReadonlyArray<Entry>): Promise<void> => {
   if (entries.length === 0) {
     return;
   }
@@ -120,7 +120,7 @@ const unseen = (id: string): EngineComponent => ({
   unsettled: false,
 });
 
-const modelRows = (): HTMLTableRowElement[] => {
+const modelRows = (): Array<HTMLTableRowElement> => {
   const known = new Map(engineComponents().map((item) => [item.id, item]));
   return components.map((id) => {
     const item = known.get(id) ?? unseen(id);
@@ -194,7 +194,7 @@ const uiSheet = (editor: Editor): HTMLDialogElement => {
   return sheet;
 };
 
-const editButton = (unit: string): HTMLElement[] => {
+const editButton = (unit: string): Array<HTMLElement> => {
   const editor = textEditor(unit);
   const button = make('button', '改這句（F2）');
   const others = uiSheet(editor);
@@ -202,7 +202,7 @@ const editButton = (unit: string): HTMLElement[] => {
   return [button, opener('畫面上的字', others), editor.sheet, others];
 };
 
-const sheets = (unit: string): HTMLElement[] => {
+const sheets = (unit: string): Array<HTMLElement> => {
   const jump = jumpSheet(unit);
   const note = noteSheet(unit);
   const model = modelSheet();

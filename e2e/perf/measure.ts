@@ -35,7 +35,7 @@ const places = 3;
 const ownArguments = 2;
 const defaultRounds = 3;
 
-const profiles: readonly Profile[] = [
+const profiles: ReadonlyArray<Profile> = [
   { cpu: 1, name: 'fast', network: null },
   {
     cpu: slowCpu,

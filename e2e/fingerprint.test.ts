@@ -1,14 +1,17 @@
-import { type Page } from '@playwright/test';
 import { array, boolean, number, object, record, string, union } from 'zod';
 
 import { readStored } from './stored';
 import { expect, test } from './test';
 
+import type { Page } from '@playwright/test';
+
 const value = union([boolean(), number(), string()]);
 const data = record(string(), value);
 const fingerprintEvents = array(object({ data: data.default({}), kind: string() }));
 
-const fingerprints = async (page: Page): Promise<Record<string, boolean | number | string>[]> =>
+const fingerprints = async (
+  page: Page,
+): Promise<Array<Record<string, boolean | number | string>>> =>
   fingerprintEvents
     .parse(await readStored(page))
     .filter((event) => event.kind === 'device.fingerprint')

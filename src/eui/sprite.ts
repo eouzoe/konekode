@@ -2,7 +2,6 @@ import { catalog } from '@/lib/complete/catalog';
 import { createEngine } from '@/lib/complete/engine';
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand, keysOf } from '@/lib/edit/path';
-import { type Session } from '@/lib/edit/session';
 import { knownKeys, run } from '@/lib/edit/step';
 import { chunks, firstChunk } from '@/lib/perform/rhythm';
 import {
@@ -15,8 +14,10 @@ import {
   type Drill,
 } from '@/lib/typing/drill';
 import { typeInto } from '@/lib/typing/keypress';
-import { type Beat } from '@/lib/unit/format';
 import { planOf } from '@/units/index';
+
+import type { Session } from '@/lib/edit/session';
+import type { Beat } from '@/lib/unit/format';
 
 interface DrillShow {
   readonly demo: boolean;
@@ -26,7 +27,7 @@ interface DrillShow {
 }
 
 interface Move {
-  readonly keys: readonly string[];
+  readonly keys: ReadonlyArray<string>;
   readonly label: string;
   readonly runs: boolean;
   readonly wait: number;
@@ -34,7 +35,7 @@ interface Move {
 
 interface Next<State, Item> {
   readonly delay: number;
-  readonly queue: readonly Item[];
+  readonly queue: ReadonlyArray<Item>;
   readonly state: State;
 }
 
@@ -44,14 +45,14 @@ const instant = new Set(['hint', 'hush']);
 const labels: Readonly<Record<string, string>> = { BS: 'Backspace', run: 'Enter' };
 const typePrefix = 'type:';
 
-const rulesOf = (unlocked: readonly string[]): Rules => {
+const rulesOf = (unlocked: ReadonlyArray<string>): Rules => {
   const engine = createEngine(catalog, () => new Set(unlocked));
   return { keys: engine.keys(), pairs: engine.pairs() };
 };
 
 const everything = (rules: Rules): Rules => ({ keys: knownKeys, pairs: rules.pairs });
 
-const words = (script: string | undefined): string[] =>
+const words = (script: string | undefined): Array<string> =>
   (script ?? '').split(' ').filter((word) => word !== '');
 
 const fillAll = (drill: Drill): Drill => {
@@ -79,14 +80,14 @@ const drillAct = (state: DrillShow, token: string): DrillShow => {
   return acts[name]?.() ?? base;
 };
 
-const demoStart = (beats: readonly Beat[], index: number): number =>
+const demoStart = (beats: ReadonlyArray<Beat>, index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && (beat.demo ?? '').startsWith('reset'));
 
 const drillStart = (
-  beats: readonly Beat[],
+  beats: ReadonlyArray<Beat>,
   index: number,
   target: string,
-): { readonly queue: readonly string[]; readonly state: DrillShow } | null => {
+): { readonly queue: ReadonlyArray<string>; readonly state: DrillShow } | null => {
   const beat = beats[index];
   const start = demoStart(beats, index);
   if (beat?.stage !== 'drill' || start < 0) {
@@ -100,7 +101,7 @@ const drillStart = (
   };
 };
 
-const drillStep = (state: DrillShow, queue: readonly string[]): Next<DrillShow, string> => {
+const drillStep = (state: DrillShow, queue: ReadonlyArray<string>): Next<DrillShow, string> => {
   const [token, ...rest] = queue;
   if (token === undefined) {
     return { delay: 0, queue: [], state };
@@ -120,7 +121,7 @@ const drillStep = (state: DrillShow, queue: readonly string[]): Next<DrillShow, 
   return { delay, queue: rest, state: drillAct(state, token) };
 };
 
-const movesOf = (token: string): Move[] => {
+const movesOf = (token: string): Array<Move> => {
   if (token.startsWith(typePrefix)) {
     return chunks(token.slice(typePrefix.length)).map((chunk) => ({
       keys: chunk.text.split(''),
@@ -137,19 +138,23 @@ const movesOf = (token: string): Move[] => {
   return [{ keys, label: labels[token] ?? token, runs, wait: keyPause }];
 };
 
-const startOf = (origin: string, history: readonly string[], rules: Rules): Buffer =>
+const startOf = (origin: string, history: ReadonlyArray<string>, rules: Rules): Buffer =>
   run(createBuffer(origin), keysOf(history), everything(rules));
 
-const keysStart = (beats: readonly Beat[], index: number): number =>
+const keysStart = (beats: ReadonlyArray<Beat>, index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && beat.keys?.[0] === 'reset');
 
 const runStart = (
-  beats: readonly Beat[],
+  beats: ReadonlyArray<Beat>,
   index: number,
   unit: string,
   origin: string,
   rules: Rules,
-): { readonly goal: string; readonly queue: readonly Move[]; readonly sprite: Buffer } | null => {
+): {
+  readonly goal: string;
+  readonly queue: ReadonlyArray<Move>;
+  readonly sprite: Buffer;
+} | null => {
   const beat = beats[index];
   if (beat?.stage !== 'run' || beat.keys === undefined) {
     return null;
@@ -168,7 +173,7 @@ const runStart = (
 
 const runStep = (
   sprite: Buffer,
-  queue: readonly Move[],
+  queue: ReadonlyArray<Move>,
   rules: Rules,
 ): Next<Buffer, Move> & { readonly runs: boolean } => {
   const [move, ...rest] = queue;

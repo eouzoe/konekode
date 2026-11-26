@@ -10,7 +10,7 @@ const sameOrigin = (address: string): boolean => {
   }
 };
 
-const nextPages = async (): Promise<string[]> => {
+const nextPages = async (): Promise<Array<string>> => {
   const paths = [...document.querySelectorAll<HTMLAnchorElement>('a[data-prepare]')].map(
     (link) => new URL(link.href).pathname,
   );
@@ -22,7 +22,7 @@ const nextPages = async (): Promise<string[]> => {
   return [...paths, ...paths.flatMap((path) => core[path] ?? [])];
 };
 
-const keep = (worker: ServiceWorker | null, addresses: readonly string[]): void => {
+const keep = (worker: ServiceWorker | null, addresses: ReadonlyArray<string>): void => {
   const urlsToCache = addresses.filter((address) => sameOrigin(address));
   if (urlsToCache.length > 0) {
     worker?.postMessage({ payload: { urlsToCache }, type: 'CACHE_URLS' });

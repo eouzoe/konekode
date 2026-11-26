@@ -21,7 +21,7 @@ const bump = (tally: Tally, kind: string, where: string): number => {
   return count;
 };
 
-const counted = (tally: Tally): Counted[] =>
+const counted = (tally: Tally): Array<Counted> =>
   [...tally.entries()].flatMap(([kind, places]) =>
     [...places.entries()].map(([where, count]) => ({ count, kind, where })),
   );

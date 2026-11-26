@@ -1,6 +1,5 @@
-import { type Html } from '@effect/ui/html';
-
-import { type KeyboardOptions } from '@/eui/contract';
+import type { KeyboardOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Keyboard = <Msg>(h: Html.H<Msg>, options: KeyboardOptions) =>
   h.div

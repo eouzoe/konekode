@@ -1,5 +1,6 @@
 import { readEvents } from './event';
-import { type Persistence } from './log';
+
+import type { Persistence } from './log';
 
 interface Adoption {
   readonly done: Promise<number>;

@@ -44,15 +44,15 @@ const storePart = async (bytes: Uint8Array, folder: string): Promise<string> => 
 };
 
 const inTurn = <Item, Result>(
-  items: readonly Item[],
+  items: ReadonlyArray<Item>,
   work: (item: Item) => Promise<Result>,
-): Promise<Result[]> =>
-  items.reduce<Promise<Result[]>>(async (earlier, item) => {
+): Promise<Array<Result>> =>
+  items.reduce<Promise<Array<Result>>>(async (earlier, item) => {
     const done = await earlier;
     return [...done, await work(item)];
   }, Promise.resolve([]));
 
-const splitFile = async (source: string, parts: string): Promise<string[]> => {
+const splitFile = async (source: string, parts: string): Promise<Array<string>> => {
   const bytes = new Uint8Array(await readFile(source));
   const starts = Array.from(
     { length: Math.ceil(bytes.length / partSize) },
@@ -64,7 +64,7 @@ const splitFile = async (source: string, parts: string): Promise<string[]> => {
   return names;
 };
 
-const packFolder = async (dir: URL, path: string, parts: string): Promise<string[]> => {
+const packFolder = async (dir: URL, path: string, parts: string): Promise<Array<string>> => {
   const folder = fileURLToPath(new URL(path, dir));
   if (!(await exists(folder))) {
     return [];

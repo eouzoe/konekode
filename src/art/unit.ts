@@ -13,20 +13,20 @@ const rules: Rules = { keys: new Set([...knownKeys, 'i', 'Escape']), pairs: [] }
 const shows = (beat: Beat, full: boolean): boolean =>
   beat.when === undefined || (beat.when === 'fullscreen') === full;
 
-const beats: readonly Beat[] = allBeats.filter((beat) => shows(beat, isFullScreen()));
+const beats: ReadonlyArray<Beat> = allBeats.filter((beat) => shows(beat, isFullScreen()));
 
 const press = (buffer: Buffer, key: string): { buffer: Buffer; refused: boolean } =>
   step(buffer, key, rules);
 
-const pressAll = (buffer: Buffer, keys: readonly string[]): Buffer =>
+const pressAll = (buffer: Buffer, keys: ReadonlyArray<string>): Buffer =>
   keys.reduce((now, key) => press(now, key).buffer, buffer);
 
-const keysOfTokens = (tokens: readonly string[]): string[] =>
+const keysOfTokens = (tokens: ReadonlyArray<string>): Array<string> =>
   expand(tokens)
     .filter((item) => item.kind !== 'run')
     .map((item) => item.key);
 
-const keysOfBeat = (beat: Beat): string[] => keysOfTokens(beat.keys ?? []);
+const keysOfBeat = (beat: Beat): Array<string> => keysOfTokens(beat.keys ?? []);
 
 const taskStart = (beatId: string): Buffer | undefined => {
   const plan = planFor(tasks, beatId);
@@ -72,7 +72,7 @@ const runBufferAt = (index: number): Buffer => {
   return pressAll(start, before);
 };
 
-const keysNow = (beat: Beat): string[] => keysOfBeat(beat);
+const keysNow = (beat: Beat): Array<string> => keysOfBeat(beat);
 
 const runs = (beat: Beat): boolean => (beat.keys ?? []).includes('run');
 

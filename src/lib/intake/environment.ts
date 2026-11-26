@@ -1,7 +1,8 @@
 import { siteMode } from '@/lib/mode';
-import { type Data } from '@/lib/record/event';
 import { isFullScreen } from '@/lib/scene/conditions';
 import { unknownVersion } from '@/lib/site/version';
+
+import type { Data } from '@/lib/record/event';
 
 const compilerVersion = (): string => {
   const declared: unknown = import.meta.env.PUBLIC_COMPILER;

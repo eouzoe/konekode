@@ -22,7 +22,7 @@ const openUnit = async (page: Page): Promise<void> => {
 };
 
 const openBeforeScripts = async (page: Page): Promise<void> => {
-  const held: Route[] = [];
+  const held: Array<Route> = [];
   await page.route(scripts, (route) => {
     held.push(route);
   });

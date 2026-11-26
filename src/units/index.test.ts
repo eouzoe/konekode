@@ -31,7 +31,7 @@ test('an unknown unit has no plan, no beats and no starting text', () => {
 });
 
 test('every key a gate asks for was shown in an earlier beat', () => {
-  const missing: string[] = [];
+  const missing: Array<string> = [];
   for (const [unit, domain] of Object.entries(allDomains())) {
     const shown = new Set<string>();
     for (const beat of beatsOf(unit)) {

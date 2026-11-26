@@ -1,6 +1,5 @@
-import { type Html } from '@effect/ui/html';
-
-import { type CellOptions } from '@/eui/contract';
+import type { CellOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Cell = <Msg>(h: Html.H<Msg>, options: CellOptions) =>
   h.div

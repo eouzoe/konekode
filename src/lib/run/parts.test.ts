@@ -7,7 +7,7 @@ import { fetchInParts, type Fetch } from './parts';
 const base = 'https://site.test/_astro/compiler.worker.js';
 const hashOf = (index: number): string => String(index).repeat(64);
 const same = (bytes: Uint8Array): Uint8Array => bytes;
-const brotliParts: Readonly<Record<string, readonly number[]>> = {
+const brotliParts: Readonly<Record<string, ReadonlyArray<number>>> = {
   'int main() ': [11, 5, 128, 105, 110, 116, 32, 109, 97, 105, 110, 40, 41, 32, 3],
   '{': [11, 0, 128, 123, 3],
 };
@@ -18,7 +18,7 @@ const ignore = (): void => {
 };
 
 interface Served {
-  readonly asked: string[];
+  readonly asked: Array<string>;
   readonly fetcher: Fetch;
 }
 
@@ -30,7 +30,7 @@ const addressOf = (input: RequestInfo | URL): string => {
 };
 
 const serve = (files: Readonly<Record<string, () => Response>>): Served => {
-  const asked: string[] = [];
+  const asked: Array<string> = [];
   const fetcher: Fetch = (input) => {
     const path = new URL(addressOf(input), base).pathname;
     asked.push(path);
@@ -45,7 +45,7 @@ const serve = (files: Readonly<Record<string, () => Response>>): Served => {
 
 const text = (body: string) => (): Response => new Response(body);
 
-const listing = (parts: readonly string[], size: number) => (): Response =>
+const listing = (parts: ReadonlyArray<string>, size: number) => (): Response =>
   Response.json({ parts, size });
 
 const readAll = (response: Response): Promise<string> => response.text();

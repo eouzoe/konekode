@@ -17,7 +17,7 @@ import {
 interface Tape {
   busy: boolean;
   chunk: number;
-  frames: unknown[];
+  frames: Array<unknown>;
   readonly site: string;
 }
 
@@ -35,9 +35,9 @@ const ticketFor = (tape: Tape): Ticket => ({
 
 const sendWhole = async (
   tape: Tape,
-  frames: readonly unknown[],
+  frames: ReadonlyArray<unknown>,
   packed: Packed,
-): Promise<readonly unknown[]> => {
+): Promise<ReadonlyArray<unknown>> => {
   if (await post(ticketFor(tape), packed)) {
     tape.chunk += 1;
     return [];
@@ -45,7 +45,7 @@ const sendWhole = async (
   return frames;
 };
 
-type Sender = (tape: Tape, frames: readonly unknown[]) => Promise<readonly unknown[]>;
+type Sender = (tape: Tape, frames: ReadonlyArray<unknown>) => Promise<ReadonlyArray<unknown>>;
 
 const sendHalves: Sender = async (tape, frames) => {
   const middle = Math.ceil(frames.length / half);
@@ -56,7 +56,10 @@ const sendHalves: Sender = async (tape, frames) => {
   return sendFrames(tape, frames.slice(middle));
 };
 
-const sendFrames = async (tape: Tape, frames: readonly unknown[]): Promise<readonly unknown[]> => {
+const sendFrames = async (
+  tape: Tape,
+  frames: ReadonlyArray<unknown>,
+): Promise<ReadonlyArray<unknown>> => {
   const packed = await pack(JSON.stringify(frames));
   if (packed.body.byteLength <= bodyLimit) {
     return sendWhole(tape, frames, packed);

@@ -4,73 +4,46 @@
   "categories": {
     "correctness": "error",
     "suspicious": "error",
-    "pedantic": "error",
-    "perf": "error",
-    "style": "error",
-    "nursery": "warn"
+    "perf": "error"
   },
   "rules": {
-    "no-magic-numbers": [
-      "error",
-      {
-        "ignore": [0, 1],
-        "ignoreArrayIndexes": true
-      }
-    ],
-    "unicorn/no-null": "off",
+    "typescript/consistent-type-imports": ["error", { "fixStyle": "inline-type-imports" }],
+    "typescript/no-import-type-side-effects": "error",
+    "import/no-duplicates": ["error", { "preferInline": true }],
+    "import/no-self-import": "error",
+    "import/no-empty-named-blocks": "error",
+    "typescript/no-explicit-any": ["error", { "fixToUnknown": true }],
+    "typescript/no-unused-vars": ["error", { "args": "all", "argsIgnorePattern": "^_" }],
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-unnecessary-type-constraint": "error",
+    "typescript/no-unnecessary-type-arguments": "error",
+    "typescript/no-unnecessary-condition": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/no-confusing-void-expression": "error",
+    "typescript/require-await": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/no-useless-empty-export": "error",
+    "typescript/array-type": ["error", { "default": "generic", "readonly": "generic" }],
+    "eslint/no-await-in-loop": "off",
+    "no-underscore-dangle": ["error", { "allow": ["_start", "resetVimGlobalState_"] }],
     "no-console": "error",
     "no-debugger": "error",
-    "typescript/consistent-type-imports": [
-      "error",
-      {
-        "fixStyle": "inline-type-imports"
-      }
-    ],
-    "unicorn/prefer-ternary": "off",
-    "typescript/no-unused-vars": [
-      "error",
-      {
-        "args": "all",
-        "argsIgnorePattern": "^_"
-      }
-    ],
-    "typescript/no-explicit-any": [
-      "error",
-      {
-        "fixToUnknown": true
-      }
-    ],
-    "sort-imports": "off",
-    "import/no-duplicates": [
-      "error",
-      {
-        "preferInline": true
-      }
-    ],
-    "import/consistent-type-specifier-style": ["error", "prefer-inline"],
-    "import/max-dependencies": [
-      "error",
-      {
-        "max": 10,
-        "ignoreTypeImports": true
-      }
-    ],
-    "oxc/no-async-await": "off",
-    "oxc/no-optional-chaining": "off",
-    "oxc/no-rest-spread-properties": "off",
-    "import/default": "off",
-    "typescript/prefer-readonly-parameter-types": "off",
-    "import/no-named-export": "off",
-    "import/no-default-export": "off",
-    "import/prefer-default-export": "off",
-    "one-var": "off",
-    "unicorn/require-post-message-target-origin": "off",
-    "no-underscore-dangle": [
-      "error",
-      {
-        "allow": ["_start", "resetVimGlobalState_"]
-      }
-    ]
+    "no-var": "error",
+    "no-useless-constructor": "error",
+    "no-unneeded-ternary": "error",
+    "no-useless-concat": "error",
+    "unicorn/no-abusive-eslint-disable": "error",
+    "unicorn/prefer-array-flat-map": "error",
+    "unicorn/no-accessor-recursion": "error",
+    "oxc/misrefactored-assign-op": "error",
+    "unicorn/require-post-message-target-origin": "off"
   },
   "env": {
     "browser": true,
@@ -120,11 +93,7 @@
       "files": ["*.test.ts"],
       "rules": {
         "typescript/no-explicit-any": "off",
-        "no-console": "off",
-        "eslint/max-lines": "off",
-        "eslint/max-lines-per-function": "off",
-        "eslint/max-statements": "off",
-        "eslint/no-magic-numbers": "off"
+        "no-console": "off"
       }
     },
     {
@@ -137,18 +106,6 @@
       }
     },
     {
-      "files": ["*.config.ts"],
-      "rules": {
-        "import/no-nodejs-modules": "off"
-      }
-    },
-    {
-      "files": ["**/compiler.worker.ts"],
-      "rules": {
-        "import/consistent-type-specifier-style": "off"
-      }
-    },
-    {
       "files": ["e2e/**"],
       "rules": {
         "no-restricted-properties": [
@@ -158,49 +115,13 @@
             "property": "now",
             "message": "Compare times with performance.now(): the wall clock can step back while a test runs."
           }
-        ],
-        "eslint/no-await-in-loop": "off",
-        "promise/avoid-new": "off",
-        "unicorn/no-await-expression-member": "off",
-        "typescript/return-await": "off"
-      }
-    },
-    {
-      "files": ["src/units/**"],
-      "rules": {
-        "eslint/max-lines": "off"
+        ]
       }
     },
     {
       "files": ["backend/**/*.ts", "alchemy.run.ts"],
-      "rules": {
-        "new-cap": [
-          "error",
-          {
-            "capIsNewExceptionPattern": "^(Schema|Context|D1)\\.[A-Z]",
-            "capIsNewExceptions": ["Stack", "Telemetry", "Worker"]
-          }
-        ]
-      },
       "globals": {
         "HTMLRewriter": "readonly"
-      }
-    },
-    {
-      "files": ["src/eui/**/*.ts", "src/parts/**/*.ts"],
-      "rules": {
-        "eslint/new-cap": "off",
-        "eslint/no-ternary": "off",
-        "eslint/id-length": "off",
-        "eslint/max-params": "off",
-        "unicorn/max-nested-calls": "off",
-        "eslint/max-statements": "off",
-        "eslint/max-lines": "off",
-        "import/max-dependencies": "off",
-        "eslint/no-redeclare": "off",
-        "unicorn/no-useless-undefined": "off",
-        "unicorn/no-useless-spread": "off",
-        "eslint/max-lines-per-function": "off"
       }
     }
   ]

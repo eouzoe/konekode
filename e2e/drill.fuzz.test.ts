@@ -11,7 +11,7 @@ import { generator, openAt, pickFrom, slowEveryOtherRound } from './fuzz-support
 import { expect, test, type Page } from './test';
 
 interface Run {
-  readonly actions: string[];
+  readonly actions: Array<string>;
   model: Drill;
   readonly page: Page;
   readonly random: () => number;
@@ -80,7 +80,7 @@ const acts: Record<string, (run: Run) => Promise<void>> = {
   },
 };
 
-const weights: readonly (readonly [string, number])[] = [
+const weights: ReadonlyArray<readonly [string, number]> = [
   ['right', 45],
   ['wrong', 25],
   ['shift', 6],

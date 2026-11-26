@@ -8,11 +8,11 @@ const ticket = 'actor=a&session=b&site=c&kind=events&encoding=gzip&seq=1';
 const address = `${origin}${intakePath}?${ticket}`;
 
 interface Seen {
-  readonly api: Request[];
-  readonly assets: Request[];
+  readonly api: Array<Request>;
+  readonly assets: Array<Request>;
 }
 
-const fetcher = (seen: Request[], answer: () => Response): Fetcher => ({
+const fetcher = (seen: Array<Request>, answer: () => Response): Fetcher => ({
   fetch: (request) => {
     seen.push(request);
     return Promise.resolve(answer());
@@ -128,7 +128,7 @@ test('anything that is not a page comes from the assets as it is', async () => {
 });
 
 test('a page is marked with the platform it is opened on', async () => {
-  const seen: Request[] = [];
+  const seen: Array<Request> = [];
   const env: Env = {
     API: fetcher([], () => new Response(null, { status: 204 })),
     ASSETS: fetcher(seen, html),

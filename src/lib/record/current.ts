@@ -15,9 +15,9 @@ interface Early {
   readonly kind: string;
 }
 
-const listeners: Listener[] = [];
-const early: Early[] = [];
-const nothing: readonly LearningEvent[] = [];
+const listeners: Array<Listener> = [];
+const early: Array<Early> = [];
+const nothing: ReadonlyArray<LearningEvent> = [];
 const earlyLimit = 500;
 
 let opening: Promise<Log> | null = null;
@@ -41,7 +41,7 @@ const record = (log: Log, fault: Fault): void => {
   });
 };
 
-const unrecorded = (): Counted[] =>
+const unrecorded = (): Array<Counted> =>
   faultCounts().filter((fault) => countOf(recorded, fault.kind, fault.where) < fault.count);
 
 const summarise = (log: Log): void => {
@@ -159,7 +159,7 @@ const track = (kind: string, entry: Entry = {}): void => {
   report('record.early', kind, new Error('the log was not open yet'));
 };
 
-const recordedEvents = (): readonly LearningEvent[] => opened?.events() ?? nothing;
+const recordedEvents = (): ReadonlyArray<LearningEvent> => opened?.events() ?? nothing;
 
 const onRecorded = (listener: Listener): void => {
   listeners.push(listener);
@@ -170,7 +170,7 @@ const flushLog = async (): Promise<void> => {
   await opened?.flush();
 };
 
-const forgetRecorded = (ids: readonly string[]): void => {
+const forgetRecorded = (ids: ReadonlyArray<string>): void => {
   opened?.forget(ids);
 };
 

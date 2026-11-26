@@ -52,7 +52,7 @@ test.describe('起步單元：小精靈的示範', () => {
 
   test('示範時會依序顯示小精靈按的每一個鍵', async ({ page }) => {
     await page.addInitScript(() => {
-      const shown: string[] = [];
+      const shown: Array<string> = [];
       Object.assign(globalThis, { shownKeys: shown });
       document.addEventListener('DOMContentLoaded', () => {
         const keycap = document.querySelector('[data-code-runner] [data-role="keycap"]');
@@ -131,11 +131,9 @@ test.describe('起步單元：小精靈的示範', () => {
     const second = programs['run-two'] ?? '';
     const third = programs['run-newline'] ?? '';
     const fourth = programs['run-int'] ?? '';
-    const cases: readonly [
-      beat: string,
-      draft: { cursor: number; text: string },
-      wanted: string,
-    ][] = [
+    const cases: ReadonlyArray<
+      [beat: string, draft: { cursor: number; text: string }, wanted: string]
+    > = [
       ['type-second', draftAt(first, 'cout << 11;'), second],
       ['repeat', draftAt(second, 'cout << 22;'), third],
       ['next-line', draftAt(third, 'cout << 11'), fourth],

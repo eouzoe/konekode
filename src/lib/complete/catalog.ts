@@ -18,14 +18,18 @@ type Item = KeyItem | PairItem;
 
 const commandKeys = ['$', '.', '0', 'G', 'O', 'd', 'f', 'i', 'j', 'k', 'o', 'x'];
 
-const pairs: readonly PairItem[] = [
+const pairs: ReadonlyArray<PairItem> = [
   { close: ')', id: 'pair.paren', kind: 'pair', open: '(', where: 'anywhere' },
   { close: '}', id: 'pair.brace', kind: 'pair', open: '{', where: 'anywhere' },
   { close: '>', id: 'pair.include-angle', kind: 'pair', open: '<', where: 'include-line' },
 ];
 
-const keys: readonly KeyItem[] = commandKeys.map((key) => ({ id: `key.${key}`, key, kind: 'key' }));
+const keys: ReadonlyArray<KeyItem> = commandKeys.map((key) => ({
+  id: `key.${key}`,
+  key,
+  kind: 'key',
+}));
 
-const catalog: readonly Item[] = [...pairs, ...keys];
+const catalog: ReadonlyArray<Item> = [...pairs, ...keys];
 
 export { catalog, keys, type Item, type KeyItem, type PairItem, type Where };

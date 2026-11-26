@@ -1,9 +1,10 @@
-import { type Effect } from '@/lib/edit/effect';
-import { type Expected } from '@/lib/edit/path';
 import { expectedNow, isGuided, type Pressed, type Session } from '@/lib/edit/session';
 import { say, ui } from '@/lib/text/ui';
 import { describeCommand, describeNext, needsTelling } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
+
+import type { Effect } from '@/lib/edit/effect';
+import type { Expected } from '@/lib/edit/path';
 
 const calmAfter = 2600;
 

@@ -24,9 +24,9 @@ const dayLength = 10;
 const dayMillis = 86_400_000;
 const millis = 1000;
 
-const parts = (text: string): string[] => text.split(':').filter((part) => part !== '');
+const parts = (text: string): Array<string> => text.split(':').filter((part) => part !== '');
 
-const expand = (ip: string): string[] => {
+const expand = (ip: string): Array<string> => {
   const [head = '', tail] = ip.split('::');
   if (tail === undefined) {
     return parts(head);

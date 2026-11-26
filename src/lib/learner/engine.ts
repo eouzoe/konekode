@@ -2,7 +2,6 @@ import init, { Engine, keptKinds } from 'konekode-engine';
 
 import { report } from '@/lib/fault/fault';
 import { onRecorded, openLog } from '@/lib/record/current';
-import { type LearningEvent } from '@/lib/record/event';
 import {
   array,
   boolean,
@@ -17,6 +16,8 @@ import {
 } from '@/lib/zod';
 import { contentId } from '@/units/content';
 import { engineContent } from '@/units/index';
+
+import type { LearningEvent } from '@/lib/record/event';
 
 const componentSchema = object({
   completed: int(),
@@ -49,7 +50,7 @@ interface Ready {
   readonly kept: ReadonlySet<string>;
 }
 
-const nothing: readonly string[] = [];
+const nothing: ReadonlyArray<string> = [];
 const blank: EngineState = { components: [], units: {}, unlocked: [] };
 
 let ready: Ready | null = null;
@@ -110,7 +111,7 @@ const unlockedNow = (): ReadonlySet<string> => {
   return unlocked;
 };
 
-const engineComponents = (): readonly EngineComponent[] => currentState().components;
+const engineComponents = (): ReadonlyArray<EngineComponent> => currentState().components;
 
 const asked = (where: string): Engine | null => {
   if (ready === null) {
@@ -120,10 +121,10 @@ const asked = (where: string): Engine | null => {
   return ready.engine;
 };
 
-const shownAt = (unit: string, beat: string): readonly string[] =>
+const shownAt = (unit: string, beat: string): ReadonlyArray<string> =>
   asked('shows')?.shows(unit, beat) ?? nothing;
 
-const usedAt = (unit: string, beat: string, step: number): readonly string[] =>
+const usedAt = (unit: string, beat: string, step: number): ReadonlyArray<string> =>
   asked('uses')?.uses(unit, beat, step) ?? nothing;
 
 const keptKindsNow = (): ReadonlySet<string> | null => ready?.kept ?? null;

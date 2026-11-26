@@ -1,8 +1,9 @@
 import { report } from '@/lib/fault/fault';
 import { number, object, record, string, type ZodType } from '@/lib/zod';
 
-import { type Acked } from './pending';
 import { free, type Hold } from './plan';
+
+import type { Acked } from './pending';
 
 const ackedKey = 'cp:intake:acked';
 const holdKey = 'cp:intake:hold';

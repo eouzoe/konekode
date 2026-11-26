@@ -1,14 +1,14 @@
 import { allChecks } from '@/units/index';
 import { results } from '@/units/results';
 
-import { type Outcome } from './protocol';
+import type { Outcome } from './protocol';
 
 const separator = '\u0000';
 
 const outputs = new Map(results.map((row) => [`${row.unit}${separator}${row.id}`, row.output]));
 
 const table = new Map(
-  allChecks().flatMap((check): [string, string][] => {
+  allChecks().flatMap((check): Array<[string, string]> => {
     const output = outputs.get(`${check.unit}${separator}${check.id}`);
     if (output === undefined) {
       return [];

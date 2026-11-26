@@ -1,9 +1,9 @@
 import { expect, test } from 'bun:test';
 
-import { type LearningEvent } from '@/lib/record/event';
-
 import { pendingBatches } from './pending';
 import { byteLength, fitBytes, free, holdAfter, isDue, isHeld, prefixBatch, timing } from './plan';
+
+import type { LearningEvent } from '@/lib/record/event';
 
 const actor = '11111111-1111-4111-8111-111111111111';
 const session = '22222222-2222-4222-8222-222222222222';
@@ -24,13 +24,13 @@ const event = (seq: number, at: number, text = ''): LearningEvent => ({
   version: 3,
 });
 
-const many = (count: number, at: number, text = ''): LearningEvent[] =>
+const many = (count: number, at: number, text = ''): Array<LearningEvent> =>
   Array.from({ length: count }, (_unused, index) => event(index + 1, at, text));
 
-const batchesOf = (events: readonly LearningEvent[]) =>
+const batchesOf = (events: ReadonlyArray<LearningEvent>) =>
   pendingBatches(events, {}, timing.batchSize);
 
-const dueWith = (events: readonly LearningEvent[]): boolean => isDue(batchesOf(events), now);
+const dueWith = (events: ReadonlyArray<LearningEvent>): boolean => isDue(batchesOf(events), now);
 
 test('nothing is due when nothing waits, or when a little has waited a short while', () => {
   expect(isDue([], now)).toBe(false);
@@ -82,7 +82,7 @@ test('a refusal that says when to come back is waited out exactly', () => {
 
 test('other failures back off, doubling up to a ceiling, and a success clears the hold', () => {
   let hold = free;
-  const waits: number[] = [];
+  const waits: Array<number> = [];
   for (let attempt = 0; attempt < 8; attempt += 1) {
     hold = holdAfter({ retryAfter: null, status: 503 }, now, hold);
     waits.push(hold.until - now);

@@ -11,7 +11,7 @@ import {
 } from '@/lib/typing/keyboard';
 import { messages } from '@/lib/typing/messages';
 
-import { type KeyCapView, type KeyState } from './contract';
+import type { KeyCapView, KeyState } from './contract';
 
 interface LastKey {
   readonly key: string;
@@ -60,7 +60,10 @@ const capOf = (
   marks: { readonly last: LastKey | null; readonly wanted: Wanted | null },
 ): KeyCapView => ({ key, label, state: stateOf(key, marks.wanted, marks.last), wide });
 
-const keyboardOf = (drill: Drill, last: LastKey | null): readonly (readonly KeyCapView[])[] => {
+const keyboardOf = (
+  drill: Drill,
+  last: LastKey | null,
+): ReadonlyArray<ReadonlyArray<KeyCapView>> => {
   const marks = { last, wanted: wantedOf(drill) };
   const [digits = [], upper = [], home = [], lower = []] = rows.map((row) =>
     row.map((cap) => capOf(cap.base, capLabel(cap), false, marks)),

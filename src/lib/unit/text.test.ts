@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { flatten, type Part } from './format';
 
-const parts: readonly Part[] = [
+const parts: ReadonlyArray<Part> = [
   { id: 'one', stage: 'run' },
   { task: { demo: [{ id: 'two', keys: [] }], expect: '', goal: '', id: 'three', show: '' } },
 ];

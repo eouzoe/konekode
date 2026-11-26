@@ -1,6 +1,5 @@
-import { type Html } from '@effect/ui/html';
-
-import { type ChapterOptions } from '@/eui/contract';
+import type { ChapterOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Chapter = <Msg>(h: Html.H<Msg>, options: ChapterOptions) =>
   h.p

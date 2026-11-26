@@ -1,9 +1,10 @@
 import { gsap } from 'gsap';
 
 import { element } from './dom';
-import { type Paper } from './paper';
-import { type Stage } from './scene/stage';
 import { outputOf, type Beat } from './unit';
+
+import type { Paper } from './paper';
+import type { Stage } from './scene/stage';
 
 interface RunParts {
   readonly paper: Paper;

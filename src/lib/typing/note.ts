@@ -1,7 +1,7 @@
-import { type Attempt } from '@/lib/run/note';
-
 import { expectedChar, insertKey, isDone, isTyped, type Drill, type Feedback } from './drill';
 import { escapeKey } from './keyboard';
+
+import type { Attempt } from '@/lib/run/note';
 
 const causes: Readonly<Record<Feedback, string>> = {
   'need-insert': 'need-insert',

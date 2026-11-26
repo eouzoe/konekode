@@ -17,11 +17,11 @@ type Frame = Readonly<Record<string, number>>;
 
 interface Layout {
   readonly ceiling: number;
-  readonly clipped: readonly string[];
+  readonly clipped: ReadonlyArray<string>;
   readonly cursor: Box | null;
   readonly frame: Frame;
-  readonly parts: readonly Box[];
-  readonly scaled: readonly string[];
+  readonly parts: ReadonlyArray<Box>;
+  readonly scaled: ReadonlyArray<string>;
   readonly width: number;
 }
 

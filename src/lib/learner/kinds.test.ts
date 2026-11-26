@@ -2,12 +2,13 @@ import { expect, test } from 'bun:test';
 
 import { array, assert, constantFrom, integer, property, record } from 'fast-check';
 
-import { type LearningEvent } from '@/lib/record/event';
 import { allDomains } from '@/units/index';
 
 import { keptKinds, modelKinds, progressKinds } from './kinds';
 import { handledKinds, learnerModel } from './model';
 import { unitState, unlockedItems } from './progress';
+
+import type { LearningEvent } from '@/lib/record/event';
 
 interface Sketch {
   readonly at: number;

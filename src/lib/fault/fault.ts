@@ -13,8 +13,8 @@ type Sink = (fault: Fault) => void;
 const reasonLimit = 300;
 const keptLimit = 200;
 
-const sinks: Sink[] = [];
-const kept: Fault[] = [];
+const sinks: Array<Sink> = [];
+const kept: Array<Fault> = [];
 const counts: Tally = new Map();
 
 const reasonOf = (error: unknown): string => {
@@ -51,7 +51,7 @@ const onFault = (sink: Sink): void => {
   }
 };
 
-const faultCounts = (): Counted[] => counted(counts);
+const faultCounts = (): Array<Counted> => counted(counts);
 
 const settle = async (where: string, work: Promise<unknown>): Promise<void> => {
   try {

@@ -95,13 +95,13 @@ const readEvent = (value: unknown): LearningEvent | null => {
 };
 
 interface Reading {
-  readonly events: LearningEvent[];
+  readonly events: Array<LearningEvent>;
   readonly unlabelled: number;
   readonly unreadable: number;
 }
 
-const readCounted = (values: readonly unknown[]): Reading => {
-  const events: LearningEvent[] = [];
+const readCounted = (values: ReadonlyArray<unknown>): Reading => {
+  const events: Array<LearningEvent> = [];
   let unreadable = 0;
   for (const value of values) {
     const event = readEvent(value);
@@ -115,7 +115,8 @@ const readCounted = (values: readonly unknown[]): Reading => {
   return { events, unlabelled, unreadable };
 };
 
-const readEvents = (values: readonly unknown[]): LearningEvent[] => readCounted(values).events;
+const readEvents = (values: ReadonlyArray<unknown>): Array<LearningEvent> =>
+  readCounted(values).events;
 
 const byTime = (left: LearningEvent, right: LearningEvent): number => {
   if (left.at !== right.at) {
@@ -127,7 +128,7 @@ const byTime = (left: LearningEvent, right: LearningEvent): number => {
   return left.id.localeCompare(right.id);
 };
 
-const ordered = (events: readonly LearningEvent[]): LearningEvent[] =>
+const ordered = (events: ReadonlyArray<LearningEvent>): Array<LearningEvent> =>
   [...new Map(events.map((event) => [event.id, event])).values()].toSorted(byTime);
 
 export {

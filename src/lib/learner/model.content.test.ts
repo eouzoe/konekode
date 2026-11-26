@@ -1,19 +1,19 @@
 import { expect, test } from 'bun:test';
 
-import { type Data, type LearningEvent } from '@/lib/record/event';
-import { type Beat, type Task } from '@/lib/unit/format';
-
 import { components, unitDomain, type UnitDomain } from './domain';
 import { componentOf, observe, type Component, type Domains } from './model';
 
+import type { Data, LearningEvent } from '@/lib/record/event';
+import type { Beat, Task } from '@/lib/unit/format';
+
 interface Content {
-  readonly beats: readonly Beat[];
-  readonly tasks: readonly Task[];
+  readonly beats: ReadonlyArray<Beat>;
+  readonly tasks: ReadonlyArray<Task>;
 }
 
 const unit = 'fake';
 
-const contentWith = (keys: readonly string[], shown: readonly string[]): Content => ({
+const contentWith = (keys: ReadonlyArray<string>, shown: ReadonlyArray<string>): Content => ({
   beats: [
     { id: 'look', keys: shown, say: '', stage: 'run' },
     { id: 'gate', say: '', stage: 'run', wait: 'run' },
@@ -29,7 +29,7 @@ interface Press {
   readonly verdict: string;
 }
 
-const presses: readonly Press[] = [
+const presses: ReadonlyArray<Press> = [
   { at: 0, verdict: 'wrong' },
   { at: 0, verdict: 'right' },
   { at: 1, verdict: 'right' },
@@ -59,14 +59,14 @@ const eventOf = ({ data, kind, ref }: Sketch, seq: number): LearningEvent => ({
   version: 3,
 });
 
-const recordUnder = (domain: UnitDomain, describe: boolean): LearningEvent[] => {
-  const told = (field: string, ids: readonly string[] | undefined): Data => {
+const recordUnder = (domain: UnitDomain, describe: boolean): Array<LearningEvent> => {
+  const told = (field: string, ids: ReadonlyArray<string> | undefined): Data => {
     if (!describe) {
       return {};
     }
     return { [field]: (ids ?? []).join(',') };
   };
-  const sketches: Sketch[] = [
+  const sketches: Array<Sketch> = [
     { data: told('shows', domain.shows.get('look')), kind: 'beat.reached', ref: 'look' },
     { data: { mode: 'guided' }, kind: 'task.entered', ref: 'gate' },
     ...presses.map((press) => ({
@@ -84,7 +84,7 @@ const recordUnder = (domain: UnitDomain, describe: boolean): LearningEvent[] => 
 
 const domainsOf = (content: Content): Domains => ({ [unit]: unitDomain(content) });
 
-const everything = (events: readonly LearningEvent[], domains: Domains) => {
+const everything = (events: ReadonlyArray<LearningEvent>, domains: Domains) => {
   const reading = observe(events, domains);
   const model: Record<string, Component> = Object.fromEntries(
     components.map((id) => [id, componentOf(reading.model, id)]),

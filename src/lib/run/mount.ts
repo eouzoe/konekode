@@ -1,6 +1,5 @@
 import { engine } from '@/lib/complete/current';
 import { createBuffer, lastColumn, type Buffer, type Rules } from '@/lib/edit/buffer';
-import { type Pressed } from '@/lib/edit/session';
 import { planOf, starterOf } from '@/units/index';
 
 import { createDesk, type Desk } from './desk';
@@ -19,9 +18,11 @@ import {
 } from './guidance';
 import { noteFailure, noteRun } from './note';
 import { busyStatus, describe, failed, type View } from './outcome';
-import { type Outcome } from './protocol';
 import { isKnown, loadedPercent, runProgram, watchLoading } from './runner';
 import { createStage } from './stage';
+
+import type { Outcome } from './protocol';
+import type { Pressed } from '@/lib/edit/session';
 
 interface Parts {
   readonly button: HTMLButtonElement;
@@ -215,7 +216,7 @@ const report = (parts: Parts, pressed: Pressed): void => {
 };
 
 const mountRunner = (root: HTMLElement): void => {
-  const listeners: ((pressed: Pressed) => void)[] = [];
+  const listeners: Array<(pressed: Pressed) => void> = [];
   const parts = buildParts(root, (pressed) => {
     for (const listener of listeners) {
       listener(pressed);

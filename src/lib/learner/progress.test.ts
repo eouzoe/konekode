@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
 
-import { type LearningEvent } from '@/lib/record/event';
-
 import { unitState, unlockedItems } from './progress';
+
+import type { LearningEvent } from '@/lib/record/event';
 
 let counter = 0;
 
@@ -24,7 +24,7 @@ const make = (kind: string, ref: string, at: number): LearningEvent => {
   };
 };
 
-const shuffles = (events: readonly LearningEvent[]): LearningEvent[][] => [
+const shuffles = (events: ReadonlyArray<LearningEvent>): Array<Array<LearningEvent>> => [
   [...events],
   events.toReversed(),
   [...events.slice(2), ...events.slice(0, 2)],

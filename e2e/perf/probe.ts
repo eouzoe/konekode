@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 interface Loaded {
   readonly at: number;
@@ -8,7 +8,7 @@ interface Loaded {
 
 interface Probe {
   readonly fcp: number;
-  readonly loaded: readonly Loaded[];
+  readonly loaded: ReadonlyArray<Loaded>;
   readonly ready: number;
   readonly shifted: number;
 }

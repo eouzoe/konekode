@@ -1,4 +1,3 @@
-import { type Page } from '@playwright/test';
 import { array } from 'zod';
 
 import { expand } from '../src/lib/edit/path';
@@ -9,6 +8,8 @@ import { currentId, type Current } from './scene-view';
 import { storedPosition, storedSummary } from './stored';
 import { expect } from './test';
 import { isHeld, passUntil } from './time';
+
+import type { Page } from '@playwright/test';
 
 const path = '/learn/start/';
 const spriteEditor = '[data-code-runner] [data-role="editor"][data-actor="sprite"]';
@@ -47,10 +48,10 @@ const programs: Record<string, string> = Object.fromEntries(
   checksOf('start').map((check) => [check.id, check.program]),
 );
 
-const keysFor = (gate: string): string[] =>
+const keysFor = (gate: string): Array<string> =>
   expand(planOf('start', gate)?.path ?? []).map((step) => step.key);
 
-const lessons: Record<string, readonly string[]> = Object.fromEntries(
+const lessons: Record<string, ReadonlyArray<string>> = Object.fromEntries(
   checksOf('start')
     .map((check) => check.id)
     .filter((gate) => keysFor(gate).length > 0)
@@ -64,7 +65,7 @@ interface Saved {
 
 interface Setup {
   readonly draft?: Saved;
-  readonly unlocked?: readonly string[];
+  readonly unlocked?: ReadonlyArray<string>;
 }
 
 const draftAt = (text: string, needle: string): Saved => ({ cursor: text.indexOf(needle), text });
@@ -150,7 +151,7 @@ const typeTemplate = async (page: Page): Promise<void> => {
   await page.keyboard.press('Escape');
 };
 
-const follow = async (page: Page, keys: readonly string[]): Promise<void> => {
+const follow = async (page: Page, keys: ReadonlyArray<string>): Promise<void> => {
   for (const key of keys) {
     await send(page, key);
   }
@@ -197,7 +198,7 @@ const advance = async (page: Page, state: Current): Promise<void> => {
   await page.keyboard.press('Space');
 };
 
-const readMetas = async (page: Page): Promise<BeatMeta[]> => {
+const readMetas = async (page: Page): Promise<Array<BeatMeta>> => {
   const raw = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('[data-beat]')].map((beat) => {
       const { after, expect: wanted, id = '', wait = '', when = '' } = beat.dataset;

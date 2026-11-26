@@ -2,7 +2,7 @@ import { budgets } from './perf/budget';
 import { expect, test } from './test';
 
 interface Spent {
-  readonly blocking: readonly string[];
+  readonly blocking: ReadonlyArray<string>;
   readonly firstPaint: number;
   readonly usable: number;
 }

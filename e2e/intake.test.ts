@@ -14,10 +14,10 @@ const unusual = 400;
 const chinese = '輸入法打出來的中文'.repeat(12);
 const intake = /\/api\/intake\?/u;
 
-const kindsStored = async (page: Page): Promise<string[]> =>
+const kindsStored = async (page: Page): Promise<Array<string>> =>
   await page.evaluate(
     async () =>
-      await new Promise<string[]>((resolve) => {
+      await new Promise<Array<string>>((resolve) => {
         const opening = indexedDB.open('konekode');
         opening.addEventListener('success', () => {
           const all = opening.result.transaction('events').objectStore('events').getAll();
@@ -54,7 +54,7 @@ const isIntake = (url: string): boolean => intake.test(url);
 test('events wait until there is enough to send, then reach the server with their session', async ({
   page,
 }) => {
-  const asked: string[] = [];
+  const asked: Array<string> = [];
   page.on('request', (request) => {
     if (isIntake(request.url())) {
       asked.push(request.url());
@@ -137,7 +137,7 @@ test.describe('when the intake refuses', () => {
 test('the last batch on leaving fits its bytes even in Chinese, and the rest follows later', async ({
   page,
 }) => {
-  const bodies: { bytes: number; encoding: string; text: string }[] = [];
+  const bodies: Array<{ bytes: number; encoding: string; text: string }> = [];
   page.on('request', (request) => {
     if (isIntake(request.url())) {
       const body = request.postDataBuffer() ?? Buffer.alloc(0);

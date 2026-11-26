@@ -2,14 +2,14 @@ import { say, ui } from '@/lib/text/ui';
 
 const newline = '\n';
 
-const linesOf = (text: string): string[] => text.trim().split(newline);
+const linesOf = (text: string): Array<string> => text.trim().split(newline);
 
 const squash = (text: string): string => text.replaceAll(/\s+/gu, '');
 
-const sameLines = (want: readonly string[], got: readonly string[]): boolean =>
+const sameLines = (want: ReadonlyArray<string>, got: ReadonlyArray<string>): boolean =>
   want.toSorted().join(newline) === got.toSorted().join(newline);
 
-const firstDifference = (want: readonly string[], got: readonly string[]): string => {
+const firstDifference = (want: ReadonlyArray<string>, got: ReadonlyArray<string>): string => {
   const at = want.findIndex((line, index) => line !== got[index]);
   return say('wrong.line', {
     got: got[at] ?? '',
@@ -18,7 +18,7 @@ const firstDifference = (want: readonly string[], got: readonly string[]): strin
   });
 };
 
-const counted = (want: readonly string[], got: readonly string[]): string => {
+const counted = (want: ReadonlyArray<string>, got: ReadonlyArray<string>): string => {
   const values = { got: String(got.length), want: String(want.length) };
   if (got.length < want.length) {
     return say('wrong.fewer', values);

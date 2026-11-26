@@ -7,7 +7,7 @@ import { sceneMachine, type BeatMeta, type SceneEvent } from './machine';
 
 const plain = (id: string): BeatMeta => ({ expect: null, id, next: false, wait: '', when: '' });
 
-const beats: BeatMeta[] = [
+const beats: Array<BeatMeta> = [
   plain('ask'),
   { ...plain('yes'), when: 'fullscreen' },
   { ...plain('no'), when: 'windowed' },
@@ -17,7 +17,7 @@ const beats: BeatMeta[] = [
   plain('end'),
 ];
 
-const start = (position: string | null = null, passed: string[] = []) => {
+const start = (position: string | null = null, passed: Array<string> = []) => {
   const actor = createActor(sceneMachine, { input: { beats, passed, position } });
   actor.start();
   actor.send({ type: 'REVEALED' });
@@ -186,7 +186,7 @@ test('文字出完後，需要檢查的拍子會停下來等', () => {
 });
 
 test('不管怎麼操作，都不會越過還沒通過的檢查', () => {
-  const events: SceneEvent[] = [
+  const events: Array<SceneEvent> = [
     next,
     back,
     typed,

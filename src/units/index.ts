@@ -5,9 +5,9 @@ import { planFor, programOf, runToken, type Beat, type Plan, type Task } from '@
 import { beats as startBeats, starter as startStarter, tasks as startTasks } from './start';
 
 interface Unit {
-  readonly beats: readonly Beat[];
+  readonly beats: ReadonlyArray<Beat>;
   readonly starter: string;
-  readonly tasks: readonly Task[];
+  readonly tasks: ReadonlyArray<Task>;
 }
 
 const fromEnd = -1;
@@ -45,7 +45,7 @@ const planOf = (unit: string, beat: string): Plan | null => {
   return planFor(found.tasks, beat) ?? settled(found, beat);
 };
 
-const beatsOf = (unit: string): readonly Beat[] => units[unit]?.beats ?? [];
+const beatsOf = (unit: string): ReadonlyArray<Beat> => units[unit]?.beats ?? [];
 
 interface Check {
   readonly expect: string;
@@ -54,7 +54,7 @@ interface Check {
   readonly program: string;
 }
 
-const checksOf = (unit: string): Check[] => {
+const checksOf = (unit: string): Array<Check> => {
   const found = units[unit];
   if (found === undefined) {
     return [];
@@ -71,7 +71,7 @@ interface UnitCheck extends Check {
   readonly unit: string;
 }
 
-const allChecks = (): UnitCheck[] =>
+const allChecks = (): Array<UnitCheck> =>
   Object.keys(units).flatMap((unit) =>
     checksOf(unit).map((check) => ({
       expect: check.expect,
@@ -82,7 +82,8 @@ const allChecks = (): UnitCheck[] =>
     })),
   );
 
-const pathFor = (unit: string, beat: string): readonly string[] => planOf(unit, beat)?.path ?? [];
+const pathFor = (unit: string, beat: string): ReadonlyArray<string> =>
+  planOf(unit, beat)?.path ?? [];
 
 const allDomains = (): Readonly<Record<string, UnitDomain>> =>
   Object.fromEntries(Object.entries(units).map(([name, unit]) => [name, unitDomain(unit)]));
@@ -94,10 +95,10 @@ const domainOf = (unit: string): UnitDomain | undefined => {
   return domains[unit];
 };
 
-const usedAt = (unit: string, beat: string, step: number): readonly string[] =>
+const usedAt = (unit: string, beat: string, step: number): ReadonlyArray<string> =>
   domainOf(unit)?.uses.get(beat)?.[step] ?? [];
 
-const shownAt = (unit: string, beat: string): readonly string[] =>
+const shownAt = (unit: string, beat: string): ReadonlyArray<string> =>
   domainOf(unit)?.shows.get(beat) ?? [];
 
 const unitContent = (): unknown => ({ catalog, units });

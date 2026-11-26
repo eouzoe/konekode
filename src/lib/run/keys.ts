@@ -16,7 +16,7 @@ interface State {
 
 const prefix = 'key.';
 
-const orderOf = (unit: string): string[] => {
+const orderOf = (unit: string): Array<string> => {
   const ids = beatsOf(unit).flatMap((beat) => beat.unlock ?? []);
   const keys = ids.filter((id) => id.startsWith(prefix)).map((id) => id.slice(prefix.length));
   return [...new Set(keys)];
@@ -45,7 +45,10 @@ const labelled = (row: HTMLElement): void => {
   }
 };
 
-const forget = (present: ReadonlyMap<string, HTMLElement>, learned: readonly string[]): void => {
+const forget = (
+  present: ReadonlyMap<string, HTMLElement>,
+  learned: ReadonlyArray<string>,
+): void => {
   for (const [key, element] of present) {
     if (!learned.includes(key)) {
       element.remove();
@@ -60,7 +63,7 @@ const added = (row: HTMLElement, key: string, state: State): HTMLElement => {
   return element;
 };
 
-const draw = (row: HTMLElement, order: readonly string[], state: State): void => {
+const draw = (row: HTMLElement, order: ReadonlyArray<string>, state: State): void => {
   const learned = order.filter((key) => engine.keys().has(key));
   const present = capsOf(row);
   labelled(row);

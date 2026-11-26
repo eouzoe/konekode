@@ -7,13 +7,13 @@ interface Beat {
   readonly free?: boolean;
   readonly id: string;
   readonly input?: string;
-  readonly keys?: readonly string[];
+  readonly keys?: ReadonlyArray<string>;
   readonly lines?: string;
   readonly needs?: 'fullscreen-key';
   readonly say: string;
   readonly snippet?: string;
   readonly stage: 'code' | 'drill' | 'empty' | 'run';
-  readonly unlock?: readonly string[];
+  readonly unlock?: ReadonlyArray<string>;
   readonly wait?: 'drill' | 'run';
   readonly when?: 'fullscreen' | 'windowed';
 }
@@ -24,12 +24,12 @@ type Text = Readonly<Record<string, string>>;
 
 interface Shown {
   readonly id: string;
-  readonly keys: readonly string[];
-  readonly teaches?: readonly string[];
+  readonly keys: ReadonlyArray<string>;
+  readonly teaches?: ReadonlyArray<string>;
 }
 
 interface Task {
-  readonly demo: readonly Shown[];
+  readonly demo: ReadonlyArray<Shown>;
   readonly expect: string;
   readonly goal: string;
   readonly id: string;
@@ -63,7 +63,7 @@ const said = (text: Text, id: string): string => {
   return sentence;
 };
 
-const keysOf = (shown: Shown, first: boolean): readonly string[] => {
+const keysOf = (shown: Shown, first: boolean): ReadonlyArray<string> => {
   if (first) {
     return [resetToken, ...shown.keys];
   }
@@ -107,7 +107,7 @@ const gateBeat = (task: Task, say: string): Beat => {
   return { ...beat, input: task.input };
 };
 
-const taskBeats = (task: Task, text: Text): Beat[] => [
+const taskBeats = (task: Task, text: Text): Array<Beat> => [
   ...task.demo.map((shown, at) =>
     shownBeat(task, { first: at === 0, say: said(text, shown.id), shown }),
   ),
@@ -116,7 +116,7 @@ const taskBeats = (task: Task, text: Text): Beat[] => [
 
 const spoken = (line: Line, say: string): Beat => ({ ...line, say });
 
-const flatten = (parts: readonly Part[], text: Text): Beat[] =>
+const flatten = (parts: ReadonlyArray<Part>, text: Text): Array<Beat> =>
   parts.flatMap((part) => {
     if (isTask(part)) {
       return taskBeats(part.task, text);
@@ -124,10 +124,10 @@ const flatten = (parts: readonly Part[], text: Text): Beat[] =>
     return [spoken(part, said(text, part.id))];
   });
 
-const tasksOf = (parts: readonly Part[]): Task[] =>
+const tasksOf = (parts: ReadonlyArray<Part>): Array<Task> =>
   parts.filter((part) => isTask(part)).map((part) => part.task);
 
-const pathOf = (task: Task): string[] => {
+const pathOf = (task: Task): Array<string> => {
   const keys = task.demo.flatMap((shown) => shown.keys);
   if (keys.length === 0 || keys.at(fromEnd) === runToken) {
     return keys;
@@ -140,7 +140,7 @@ const indent = '    ';
 const mainStart = 'int main()';
 const closer = '}';
 
-const mainCloses = (lines: readonly string[]): boolean => {
+const mainCloses = (lines: ReadonlyArray<string>): boolean => {
   const main = lines.findIndex((line) => line.startsWith(mainStart));
   const last = lines.length - 1;
   const closers = [...lines.entries()].filter(([, line]) => line === closer).map(([at]) => at);
@@ -160,14 +160,14 @@ const programOf = (starter: string, goal: string): string => {
 };
 
 interface Plan {
-  readonly history: readonly string[];
-  readonly path: readonly string[];
+  readonly history: ReadonlyArray<string>;
+  readonly path: ReadonlyArray<string>;
 }
 
 const holds = (task: Task, beat: string): boolean =>
   task.id === beat || task.demo.some((shown) => shown.id === beat);
 
-const planFor = (tasks: readonly Task[], beat: string): Plan | null => {
+const planFor = (tasks: ReadonlyArray<Task>, beat: string): Plan | null => {
   const at = tasks.findIndex((task) => holds(task, beat));
   const task = tasks[at];
   if (task === undefined) {

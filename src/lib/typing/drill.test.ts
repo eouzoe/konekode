@@ -113,7 +113,7 @@ const everyKey = [
   '你',
 ];
 
-const otherKeys = (right: string): string[] => everyKey.filter((item) => item !== right);
+const otherKeys = (right: string): Array<string> => everyKey.filter((item) => item !== right);
 
 const rightKey = (drill: Drill): string => {
   if (drill.mode === 'normal') {

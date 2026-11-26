@@ -1,6 +1,6 @@
 import { diagnose } from '@/lib/run/diagnose';
 
-const markLines = (lines: readonly HTMLElement[], beat: HTMLElement): void => {
+const markLines = (lines: ReadonlyArray<HTMLElement>, beat: HTMLElement): void => {
   const marked = new Set((beat.dataset.lines ?? '').split(','));
   for (const line of lines) {
     line.dataset.marked = String(marked.has(line.dataset.line ?? ''));
@@ -36,14 +36,14 @@ const mismatchNote = (root: HTMLElement, beat: HTMLElement | undefined): string 
 
 const forward = 1;
 
-const isShown = (beats: readonly HTMLElement[], index: number, at: number): boolean => {
+const isShown = (beats: ReadonlyArray<HTMLElement>, index: number, at: number): boolean => {
   if (at > index) {
     return false;
   }
   return beats.slice(at + forward, index + forward).every((beat) => beat.dataset.append === 'true');
 };
 
-const showBeats = (beats: readonly HTMLElement[], index: number): void => {
+const showBeats = (beats: ReadonlyArray<HTMLElement>, index: number): void => {
   for (const [at, beat] of beats.entries()) {
     beat.hidden = !isShown(beats, index, at);
   }

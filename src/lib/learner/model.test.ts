@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 
 import { array, assert, constantFrom, integer, property, record, type Arbitrary } from 'fast-check';
 
-import { type LearningEvent } from '@/lib/record/event';
 import { allDomains } from '@/units/index';
 
 import { components } from './domain';
@@ -16,6 +15,8 @@ import {
   type Component,
   type Model,
 } from './model';
+
+import type { LearningEvent } from '@/lib/record/event';
 
 interface Sketch {
   readonly at: number;
@@ -43,12 +44,12 @@ const make = (sketch: Partial<Sketch>, seq: number): LearningEvent => ({
   version: 3,
 });
 
-const build = (sketches: readonly Partial<Sketch>[]): LearningEvent[] =>
+const build = (sketches: ReadonlyArray<Partial<Sketch>>): Array<LearningEvent> =>
   sketches.map((sketch, at) => make(sketch, at + 1));
 
 const domains = allDomains();
 
-const read = (events: readonly LearningEvent[]): Model => learnerModel(events, domains);
+const read = (events: ReadonlyArray<LearningEvent>): Model => learnerModel(events, domains);
 
 const afterwards = (event: LearningEvent): LearningEvent => ({
   ...event,

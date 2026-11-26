@@ -5,11 +5,14 @@ interface Problem {
   readonly text: string;
 }
 
-type Rule = readonly [pattern: RegExp, tell: (line: string, found: readonly string[]) => string];
+type Rule = readonly [
+  pattern: RegExp,
+  tell: (line: string, found: ReadonlyArray<string>) => string,
+];
 
 const header = /main\.cpp:(?<line>\d+):\d+: (?:fatal )?error: (?<text>.+)/u;
 
-const rules: readonly Rule[] = [
+const rules: ReadonlyArray<Rule> = [
   [/^expected ';'/u, (line) => say('explain.semicolon', { line })],
   [
     /^use of undeclared identifier '(?<name>[^']+)'; did you mean '(?<guess>[^']+)'/u,
@@ -54,8 +57,8 @@ const another =
 const blockLines = 3;
 const briefLines = 6;
 
-const ownLines = (rest: readonly string[]): readonly string[] => {
-  const own: string[] = [];
+const ownLines = (rest: ReadonlyArray<string>): ReadonlyArray<string> => {
+  const own: Array<string> = [];
   for (const line of rest) {
     if (another.test(line)) {
       break;

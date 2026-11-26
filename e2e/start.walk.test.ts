@@ -12,14 +12,14 @@ test.describe('起步單元：從頭到尾', () => {
 
   test('從第一句走到最後一句，每個關卡都能過', async ({ page }) => {
     expect(warmAt).not.toBe('');
-    const started: string[] = [];
+    const started: Array<string> = [];
     page.on('request', (request) => {
       if (compilerScript.test(request.url())) {
         started.push(request.url());
       }
     });
     await open(page);
-    const seen: string[] = [];
+    const seen: Array<string> = [];
     let warming = false;
     for (let step = 0; step < 300; step += 1) {
       const state = await current(page);

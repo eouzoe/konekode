@@ -5,7 +5,7 @@ import { holdTime } from './time';
 interface Options {
   readonly compiler: boolean;
   readonly heldTime: boolean;
-  readonly tolerated: readonly RegExp[];
+  readonly tolerated: ReadonlyArray<RegExp>;
 }
 
 const plainHttpOnly = /Prefetch request denied: URL must be secure \(HTTPS\)/u;
@@ -38,8 +38,8 @@ const withoutCompiler = async (page: Page): Promise<void> => {
   }, needed);
 };
 
-const watchProblems = (page: Page): string[] => {
-  const problems: string[] = [];
+const watchProblems = (page: Page): Array<string> => {
+  const problems: Array<string> = [];
   page.on('pageerror', (error) => {
     problems.push(`uncaught: ${error.message}`);
   });

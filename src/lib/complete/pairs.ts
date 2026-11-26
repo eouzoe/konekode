@@ -1,4 +1,4 @@
-import { type PairItem } from './catalog';
+import type { PairItem } from './catalog';
 
 interface Open {
   readonly closer: string;
@@ -7,8 +7,8 @@ interface Open {
 
 interface Scan {
   readonly found: Map<number, number>;
-  readonly open: Open[];
-  readonly pairs: readonly PairItem[];
+  readonly open: Array<Open>;
+  readonly pairs: ReadonlyArray<PairItem>;
   readonly text: string;
 }
 
@@ -73,7 +73,7 @@ const visit = (scan: Scan, index: number): void => {
   }
 };
 
-const matchPairs = (text: string, pairs: readonly PairItem[]): Map<number, number> => {
+const matchPairs = (text: string, pairs: ReadonlyArray<PairItem>): Map<number, number> => {
   const scan: Scan = { found: new Map<number, number>(), open: [], pairs, text };
   for (let index = 0; index < text.length; index += 1) {
     visit(scan, index);
@@ -81,7 +81,11 @@ const matchPairs = (text: string, pairs: readonly PairItem[]): Map<number, numbe
   return scan.found;
 };
 
-const autoClosed = (text: string, position: number, pairs: readonly PairItem[]): Set<number> => {
+const autoClosed = (
+  text: string,
+  position: number,
+  pairs: ReadonlyArray<PairItem>,
+): Set<number> => {
   const closed = new Set<number>();
   for (const [opener, closer] of matchPairs(text, pairs)) {
     if (opener < position && closer >= position) {

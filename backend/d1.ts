@@ -1,12 +1,13 @@
-import { type D1 } from '@alchemy.run/cloudflare';
-import { type RuntimeContext } from 'alchemy/RuntimeContext';
 import { and, eq, sql } from 'drizzle-orm';
-import { type EffectSQLiteD1Database } from 'drizzle-orm/effect-d1';
 import { Effect } from 'effect';
 
 import { usageOf, type Account } from './budget';
 import { intake, intakeActorUsage, intakeUsage } from './schema';
-import { type Parcel, type Spent, type Storage } from './store';
+
+import type { Parcel, Spent, Storage } from './store';
+import type { D1 } from '@alchemy.run/cloudflare';
+import type { RuntimeContext } from 'alchemy/RuntimeContext';
+import type { EffectSQLiteD1Database } from 'drizzle-orm/effect-d1';
 
 type Database = EffectSQLiteD1Database;
 type Client = D1.QueryDatabaseClient;
@@ -37,7 +38,10 @@ const spentBy = (
   );
 };
 
-const statementsFor = (db: Database, parcel: Parcel): { params: unknown[]; sql: string }[] => {
+const statementsFor = (
+  db: Database,
+  parcel: Parcel,
+): Array<{ params: Array<unknown>; sql: string }> => {
   const { account, body, now, origin, ticket } = parcel;
   const size = body.byteLength;
   const row = db.insert(intake).values({ ...ticket, ...origin, body, receivedAt: now });

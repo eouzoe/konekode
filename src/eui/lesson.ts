@@ -619,7 +619,7 @@ const stageView = LessonDef.fragment((h, model: LessonModel) => {
   return null;
 });
 
-const linesOf = (model: LessonModel): readonly DialogueLine[] =>
+const linesOf = (model: LessonModel): ReadonlyArray<DialogueLine> =>
   beats.flatMap((beat, at) => {
     if (!isShown(beats, model.index, at)) {
       return [];

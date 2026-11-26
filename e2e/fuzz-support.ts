@@ -15,7 +15,7 @@ const generator = (seed: number): (() => number) => {
   };
 };
 
-const pickFrom = <Item>(random: () => number, items: readonly Item[]): Item => {
+const pickFrom = <Item>(random: () => number, items: ReadonlyArray<Item>): Item => {
   const item = items[Math.floor(random() * items.length)];
   if (item === undefined) {
     throw new Error('nothing to pick from');

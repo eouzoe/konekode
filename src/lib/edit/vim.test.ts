@@ -10,8 +10,8 @@ import { run } from './step';
 
 interface Case {
   readonly column: number;
-  readonly commands: readonly string[];
-  readonly keys: readonly string[];
+  readonly commands: ReadonlyArray<string>;
+  readonly keys: ReadonlyArray<string>;
   readonly line: number;
   readonly start: number;
   readonly text: string;
@@ -22,7 +22,7 @@ interface Outcome {
   readonly text: string;
 }
 
-type Groups = readonly (readonly string[])[];
+type Groups = ReadonlyArray<ReadonlyArray<string>>;
 
 const rules: Rules = { keys: new Set(commandKeys.map((item) => item.key)), pairs: [] };
 const typed: Readonly<Record<string, string>> = {
@@ -31,7 +31,7 @@ const typed: Readonly<Record<string, string>> = {
   Escape: '\u001B',
 };
 const texts = [starterOf('start') ?? '', ...checksOf('start').map((check) => check.program)];
-const kinds: readonly Groups[] = [
+const kinds: ReadonlyArray<Groups> = [
   [['G']],
   [['$']],
   [['0']],
@@ -61,7 +61,8 @@ const kinds: readonly Groups[] = [
   [['$'], ['i', ' ', '<', 'Escape'], ['k'], ['$'], ['.']],
 ];
 
-const toVim = (keys: readonly string[]): string => keys.map((key) => typed[key] ?? key).join('');
+const toVim = (keys: ReadonlyArray<string>): string =>
+  keys.map((key) => typed[key] ?? key).join('');
 
 const caseAt = (text: string, start: number, groups: Groups): Case => {
   const lines = text.slice(0, start).split('\n');
@@ -75,19 +76,19 @@ const caseAt = (text: string, start: number, groups: Groups): Case => {
   };
 };
 
-const positions = (text: string): number[] =>
+const positions = (text: string): Array<number> =>
   Array.from({ length: text.length }, (_unused, at) => at).filter(
     (at) => at <= lastColumn(text, at),
   );
 
-const allCases = (): Case[] =>
+const allCases = (): Array<Case> =>
   texts.flatMap((text) =>
     positions(text).flatMap((start) => kinds.map((groups) => caseAt(text, start, groups))),
   );
 
 const outcomes = array(object({ cursor: number(), text: string() }));
 
-const askVim = async (cases: readonly Case[]): Promise<Outcome[]> => {
+const askVim = async (cases: ReadonlyArray<Case>): Promise<Array<Outcome>> => {
   const base = `${Bun.env.TMPDIR ?? '/tmp'}/oracle-${crypto.randomUUID()}`;
   const input = Bun.file(`${base}.in.json`);
   const output = Bun.file(`${base}.out.json`);

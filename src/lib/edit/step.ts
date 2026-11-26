@@ -1,6 +1,7 @@
-import { type Buffer, type Rules } from './buffer';
 import { insertKey } from './insert';
 import { commands, follows, prefixes } from './normal';
+
+import type { Buffer, Rules } from './buffer';
 
 interface Result {
   readonly buffer: Buffer;
@@ -80,7 +81,7 @@ const step = (buffer: Buffer, key: string, rules: Rules): Result => {
   return { buffer: next, refused: false };
 };
 
-const run = (buffer: Buffer, keys: readonly string[], rules: Rules): Buffer => {
+const run = (buffer: Buffer, keys: ReadonlyArray<string>, rules: Rules): Buffer => {
   let now = buffer;
   for (const key of keys) {
     now = step(now, key, rules).buffer;

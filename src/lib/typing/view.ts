@@ -51,7 +51,7 @@ const capLabel = (cap: KeyCap): string => {
   return `${cap.shift} ${cap.base}`;
 };
 
-const makeRow = (keys: readonly HTMLElement[]): HTMLElement => {
+const makeRow = (keys: ReadonlyArray<HTMLElement>): HTMLElement => {
   const row = document.createElement('div');
   row.className = 'key-row';
   row.append(...keys);
@@ -144,7 +144,7 @@ const autoSpan = (text: string): HTMLElement => {
 
 const renderRest = (parts: Parts, drill: Drill, from: number): void => {
   const closed = autoClosed(drill.target, drill.position, engine.pairs());
-  const pieces: (HTMLElement | string)[] = [];
+  const pieces: Array<HTMLElement | string> = [];
   let plain = '';
   for (let index = from; index < drill.target.length; index += 1) {
     const char = drill.target.charAt(index);

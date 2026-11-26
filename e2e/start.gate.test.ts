@@ -36,7 +36,7 @@ test.describe('起步單元：編輯器關卡', () => {
     await page.keyboard.insertText('cout << 11;');
     await page.keyboard.insertText('ｃ');
     expect(await editorText(page)).toBe(before);
-    const answers: readonly (readonly [key: string, lead: string])[] = [
+    const answers: ReadonlyArray<readonly [key: string, lead: string]> = [
       ['x', ui['typing.wrong']],
       ['g', ui['guide.case']],
       ['Backspace', ui['typing.noDelete']],

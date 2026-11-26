@@ -79,7 +79,7 @@ const fillRoute = (steps: HTMLElement): void => {
 
 const fillText = (text: string): string => text.replace('{section}', shownSection().title);
 
-const shownLines = (): readonly Line[] => lines[visit];
+const shownLines = (): ReadonlyArray<Line> => lines[visit];
 
 const stopAt = (): number => Number(params.get('line') ?? shownLines().length);
 

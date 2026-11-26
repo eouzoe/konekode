@@ -88,7 +88,7 @@ const openDatabase = async (): Promise<IDBDatabase> => {
   return database;
 };
 
-const readLegacy = (): LearningEvent[] => {
+const readLegacy = (): Array<LearningEvent> => {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(legacyKey) ?? '[]');
     if (!Array.isArray(parsed)) {
@@ -108,7 +108,10 @@ const dropLegacy = (): void => {
   }
 };
 
-const putAll = async (database: IDBDatabase, events: readonly LearningEvent[]): Promise<void> => {
+const putAll = async (
+  database: IDBDatabase,
+  events: ReadonlyArray<LearningEvent>,
+): Promise<void> => {
   const transaction = database.transaction(storeName, 'readwrite', relaxed);
   const store = transaction.objectStore(storeName);
   for (const event of events) {
@@ -134,7 +137,7 @@ const databasePersistence = async (): Promise<Persistence> => {
     },
     load: async () => {
       const store = database.transaction(storeName, 'readonly').objectStore(storeName);
-      const all: unknown[] = await settle(store.getAll());
+      const all: Array<unknown> = await settle(store.getAll());
       return all;
     },
     remove: async (ids) => {

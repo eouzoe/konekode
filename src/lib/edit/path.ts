@@ -45,7 +45,7 @@ const named: Record<string, Expected> = {
   run: { key: 'Enter', kind: 'run' },
 };
 
-const expandToken = (token: string): Expected[] => {
+const expandToken = (token: string): Array<Expected> => {
   if (token === 'reset') {
     return [];
   }
@@ -67,9 +67,10 @@ const expandToken = (token: string): Expected[] => {
   return token.split('').map((key) => ({ key, kind: 'command' }));
 };
 
-const expand = (path: readonly string[]): Expected[] => path.flatMap((token) => expandToken(token));
+const expand = (path: ReadonlyArray<string>): Array<Expected> =>
+  path.flatMap((token) => expandToken(token));
 
-const keysOf = (path: readonly string[]): string[] =>
+const keysOf = (path: ReadonlyArray<string>): Array<string> =>
   expand(path)
     .filter((step) => step.kind !== 'run')
     .map((step) => step.key);
@@ -77,7 +78,7 @@ const keysOf = (path: readonly string[]): string[] =>
 const deleteKeys = new Set(['Backspace', 'Delete']);
 const isChar = (key: string): boolean => key.length === 1;
 
-const causes: readonly (readonly [Cause, (slip: Slip) => boolean])[] = [
+const causes: ReadonlyArray<readonly [Cause, (slip: Slip) => boolean]> = [
   ['no-delete', (slip) => deleteKeys.has(slip.key)],
   ['case', (slip) => slip.key.toLowerCase() === slip.expected.key.toLowerCase()],
   ['early-leave', (slip) => slip.key === 'Escape' && slip.expected.kind === 'text'],

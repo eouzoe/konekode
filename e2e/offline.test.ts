@@ -1,8 +1,8 @@
-import { type BrowserContext, type Page } from '@playwright/test';
-
 import { currentId } from './scene-view';
 import { storedPosition } from './stored';
 import { expect, test } from './test';
+
+import type { BrowserContext, Page } from '@playwright/test';
 
 const path = '/learn/start/';
 const ready = '[data-scene][data-ready="true"]';
@@ -33,7 +33,7 @@ const cached = async (page: Page, address: string): Promise<boolean> =>
     return found !== undefined;
   }, address);
 
-const coreOf = async (page: Page, of: string): Promise<string[]> =>
+const coreOf = async (page: Page, of: string): Promise<Array<string>> =>
   await page.evaluate(async (wanted) => {
     const response = await fetch('/core.json');
     const core: unknown = await response.json();
@@ -47,7 +47,7 @@ const coreOf = async (page: Page, of: string): Promise<string[]> =>
     return files.map(String);
   }, of);
 
-const uncached = async (page: Page, addresses: readonly string[]): Promise<string[]> => {
+const uncached = async (page: Page, addresses: ReadonlyArray<string>): Promise<Array<string>> => {
   const found = await Promise.all(addresses.map((address) => cached(page, address)));
   return addresses.filter((_address, at) => found[at] !== true);
 };
@@ -75,7 +75,7 @@ test('a learner who was here before can reload offline and lands where they were
   await goOnline(context);
 });
 
-const assetsLoaded = async (page: Page): Promise<string[]> =>
+const assetsLoaded = async (page: Page): Promise<Array<string>> =>
   await page.evaluate(() =>
     performance
       .getEntriesByType('resource')

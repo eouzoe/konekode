@@ -28,7 +28,7 @@ const watchMotion = async (page: Page): Promise<void> => {
   });
 };
 
-const motion = async (page: Page): Promise<string[]> =>
+const motion = async (page: Page): Promise<Array<string>> =>
   ((await page.locator('html').getAttribute('data-motion')) ?? '').split(' ');
 
 test('with motion allowed, a wrong key, a saving command and the waiting key really move', async ({
@@ -64,7 +64,7 @@ test.describe('with reduced motion', () => {
 
   test('nothing shakes, pulses or flashes, and the words are still there', async ({ page }) => {
     await page.addInitScript(() => {
-      const animated: string[] = [];
+      const animated: Array<string> = [];
       Object.assign(globalThis, { animated });
       const original: unknown = Reflect.get(Element.prototype, 'animate');
       if (typeof original !== 'function') {

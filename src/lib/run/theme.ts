@@ -1,7 +1,8 @@
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+
+import type { Extension } from '@codemirror/state';
 
 const night = {
   blue: '#7aa2f7',
@@ -59,6 +60,6 @@ const colors = HighlightStyle.define([
   { color: night.ink, tag: tags.variableName },
 ]);
 
-const tokyoNight: Extension[] = [look, syntaxHighlighting(colors)];
+const tokyoNight: Array<Extension> = [look, syntaxHighlighting(colors)];
 
 export { tokyoNight };

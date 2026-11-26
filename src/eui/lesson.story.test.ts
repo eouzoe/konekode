@@ -20,7 +20,7 @@ const newline = '\n';
 test('story: the drill gate passes only after the whole template is typed and Esc', () => {
   const story = Story.start(Lesson, props);
   const settle = (): void => {
-    for (const entry of [...story.pending]) {
+    for (const entry of story.pending.slice()) {
       if (entry.command.name === 'NoteCheck') {
         story.resolve(NoteCheck, undefined);
       }

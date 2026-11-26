@@ -7,18 +7,18 @@ const retryMs = 3000;
 const untilLimitMs = 10_000;
 
 interface Options {
-  readonly dues: readonly Due[];
+  readonly dues: ReadonlyArray<Due>;
   readonly link: () => Link;
   readonly loaders: Readonly<Record<string, Loader>>;
   readonly onFailure: (name: string, error: unknown) => void;
   readonly onSettle: () => void;
   readonly online: () => boolean;
-  readonly steps: readonly Step[];
+  readonly steps: ReadonlyArray<Step>;
 }
 
 interface Supply {
   readonly advance: (at: number) => void;
-  readonly missing: (at: number) => string[];
+  readonly missing: (at: number) => Array<string>;
   readonly resume: () => void;
   readonly until: (at: number) => Promise<void>;
 }
@@ -32,10 +32,10 @@ interface State {
 
 const statusOf = (state: State, name: string): Status => state.status.get(name) ?? 'waiting';
 
-const known = (state: State): Due[] =>
+const known = (state: State): Array<Due> =>
   state.options.dues.filter((due) => state.options.loaders[due.name] !== undefined);
 
-const open = (state: State, retry: boolean): Due[] =>
+const open = (state: State, retry: boolean): Array<Due> =>
   known(state).filter((due) => {
     const status = statusOf(state, due.name);
     return status === 'waiting' || (retry && status === 'failed');
@@ -44,7 +44,7 @@ const open = (state: State, retry: boolean): Due[] =>
 const busy = (state: State): boolean =>
   known(state).some((due) => statusOf(state, due.name) === 'loading');
 
-const wanted = (state: State, left: readonly Due[]): boolean => {
+const wanted = (state: State, left: ReadonlyArray<Due>): boolean => {
   if (!state.options.online()) {
     return left.some((due) => due.by <= state.at);
   }
@@ -92,7 +92,7 @@ const settled = (state: State): void => {
   pump(state, false);
 };
 
-const missingAt = (state: State, at: number): string[] =>
+const missingAt = (state: State, at: number): Array<string> =>
   overdue(state.options.dues, at)
     .filter((due) => statusOf(state, due.name) !== 'ready')
     .map((due) => due.name);

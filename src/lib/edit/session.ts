@@ -1,11 +1,12 @@
-import { type Buffer, type Rules } from './buffer';
 import { causeOf, type Cause, type Expected } from './path';
 import { knownKeys, step } from './step';
+
+import type { Buffer, Rules } from './buffer';
 
 interface Session {
   readonly at: number;
   readonly buffer: Buffer;
-  readonly path: readonly Expected[];
+  readonly path: ReadonlyArray<Expected>;
 }
 
 type Verdict = 'moved' | 'refused' | 'right' | 'wrong';

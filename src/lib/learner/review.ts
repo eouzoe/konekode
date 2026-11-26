@@ -1,20 +1,21 @@
 import { dayLength, dueAt, recall } from './memory';
-import { type Component, type Model } from './model';
+
+import type { Component, Model } from './model';
 
 interface Recollection {
   readonly daysLeft: number;
   readonly recall: number;
 }
 
-const dueOf = (model: Model, at: number): [string, number][] =>
-  [...model].flatMap(([id, { memory }]): [string, number][] => {
+const dueOf = (model: Model, at: number): Array<[string, number]> =>
+  [...model].flatMap(([id, { memory }]): Array<[string, number]> => {
     if (memory === null || dueAt(memory) > at) {
       return [];
     }
     return [[id, dueAt(memory)]];
   });
 
-const reviewDue = (model: Model, at: number): readonly string[] =>
+const reviewDue = (model: Model, at: number): ReadonlyArray<string> =>
   dueOf(model, at)
     .toSorted(([first, firstDue], [second, secondDue]) => {
       if (firstDue !== secondDue) {

@@ -5,7 +5,7 @@ interface Look {
   readonly label: string;
 }
 
-const looks: readonly Look[] = [
+const looks: ReadonlyArray<Look> = [
   { id: '', label: '外觀：現在' },
   { id: 'sprite', label: '外觀：甲（像素小精靈）' },
   { id: 'pixel', label: '外觀：乙（整頁像素）' },

@@ -1,8 +1,8 @@
 import { baseFlags, pchMagic, pchName, pchUrl } from './flags';
 import { fetchInParts } from './parts';
-import { type CompileMessage, type CompileReply, type CompileRequest } from './protocol';
 import { umbrella } from './umbrella';
 
+import type { CompileMessage, CompileReply, CompileRequest } from './protocol';
 import type { commands } from '@yowasp/clang';
 
 interface Tools {
@@ -90,7 +90,7 @@ const ready = async (): Promise<Tools | null> => {
   }
 };
 
-const flagsFor = (header: Uint8Array | null): string[] => {
+const flagsFor = (header: Uint8Array | null): Array<string> => {
   if (header === null) {
     return [...baseFlags, ...outputs];
   }

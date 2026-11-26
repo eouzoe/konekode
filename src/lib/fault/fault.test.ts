@@ -12,7 +12,7 @@ const waitAMoment = async (): Promise<void> => {
 };
 
 test('each kind and place is counted on its own, so every fault says which time it is', () => {
-  const seen: Fault[] = [];
+  const seen: Array<Fault> = [];
   onFault((fault) => {
     seen.push(fault);
   });
@@ -38,7 +38,7 @@ test('a kind or a place may hold any character, since they are never joined into
 
 test('a place that listens late still hears what happened before it', () => {
   report('rejected', 'scenes', new Error('early'));
-  const seen: string[] = [];
+  const seen: Array<string> = [];
   onFault((fault) => {
     seen.push(fault.where);
   });
@@ -46,8 +46,8 @@ test('a place that listens late still hears what happened before it', () => {
 });
 
 test('one listener that throws does not keep the others from hearing', () => {
-  const seen: string[] = [];
-  const logged: unknown[] = [];
+  const seen: Array<string> = [];
+  const logged: Array<unknown> = [];
   const { error } = globalThis.console;
   globalThis.console.error = (value: unknown): void => {
     logged.push(value);
@@ -68,7 +68,7 @@ test('one listener that throws does not keep the others from hearing', () => {
 });
 
 test('work that nobody awaits reports its failure with where it was started', async () => {
-  const seen: Fault[] = [];
+  const seen: Array<Fault> = [];
   onFault((fault) => {
     seen.push(fault);
   });

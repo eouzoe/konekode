@@ -24,8 +24,8 @@ const firstChunk = (text: string): Chunk => {
   return { pause: symbolPause, text: char };
 };
 
-const chunks = (text: string): Chunk[] => {
-  const found: Chunk[] = [];
+const chunks = (text: string): Array<Chunk> => {
+  const found: Array<Chunk> = [];
   let rest = text;
   while (rest !== '') {
     const chunk = firstChunk(rest);

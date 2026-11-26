@@ -1,4 +1,4 @@
-import { type Rule } from './plan';
+import type { Rule } from './plan';
 
 const kibi = 1024;
 const mebi = kibi * kibi;
@@ -6,7 +6,7 @@ const drillKibi = 8;
 const editorKibi = 160;
 const compilerMebi = 18;
 
-const rules: readonly Rule[] = [
+const rules: ReadonlyArray<Rule> = [
   {
     bytes: drillKibi * kibi,
     early: true,

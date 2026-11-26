@@ -1,9 +1,9 @@
-import { type Pressed } from '@/lib/edit/session';
-
-import { type Desk } from './desk';
 import { createKeys, type Keys } from './keys';
 import { noteEntry, noteRefusal, noteStep, type Place } from './note';
 import { calmAfter, nextKey, nextOf, quietHint, wrongHint } from './view';
+
+import type { Desk } from './desk';
+import type { Pressed } from '@/lib/edit/session';
 
 interface Panel {
   readonly button: HTMLButtonElement;

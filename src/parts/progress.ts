@@ -1,6 +1,5 @@
-import { type Html } from '@effect/ui/html';
-
-import { type ProgressOptions } from '@/eui/contract';
+import type { ProgressOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Progress = <Msg>(h: Html.H<Msg>, options: ProgressOptions) =>
   h.div

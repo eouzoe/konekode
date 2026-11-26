@@ -1,7 +1,6 @@
-import { type View } from '@effect/ui';
-import { type Html } from '@effect/ui/html';
-
-import { type PaperOptions } from '@/eui/contract';
+import type { PaperOptions } from '@/eui/contract';
+import type { View } from '@effect/ui';
+import type { Html } from '@effect/ui/html';
 
 const Paper = <Msg, Body extends View.Children<Msg>>(h: Html.H<Msg>, options: PaperOptions<Body>) =>
   h.section

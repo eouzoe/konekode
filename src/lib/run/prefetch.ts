@@ -1,4 +1,4 @@
-import { type PrefetchMessage } from './protocol';
+import type { PrefetchMessage } from './protocol';
 
 type Listener = (percent: number) => void;
 

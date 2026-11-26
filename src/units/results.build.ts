@@ -15,7 +15,10 @@ const rowOf = async (check: UnitCheck): Promise<Row> => ({
   unit: check.unit,
 });
 
-const inTurn = async (checks: readonly UnitCheck[], done: readonly Row[]): Promise<Row[]> => {
+const inTurn = async (
+  checks: ReadonlyArray<UnitCheck>,
+  done: ReadonlyArray<Row>,
+): Promise<Array<Row>> => {
   const [first, ...rest] = checks;
   if (first === undefined) {
     return [...done];

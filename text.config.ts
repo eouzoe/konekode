@@ -1,9 +1,10 @@
 import { appendFile, readFile, writeFile } from 'node:fs/promises';
-import { type IncomingMessage, type ServerResponse } from 'node:http';
 import { fileURLToPath } from 'node:url';
 
-import { type AstroIntegration } from 'astro';
 import { object, record, string, type infer as Infer } from 'zod';
+
+import type { AstroIntegration } from 'astro';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 const editSchema = object({
   id: string().min(1),

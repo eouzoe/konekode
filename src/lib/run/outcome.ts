@@ -1,7 +1,8 @@
 import { say, ui } from '@/lib/text/ui';
 
 import { explain } from './explain';
-import { type Outcome } from './protocol';
+
+import type { Outcome } from './protocol';
 
 interface View {
   readonly state: string;

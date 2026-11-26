@@ -1,16 +1,16 @@
 const kept = new Set(['dev', 'prod']);
 const listed = /^Konekode\/(?<stage>[^/]+)\/$/u;
 
-const stagesIn = (listing: string): string[] =>
+const stagesIn = (listing: string): Array<string> =>
   listing
     .split('\n')
     .map((line) => listed.exec(line.trim())?.groups?.stage)
     .filter((stage): stage is string => stage !== undefined);
 
-const previewsIn = (listing: string): string[] =>
+const previewsIn = (listing: string): Array<string> =>
   stagesIn(listing).filter((stage) => !kept.has(stage));
 
-const run = async (command: readonly string[]): Promise<string> => {
+const run = async (command: ReadonlyArray<string>): Promise<string> => {
   const child = Bun.spawn([...command], { stderr: 'inherit', stdout: 'pipe' });
   const [out, code] = await Promise.all([new Response(child.stdout).text(), child.exited]);
   if (code !== 0) {

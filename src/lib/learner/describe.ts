@@ -1,20 +1,20 @@
-import { type UnitDomain } from './domain';
+import type { UnitDomain } from './domain';
 
 interface Count {
   legacy: number;
   unread: number;
 }
 
-type LookUp = () => readonly string[] | undefined;
+type LookUp = () => ReadonlyArray<string> | undefined;
 
-const listed = (value: unknown): readonly string[] | null => {
+const listed = (value: unknown): ReadonlyArray<string> | null => {
   if (typeof value !== 'string') {
     return null;
   }
   return value.split(',').filter((id) => id !== '');
 };
 
-const described = (count: Count, own: unknown, lookUp: LookUp): readonly string[] => {
+const described = (count: Count, own: unknown, lookUp: LookUp): ReadonlyArray<string> => {
   const told = listed(own);
   if (told !== null) {
     return told;
@@ -28,7 +28,10 @@ const described = (count: Count, own: unknown, lookUp: LookUp): readonly string[
   return found;
 };
 
-const shownBy = (domain: UnitDomain | undefined, beat: string): readonly string[] | undefined => {
+const shownBy = (
+  domain: UnitDomain | undefined,
+  beat: string,
+): ReadonlyArray<string> | undefined => {
   if (domain === undefined) {
     return undefined;
   }
@@ -39,7 +42,7 @@ const usedBy = (
   domain: UnitDomain | undefined,
   task: string,
   step: number,
-): readonly string[] | undefined => {
+): ReadonlyArray<string> | undefined => {
   if (domain === undefined) {
     return undefined;
   }

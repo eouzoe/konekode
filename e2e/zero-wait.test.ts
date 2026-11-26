@@ -1,8 +1,8 @@
-import { type Page, type Route } from '@playwright/test';
-
 import { currentId } from './scene-view';
 import { open } from './start-support';
 import { expect, test } from './test';
+
+import type { Page, Route } from '@playwright/test';
 
 const path = '/learn/start/';
 const script = /\/_astro\/[^/]+\.js(?:\?|$)/u;
@@ -19,7 +19,7 @@ const hold = async (
   pattern: RegExp,
   held: (address: string) => boolean,
 ): Promise<Gate> => {
-  const waiting: Route[] = [];
+  const waiting: Array<Route> = [];
   let opened = false;
   await page.route(pattern, async (route) => {
     if (opened || !held(new URL(route.request().url()).pathname)) {

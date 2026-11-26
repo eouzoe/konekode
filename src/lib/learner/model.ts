@@ -2,8 +2,9 @@ import { ordered, type LearningEvent } from '@/lib/record/event';
 
 import { bktExpect, bktUpdate, defaultParams } from './bkt';
 import { described, shownBy, usedBy, type Count } from './describe';
-import { type UnitDomain } from './domain';
 import { recall, remember, type Evidence, type Memory } from './memory';
+
+import type { UnitDomain } from './domain';
 
 type Standing = 'done' | 'shown' | 'unseen';
 
@@ -54,7 +55,7 @@ interface Mark {
 
 interface Fold extends Count {
   readonly entries: Map<string, Entry>;
-  readonly observations: Observation[];
+  readonly observations: Array<Observation>;
   readonly seen: Set<string>;
   readonly tallies: Map<string, Tally>;
 }
@@ -169,7 +170,7 @@ const observed = (
 interface Credit {
   readonly event: LearningEvent;
   readonly mark: Mark;
-  readonly used: readonly string[];
+  readonly used: ReadonlyArray<string>;
 }
 
 const credit = (fold: Fold, { event, mark, used }: Credit): void => {
@@ -212,7 +213,7 @@ const standingOf = (tally: Tally): Standing => {
 interface Reading {
   readonly legacy: number;
   readonly model: Model;
-  readonly observations: readonly Observation[];
+  readonly observations: ReadonlyArray<Observation>;
   readonly unread: number;
 }
 
@@ -223,7 +224,7 @@ const own = <Value>(table: Readonly<Record<string, Value>>, key: string): Value 
   return undefined;
 };
 
-const observe = (events: readonly LearningEvent[], domains: Domains): Reading => {
+const observe = (events: ReadonlyArray<LearningEvent>, domains: Domains): Reading => {
   const fold: Fold = {
     entries: new Map(),
     legacy: 0,
@@ -241,7 +242,7 @@ const observe = (events: readonly LearningEvent[], domains: Domains): Reading =>
   return { legacy: fold.legacy, model, observations: fold.observations, unread: fold.unread };
 };
 
-const learnerModel = (events: readonly LearningEvent[], domains: Domains): Model =>
+const learnerModel = (events: ReadonlyArray<LearningEvent>, domains: Domains): Model =>
   observe(events, domains).model;
 
 const unseen: Component = {
@@ -257,7 +258,7 @@ const unseen: Component = {
 
 const componentOf = (model: Model, id: string): Component => model.get(id) ?? unseen;
 
-const handledKinds: readonly string[] = Object.keys(handles);
+const handledKinds: ReadonlyArray<string> = Object.keys(handles);
 
 export { recollect, reviewDue } from './review';
 

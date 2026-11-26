@@ -2,7 +2,8 @@ import { firstChunk, type Chunk } from '@/lib/perform/rhythm';
 
 import { createDrill, escape, press, remind, type Drill } from './drill';
 import { messages } from './messages';
-import { type Parts } from './view';
+
+import type { Parts } from './view';
 
 interface Session {
   beat: string;

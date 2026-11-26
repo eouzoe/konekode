@@ -57,7 +57,7 @@ const result = (name: string, passed: boolean, detail: string): Result => ({
   passed,
 });
 
-const shown = (values: readonly string[]): string => {
+const shown = (values: ReadonlyArray<string>): string => {
   if (values.length === 0) {
     return '無';
   }
@@ -84,7 +84,7 @@ const textOf = async (probe: Probe, path: string): Promise<string> => {
   return response.text();
 };
 
-const wall = async (probe: Probe): Promise<Result[]> => {
+const wall = async (probe: Probe): Promise<Array<Result>> => {
   const name = '登入牆';
   if (probe.target.local) {
     return [result(name, true, '本機沒有 Access，略過')];
@@ -100,7 +100,7 @@ const wall = async (probe: Probe): Promise<Result[]> => {
   ];
 };
 
-const pageResults = async (probe: Probe, path: string): Promise<Result[]> => {
+const pageResults = async (probe: Probe, path: string): Promise<Array<Result>> => {
   const response = await send(probe, path);
   const html = await response.text();
   const missing = securityHeaders.filter((header) => !response.headers.has(header));
@@ -112,7 +112,7 @@ const pageResults = async (probe: Probe, path: string): Promise<Result[]> => {
   ];
 };
 
-const site = async (probe: Probe): Promise<Result[]> => {
+const site = async (probe: Probe): Promise<Array<Result>> => {
   const each = await Promise.all(pages.map((path) => pageResults(probe, path)));
   const robots = await textOf(probe, '/robots.txt');
   const closed = robots.split('\n').some((line) => line.trim() === 'Disallow: /');
@@ -125,13 +125,16 @@ const site = async (probe: Probe): Promise<Result[]> => {
   ];
 };
 
-const scriptsOf = async (probe: Probe): Promise<string[]> => {
+const scriptsOf = async (probe: Probe): Promise<Array<string>> => {
   const html = await textOf(probe, '/learn/start/');
   const paths = [...html.matchAll(scriptPattern)].map((match) => match.groups?.path ?? '');
   return [...new Set(paths)];
 };
 
-const versionResult = async (probe: Probe, scripts: readonly string[]): Promise<Result[]> => {
+const versionResult = async (
+  probe: Probe,
+  scripts: ReadonlyArray<string>,
+): Promise<Array<Result>> => {
   const { version } = probe.target;
   if (version === null) {
     return [];
@@ -146,7 +149,7 @@ const versionResult = async (probe: Probe, scripts: readonly string[]): Promise<
   return [result('版本', found, `頁面的程式裡有「${version}」：${String(found)}`)];
 };
 
-const assets = async (probe: Probe): Promise<Result[]> => {
+const assets = async (probe: Probe): Promise<Array<Result>> => {
   const scripts = await scriptsOf(probe);
   const [first = '/none'] = scripts;
   const response = await send(probe, first);
@@ -181,7 +184,7 @@ const post = (
 const expectStatus = (name: string, response: Response, wanted: number): Result =>
   result(name, response.status === wanted, `回 ${String(response.status)}，應該 ${String(wanted)}`);
 
-const closedIntake = async (probe: Probe): Promise<Result[]> => {
+const closedIntake = async (probe: Probe): Promise<Array<Result>> => {
   const response = await post(probe, someBytes);
   const retry = response.headers.get('retry-after') ?? '';
   return [
@@ -190,7 +193,7 @@ const closedIntake = async (probe: Probe): Promise<Result[]> => {
   ];
 };
 
-const openIntake = async (probe: Probe): Promise<Result[]> => {
+const openIntake = async (probe: Probe): Promise<Array<Result>> => {
   const [stored, read, other, method, large] = await Promise.all([
     post(probe, someBytes),
     send(probe, `${intakePath}?actor=x`, { body: someBytes, method: 'POST' }),
@@ -207,7 +210,7 @@ const openIntake = async (probe: Probe): Promise<Result[]> => {
   ];
 };
 
-const intake = (probe: Probe): Promise<Result[]> => {
+const intake = (probe: Probe): Promise<Array<Result>> => {
   if (probe.target.live) {
     return closedIntake(probe);
   }
@@ -224,7 +227,7 @@ const apiResult = async (probe: Probe): Promise<Result> => {
   return result(name, direct.status >= firstError, `${api} 回 ${String(direct.status)}`);
 };
 
-const isolation = async (probe: Probe): Promise<Result[]> => {
+const isolation = async (probe: Probe): Promise<Array<Result>> => {
   const others = await Promise.all(otherApiPaths.map((path) => send(probe, path)));
   const results = others.map((response, index) =>
     expectStatus(`只轉發入口 ${otherApiPaths[index] ?? ''}`, response, status.notFound),
@@ -232,7 +235,7 @@ const isolation = async (probe: Probe): Promise<Result[]> => {
   return [...results, await apiResult(probe)];
 };
 
-const github = async (probe: Probe): Promise<Result[]> => {
+const github = async (probe: Probe): Promise<Array<Result>> => {
   const response = await probe.fetch(new Request(repository));
   const listed = Schema.decodeUnknownSync(branchList)(await response.json());
   const names = listed.map((branch) => branch.name).toSorted();
@@ -247,7 +250,7 @@ const dashboardOnly = [
   '遷移：__alchemy_migrations 三筆、時間是原本的',
 ];
 
-const checkAll = async (probe: Probe): Promise<Result[]> => {
+const checkAll = async (probe: Probe): Promise<Array<Result>> => {
   const checks = [wall, site, assets, intake, isolation, github];
   const groups = await Promise.all(checks.map((check) => check(probe)));
   return groups.flat();
@@ -260,7 +263,7 @@ const mark = (passed: boolean): string => {
   return '✘';
 };
 
-const report = (results: readonly Result[]): string =>
+const report = (results: ReadonlyArray<Result>): string =>
   [
     ...results.map((each) => `${mark(each.passed)} ${each.name}：${each.detail}`),
     ...dashboardOnly.map((each) => `… 要到 Cloudflare 面板看：${each}`),

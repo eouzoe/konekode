@@ -14,7 +14,7 @@ test('every unlock names an item in the catalogue', () => {
 
 test('every command the sprite demonstrates is unlocked by that beat', () => {
   const unlocked = new Set<string>();
-  const missing: string[] = [];
+  const missing: Array<string> = [];
   for (const beat of beats) {
     for (const id of beat.unlock ?? []) {
       unlocked.add(id);

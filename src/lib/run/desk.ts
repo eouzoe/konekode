@@ -1,4 +1,3 @@
-import { type Buffer, type Rules } from '@/lib/edit/buffer';
 import { effectOf } from '@/lib/edit/effect';
 import { between, finalText, goalOf } from '@/lib/edit/goal';
 import { press, type Pressed, type Session } from '@/lib/edit/session';
@@ -6,6 +5,8 @@ import { knownKeys, run } from '@/lib/edit/step';
 
 import { createScreen, type Screen } from './screen';
 import { effectText } from './view';
+
+import type { Buffer, Rules } from '@/lib/edit/buffer';
 
 interface Desk {
   readonly blur: () => void;
@@ -90,12 +91,12 @@ const isElsewhere = (target: EventTarget | null): boolean =>
 
 const frameGap = 55;
 
-const framesOf = (before: Buffer, rules: Rules): Buffer[] =>
+const framesOf = (before: Buffer, rules: Rules): Array<Buffer> =>
   before.change.map((_key, at) =>
     run(before, before.change.slice(0, at + 1), { keys: knownKeys, pairs: rules.pairs }),
   );
 
-const replay = (inner: Inner, frames: readonly Buffer[], turn: number): void => {
+const replay = (inner: Inner, frames: ReadonlyArray<Buffer>, turn: number): void => {
   const [frame, ...rest] = frames;
   const { session } = inner.state;
   if (frame === undefined || inner.state.turn !== turn) {

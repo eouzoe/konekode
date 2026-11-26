@@ -11,7 +11,7 @@ import {
   type StoreFault,
 } from './log';
 
-const source = (persistence: Persistence, faults: StoreFault[] = []): Source => {
+const source = (persistence: Persistence, faults: Array<StoreFault> = []): Source => {
   let clock = 1000;
   let count = 0;
   return {
@@ -59,7 +59,7 @@ test('寫入的事件會存起來，重新開啟後讀得回來', async () => {
 
 test('訂閱的人會收到之後寫入的每一筆', async () => {
   const log = await createLog(source(memoryPersistence()));
-  const seen: string[] = [];
+  const seen: Array<string> = [];
   log.subscribe((event) => {
     seen.push(event.kind);
   });
@@ -69,7 +69,7 @@ test('訂閱的人會收到之後寫入的每一筆', async () => {
 });
 
 test('one write is in flight at a time, and everything that arrived meanwhile goes in the next', async () => {
-  const writes: string[][] = [];
+  const writes: Array<Array<string>> = [];
   const gate = Promise.withResolvers<null>();
   const slow: Persistence = {
     append: async (events) => {
@@ -101,7 +101,7 @@ test('an event is handed to the store at once when no write is in flight', async
   expect(await persistence.load()).toHaveLength(1);
 });
 
-const failingFor = (times: number, kept: LearningEvent[]): Persistence => {
+const failingFor = (times: number, kept: Array<LearningEvent>): Persistence => {
   let left = times;
   return {
     append: async (events) => {
@@ -127,8 +127,8 @@ const settleRetries = async (log: Log, rounds = retryLimit * 2 + 1): Promise<voi
 };
 
 test('a batch that could not be stored is tried again, and nothing is lost once the store recovers', async () => {
-  const faults: StoreFault[] = [];
-  const kept: LearningEvent[] = [];
+  const faults: Array<StoreFault> = [];
+  const kept: Array<LearningEvent> = [];
   const log = await createLog(source(failingFor(2, kept), faults));
   log.track('one');
   log.track('two');
@@ -141,8 +141,8 @@ test('a batch that could not be stored is tried again, and nothing is lost once 
 });
 
 test('a store that keeps failing is given up after the limit, and what it could not keep is counted', async () => {
-  const faults: StoreFault[] = [];
-  const kept: LearningEvent[] = [];
+  const faults: Array<StoreFault> = [];
+  const kept: Array<LearningEvent> = [];
   const log = await createLog(source(failingFor(Number.POSITIVE_INFINITY, kept), faults));
   log.track('one');
   await settleRetries(log);
@@ -150,7 +150,7 @@ test('a store that keeps failing is given up after the limit, and what it could 
   log.track('three');
   await settleRetries(log);
   expect(kept).toEqual([]);
-  const expected: StoreFault['kind'][] = [
+  const expected: Array<StoreFault['kind']> = [
     ...Array.from({ length: retryLimit }, (): StoreFault['kind'] => 'write'),
     'dropped',
   ];

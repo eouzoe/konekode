@@ -1,6 +1,5 @@
-import { type Html } from '@effect/ui/html';
-
-import { type DialogueOptions } from '@/eui/contract';
+import type { DialogueOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Dialogue = <Msg>(h: Html.H<Msg>, options: DialogueOptions<Msg>) =>
   h.div

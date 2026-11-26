@@ -1,9 +1,9 @@
 import { currentVersion, readCounted, type Data, type LearningEvent } from './event';
 
 interface Persistence {
-  readonly append: (events: readonly LearningEvent[]) => Promise<void>;
-  readonly load: () => Promise<unknown[]>;
-  readonly remove: (ids: readonly string[]) => Promise<void>;
+  readonly append: (events: ReadonlyArray<LearningEvent>) => Promise<void>;
+  readonly load: () => Promise<Array<unknown>>;
+  readonly remove: (ids: ReadonlyArray<string>) => Promise<void>;
 }
 
 interface Entry {
@@ -38,9 +38,9 @@ interface Loaded {
 
 interface Log {
   readonly dropped: () => number;
-  readonly events: () => readonly LearningEvent[];
+  readonly events: () => ReadonlyArray<LearningEvent>;
   readonly flush: () => Promise<void>;
-  readonly forget: (ids: readonly string[]) => void;
+  readonly forget: (ids: ReadonlyArray<string>) => void;
   readonly loaded: Loaded;
   readonly subscribe: (listener: (event: LearningEvent) => void) => void;
   readonly track: (kind: string, entry?: Entry) => LearningEvent;
@@ -49,14 +49,14 @@ interface Log {
 interface State {
   abandoned: boolean;
   dropped: number;
-  readonly events: LearningEvent[];
+  readonly events: Array<LearningEvent>;
   failures: number;
   latest: number;
-  readonly listeners: ((event: LearningEvent) => void)[];
+  readonly listeners: Array<(event: LearningEvent) => void>;
   pending: Promise<void>;
   saving: Promise<void>;
   seq: number;
-  readonly unsaved: LearningEvent[];
+  readonly unsaved: Array<LearningEvent>;
   waiting: boolean;
 }
 
@@ -67,8 +67,8 @@ const doubling = 2;
 const hasId = (value: unknown, ids: ReadonlySet<string>): boolean =>
   typeof value === 'object' && value !== null && 'id' in value && ids.has(String(value.id));
 
-const memoryPersistence = (initial: readonly unknown[] = []): Persistence => {
-  let stored: unknown[] = [...initial];
+const memoryPersistence = (initial: ReadonlyArray<unknown> = []): Persistence => {
+  let stored: Array<unknown> = [...initial];
   return {
     append: async (events) => {
       stored.push(...events);
@@ -88,7 +88,7 @@ interface Context {
   readonly state: State;
 }
 
-const latestOf = (events: readonly LearningEvent[]): number => {
+const latestOf = (events: ReadonlyArray<LearningEvent>): number => {
   let latest = 0;
   for (const event of events) {
     latest = Math.max(latest, event.at);
@@ -134,7 +134,7 @@ const queue = ({ source, state }: Context, work: () => Promise<void>): void => {
 };
 
 interface Failure {
-  readonly batch: readonly LearningEvent[];
+  readonly batch: ReadonlyArray<LearningEvent>;
   readonly error: unknown;
 }
 
@@ -169,7 +169,7 @@ const failed = (context: Context, failure: Failure, again: () => void): void => 
 
 const persist = async (
   context: Context,
-  batch: readonly LearningEvent[],
+  batch: ReadonlyArray<LearningEvent>,
   again: () => void,
 ): Promise<void> => {
   try {
@@ -203,7 +203,7 @@ const saveLater = (context: Context): void => {
   })();
 };
 
-const removeLater = (context: Context, ids: readonly string[]): void => {
+const removeLater = (context: Context, ids: ReadonlyArray<string>): void => {
   const written = context.state.saving;
   queue(context, async () => {
     await written;
@@ -211,7 +211,7 @@ const removeLater = (context: Context, ids: readonly string[]): void => {
   });
 };
 
-const freshState = (events: LearningEvent[]): State => ({
+const freshState = (events: Array<LearningEvent>): State => ({
   abandoned: false,
   dropped: 0,
   events,

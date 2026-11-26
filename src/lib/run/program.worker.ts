@@ -1,6 +1,6 @@
 import { File, OpenFile, WASI, WASIProcExit } from '@bjorn3/browser_wasi_shim';
 
-import { type RunReply, type RunRequest } from './protocol';
+import type { RunReply, RunRequest } from './protocol';
 
 const isStartable = (
   exports: WebAssembly.Exports,

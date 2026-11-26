@@ -19,7 +19,7 @@ const event = (id: string): LearningEvent => ({
   version: 3,
 });
 
-const idsIn = async (values: Promise<unknown[]>): Promise<string[]> => {
+const idsIn = async (values: Promise<Array<unknown>>): Promise<Array<string>> => {
   const loaded = await values;
   return readEvents(loaded).map((value) => value.id);
 };

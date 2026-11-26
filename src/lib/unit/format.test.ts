@@ -22,7 +22,7 @@ const task: Task = {
   show: 'x;',
 };
 
-const parts: readonly Part[] = [
+const parts: ReadonlyArray<Part> = [
   { id: 'before', stage: 'run' },
   { task },
   { id: 'after', stage: 'run' },

@@ -1,4 +1,4 @@
-import { type Beat } from '@/lib/unit/format';
+import type { Beat } from '@/lib/unit/format';
 
 type Phase = 'blocked' | 'loading' | 'ready' | 'revealing';
 type Check = 'drill' | 'run';
@@ -11,7 +11,7 @@ interface Where {
 interface Flow {
   readonly index: number;
   readonly mismatch: boolean;
-  readonly passed: readonly string[];
+  readonly passed: ReadonlyArray<string>;
   readonly phase: Phase;
 }
 
@@ -31,14 +31,14 @@ const applies = (beat: Beat | undefined, where: Where): boolean => {
   return (beat.when === 'fullscreen') === where.full;
 };
 
-const currentOf = (beats: readonly Beat[], flow: Flow): Beat | undefined => beats[flow.index];
+const currentOf = (beats: ReadonlyArray<Beat>, flow: Flow): Beat | undefined => beats[flow.index];
 
-const needsCheck = (beats: readonly Beat[], flow: Flow): boolean => {
+const needsCheck = (beats: ReadonlyArray<Beat>, flow: Flow): boolean => {
   const beat = currentOf(beats, flow);
   return beat?.wait !== undefined && !flow.passed.includes(beat.id);
 };
 
-const seek = (beats: readonly Beat[], flow: Flow, step: number, where: Where): number => {
+const seek = (beats: ReadonlyArray<Beat>, flow: Flow, step: number, where: Where): number => {
   let next = flow.index + step;
   while (next >= 0 && next < beats.length && !applies(beats[next], where)) {
     next += step;
@@ -49,7 +49,7 @@ const seek = (beats: readonly Beat[], flow: Flow, step: number, where: Where): n
   return next;
 };
 
-const move = (beats: readonly Beat[], flow: Flow, step: number, where: Where): Flow | null => {
+const move = (beats: ReadonlyArray<Beat>, flow: Flow, step: number, where: Where): Flow | null => {
   const index = seek(beats, flow, step, where);
   if (index === flow.index || (step > 0 && needsCheck(beats, flow))) {
     return null;
@@ -61,22 +61,22 @@ const move = (beats: readonly Beat[], flow: Flow, step: number, where: Where): F
   return { ...next, phase: 'revealing' };
 };
 
-const settle = (beats: readonly Beat[], flow: Flow): Flow => ({
+const settle = (beats: ReadonlyArray<Beat>, flow: Flow): Flow => ({
   ...flow,
   phase: needsCheck(beats, flow) ? 'blocked' : 'ready',
 });
 
-const goNext = (beats: readonly Beat[], flow: Flow, where: Where): Flow | null =>
+const goNext = (beats: ReadonlyArray<Beat>, flow: Flow, where: Where): Flow | null =>
   move(beats, flow, forward, where);
 
-const goBack = (beats: readonly Beat[], flow: Flow, where: Where): Flow | null =>
+const goBack = (beats: ReadonlyArray<Beat>, flow: Flow, where: Where): Flow | null =>
   move(beats, flow, backward, where);
 
-const revealed = (beats: readonly Beat[], flow: Flow): Flow | null =>
+const revealed = (beats: ReadonlyArray<Beat>, flow: Flow): Flow | null =>
   flow.phase === 'revealing' ? settle(beats, flow) : null;
 
 const checked = (
-  beats: readonly Beat[],
+  beats: ReadonlyArray<Beat>,
   flow: Flow,
   where: Where,
   report: { readonly kind: Check; readonly output: string },
@@ -95,16 +95,16 @@ const checked = (
   return goNext(beats, passed, where) ?? { ...passed, phase: 'ready' };
 };
 
-const played = (beats: readonly Beat[], flow: Flow, where: Where): Flow | null =>
+const played = (beats: ReadonlyArray<Beat>, flow: Flow, where: Where): Flow | null =>
   currentOf(beats, flow)?.after === 'next' ? goNext(beats, flow, where) : null;
 
-const startAt = (beats: readonly Beat[], position: string | null): number =>
+const startAt = (beats: ReadonlyArray<Beat>, position: string | null): number =>
   Math.max(
     beats.findIndex((beat) => beat.id === position),
     0,
   );
 
-const isShown = (beats: readonly Beat[], index: number, at: number): boolean =>
+const isShown = (beats: ReadonlyArray<Beat>, index: number, at: number): boolean =>
   at <= index && beats.slice(at + forward, index + forward).every((beat) => beat.append === true);
 
 export {

@@ -78,7 +78,7 @@ const settle = (state: State, batch: Batch, answer: Answer): boolean => {
   return false;
 };
 
-const sendAll = async (state: State, batches: readonly Batch[]): Promise<void> => {
+const sendAll = async (state: State, batches: ReadonlyArray<Batch>): Promise<void> => {
   const [batch, ...rest] = batches;
   if (batch === undefined) {
     return;
@@ -103,7 +103,7 @@ const prune = (state: State): void => {
   }
 };
 
-const pending = (state: State): Batch[] =>
+const pending = (state: State): Array<Batch> =>
   pendingBatches(recorded(), state.acked, timing.batchSize);
 
 const sendDue = async (state: State): Promise<void> => {

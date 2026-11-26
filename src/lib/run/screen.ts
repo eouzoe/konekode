@@ -11,15 +11,16 @@ import {
   type DecorationSet,
 } from '@codemirror/view';
 
-import { type Buffer, type Mode } from '@/lib/edit/buffer';
-import { type Hint } from '@/lib/edit/goal';
 import { messages } from '@/lib/typing/messages';
 
 import { tokyoNight } from './theme';
 
+import type { Buffer, Mode } from '@/lib/edit/buffer';
+import type { Hint } from '@/lib/edit/goal';
+
 interface Mark {
   readonly at: number;
-  readonly hints: readonly Hint[];
+  readonly hints: ReadonlyArray<Hint>;
   readonly landed: number;
   readonly mode: Mode;
 }
@@ -27,7 +28,7 @@ interface Mark {
 interface Screen {
   readonly flash: (text: string) => void;
   readonly hush: () => void;
-  readonly show: (buffer: Buffer, hints?: readonly Hint[]) => void;
+  readonly show: (buffer: Buffer, hints?: ReadonlyArray<Hint>) => void;
 }
 
 type Placed = ReturnType<Decoration['range']>;
@@ -225,7 +226,7 @@ const createScreen = (parent: HTMLElement, buffer: Buffer): Screen => {
   const mode = createLabel(parent, 'mode');
   const effect = createLabel(parent, 'effect');
   const pulse = { count: 0, due: 0 };
-  const show = (next: Buffer, hints: readonly Hint[] = []): void => {
+  const show = (next: Buffer, hints: ReadonlyArray<Hint> = []): void => {
     view.dispatch({
       changes: changeTo(view.state.doc.toString(), next.text),
       effects: setMark.of({ at: next.cursor, hints, landed: pulse.due, mode: next.mode }),

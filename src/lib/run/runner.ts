@@ -1,12 +1,7 @@
 import { knownOutcome } from './known';
 import { prefetched, watchPrefetch } from './prefetch';
-import {
-  type CompileMessage,
-  type CompileReply,
-  type Outcome,
-  type RunReply,
-  type RunRequest,
-} from './protocol';
+
+import type { CompileMessage, CompileReply, Outcome, RunReply, RunRequest } from './protocol';
 
 type Listener = (percent: number) => void;
 

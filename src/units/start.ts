@@ -30,7 +30,7 @@ cin >> a >> b;
 cout << b << '\n';
 cout << a << '\n';`;
 
-const opening: readonly Line[] = [
+const opening: ReadonlyArray<Line> = [
   { id: 'fullscreen-ask', needs: 'fullscreen-key', stage: 'empty' },
   {
     id: 'fullscreen-yes',
@@ -268,7 +268,7 @@ const swapTwo: Task = {
   show: task,
 };
 
-const editing: readonly Part[] = [
+const editing: ReadonlyArray<Part> = [
   {
     id: 'do-things',
     stage: 'run',
@@ -285,7 +285,7 @@ const editing: readonly Part[] = [
   { id: 'arrows-out', stage: 'run' },
 ];
 
-const printing: readonly Part[] = [
+const printing: ReadonlyArray<Part> = [
   { id: 'add-second', snippet: printTwo, stage: 'run' },
   { task: addSecond },
   { id: 'stuck-together', stage: 'run' },
@@ -310,7 +310,7 @@ const printing: readonly Part[] = [
   },
 ];
 
-const storing: readonly Part[] = [
+const storing: ReadonlyArray<Part> = [
   { id: 'remember-number', stage: 'run' },
   {
     id: 'int-explained',
@@ -340,7 +340,7 @@ const storing: readonly Part[] = [
   { id: 'echo', stage: 'run' },
 ];
 
-const closing: readonly Part[] = [
+const closing: ReadonlyArray<Part> = [
   { id: 'recap', stage: 'run' },
   { id: 'your-turn', stage: 'run' },
   {
@@ -352,10 +352,10 @@ const closing: readonly Part[] = [
   { id: 'done', stage: 'run' },
 ];
 
-const parts: readonly Part[] = [...opening, ...editing, ...printing, ...storing, ...closing];
+const parts: ReadonlyArray<Part> = [...opening, ...editing, ...printing, ...storing, ...closing];
 
-const beats: readonly Beat[] = flatten(parts, text);
+const beats: ReadonlyArray<Beat> = flatten(parts, text);
 
-const tasks: readonly Task[] = tasksOf(parts);
+const tasks: ReadonlyArray<Task> = tasksOf(parts);
 
 export { beats, starter, tasks, template };

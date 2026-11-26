@@ -43,7 +43,7 @@ const textOf = async (encoding: string | null, body: Buffer): Promise<string> =>
   return await new Response(bytes.stream().pipeThrough(new DecompressionStream('gzip'))).text();
 };
 
-const readBody = async (url: string, body: Buffer | null): Promise<Sent[]> => {
+const readBody = async (url: string, body: Buffer | null): Promise<Array<Sent>> => {
   const query = new URL(url).searchParams;
   if (body === null || query.get('kind') !== 'events') {
     return [];
@@ -55,8 +55,8 @@ const readBody = async (url: string, body: Buffer | null): Promise<Sent[]> => {
   return parsed.filter((value) => isSent(value));
 };
 
-const watchUploads = (page: Page): Sent[] => {
-  const sent: Sent[] = [];
+const watchUploads = (page: Page): Array<Sent> => {
+  const sent: Array<Sent> = [];
   page.on('request', async (request) => {
     if (intake.test(request.url())) {
       sent.push(...(await readBody(request.url(), request.postDataBuffer())));
@@ -65,10 +65,10 @@ const watchUploads = (page: Page): Sent[] => {
   return sent;
 };
 
-const faultsIn = (sent: readonly Sent[]): string[] =>
+const faultsIn = (sent: ReadonlyArray<Sent>): Array<string> =>
   sent.filter((event) => event.kind === 'fault').map((event) => String(event.data.kind));
 
-const kindsIn = (sent: readonly Sent[]): string[] => sent.map((event) => event.kind);
+const kindsIn = (sent: ReadonlyArray<Sent>): Array<string> => sent.map((event) => event.kind);
 
 const nextSentence = async (page: Page): Promise<void> => {
   const before = await currentId(page);
@@ -131,7 +131,7 @@ const fillTheQuota = async (page: Page): Promise<void> => {
   });
 };
 
-const waitsAtMostForATrouble = async (page: Page, sent: readonly Sent[]): Promise<void> => {
+const waitsAtMostForATrouble = async (page: Page, sent: ReadonlyArray<Sent>): Promise<void> => {
   const began = performance.now();
   await page.goto('/learn/start/');
   await page

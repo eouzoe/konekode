@@ -1,6 +1,6 @@
-import { type APIRoute } from 'astro';
-
 import { listed, sitemapXml } from '@/lib/site/pages';
+
+import type { APIRoute } from 'astro';
 
 const GET: APIRoute = ({ site, url }) =>
   new Response(

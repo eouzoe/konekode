@@ -4,20 +4,20 @@ import { insertKey } from '@/lib/typing/drill';
 import { pathOf, type Beat, type Task } from '@/lib/unit/format';
 
 interface UnitDomain {
-  readonly shows: ReadonlyMap<string, readonly string[]>;
-  readonly uses: ReadonlyMap<string, readonly (readonly string[])[]>;
+  readonly shows: ReadonlyMap<string, ReadonlyArray<string>>;
+  readonly uses: ReadonlyMap<string, ReadonlyArray<ReadonlyArray<string>>>;
 }
 
 interface Content {
-  readonly beats: readonly Beat[];
-  readonly tasks: readonly Task[];
+  readonly beats: ReadonlyArray<Beat>;
+  readonly tasks: ReadonlyArray<Task>;
 }
 
 const byKey: ReadonlyMap<string, string> = new Map(keys.map((item) => [item.key, item.id]));
-const components: readonly string[] = keys.map((item) => item.id);
+const components: ReadonlyArray<string> = keys.map((item) => item.id);
 const known = new Set(components);
 
-const used = (tokens: readonly string[]): string[][] =>
+const used = (tokens: ReadonlyArray<string>): Array<Array<string>> =>
   expand(tokens).map((step) => {
     const id = byKey.get(step.key);
     if (step.kind !== 'command' || id === undefined) {
@@ -26,7 +26,7 @@ const used = (tokens: readonly string[]): string[][] =>
     return [id];
   });
 
-const shownBy = (beat: Beat): string[] => {
+const shownBy = (beat: Beat): Array<string> => {
   const labelled = (beat.unlock ?? []).filter((id) => known.has(id));
   return [...new Set([...labelled, ...used(beat.keys ?? []).flat()])];
 };

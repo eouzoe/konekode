@@ -1,22 +1,22 @@
-import { type PairItem } from '@/lib/complete/catalog';
+import type { PairItem } from '@/lib/complete/catalog';
 
 type Mode = 'insert' | 'normal';
 
 interface Buffer {
   readonly auto: number;
-  readonly change: readonly string[];
+  readonly change: ReadonlyArray<string>;
   readonly cursor: number;
   readonly fresh: boolean;
   readonly mode: Mode;
   readonly pending: string;
   readonly text: string;
-  readonly typing: readonly string[];
+  readonly typing: ReadonlyArray<string>;
   readonly want: number;
 }
 
 interface Rules {
   readonly keys: ReadonlySet<string>;
-  readonly pairs: readonly PairItem[];
+  readonly pairs: ReadonlyArray<PairItem>;
 }
 
 interface Edit {

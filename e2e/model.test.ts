@@ -36,7 +36,7 @@ const reset = async (page: Page): Promise<void> => {
   await page.locator('[data-scene][data-ready="true"]').waitFor();
 };
 
-const readMetas = async (page: Page): Promise<BeatMeta[]> => {
+const readMetas = async (page: Page): Promise<Array<BeatMeta>> => {
   const raw = await page.evaluate(() =>
     [...document.querySelectorAll<HTMLElement>('[data-beat]')].map((beat) => {
       const { after, expect: wanted, id = '', wait = '', when = '' } = beat.dataset;

@@ -20,7 +20,7 @@ const wait = async (seconds: number): Promise<void> => {
 };
 
 const inSequence = async <Item>(
-  items: readonly Item[],
+  items: ReadonlyArray<Item>,
   step: (item: Item) => Promise<void>,
   live: () => boolean,
 ): Promise<void> => {

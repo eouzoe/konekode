@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { jumpTo, skipFrom, type Stop } from './jump';
 
-const stops: readonly Stop[] = [
+const stops: ReadonlyArray<Stop> = [
   { id: 'a' },
   { id: 'gate-1', wait: 'drill' },
   { id: 'b' },

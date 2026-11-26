@@ -3,13 +3,13 @@ import { expand, keysOf } from '@/lib/edit/path';
 import { knownKeys, run } from '@/lib/edit/step';
 import { guard } from '@/lib/fault/fault';
 import { chunks } from '@/lib/perform/rhythm';
-import { type Plan } from '@/lib/unit/format';
 import { array, boolean, object, string, type infer as Infer } from '@/lib/zod';
 
-import { type Desk } from './desk';
+import type { Desk } from './desk';
+import type { Plan } from '@/lib/unit/format';
 
 interface Move {
-  readonly keys: readonly string[];
+  readonly keys: ReadonlyArray<string>;
   readonly label: string;
   readonly runs: boolean;
   readonly wait: number;
@@ -55,7 +55,7 @@ const typePrefix = 'type:';
 const keyPause = 450;
 const labels: Record<string, string> = { BS: 'Backspace', run: 'Enter' };
 
-const typing = (text: string): Move[] =>
+const typing = (text: string): Array<Move> =>
   chunks(text).map((chunk) => ({
     keys: chunk.text.split(''),
     label: '',
@@ -63,7 +63,7 @@ const typing = (text: string): Move[] =>
     wait: chunk.pause,
   }));
 
-const movesOf = (token: string): Move[] => {
+const movesOf = (token: string): Array<Move> => {
   if (token.startsWith(typePrefix)) {
     return typing(token.slice(typePrefix.length));
   }
@@ -85,7 +85,7 @@ const pause = async (time: number): Promise<void> => {
 
 const everything = (tools: Tools): Rules => ({ keys: knownKeys, pairs: tools.rules().pairs });
 
-const startOf = (tools: Tools, history: readonly string[]): Buffer =>
+const startOf = (tools: Tools, history: ReadonlyArray<string>): Buffer =>
   run(createBuffer(tools.origin), keysOf(history), everything(tools));
 
 const perform = (tools: Tools, state: State, move: Move): void => {
@@ -100,7 +100,7 @@ const perform = (tools: Tools, state: State, move: Move): void => {
   tools.desk.showSprite(state.sprite, state.goal);
 };
 
-const play = async (tools: Tools, state: State, moves: readonly Move[]): Promise<void> => {
+const play = async (tools: Tools, state: State, moves: ReadonlyArray<Move>): Promise<void> => {
   const mine = state.turn;
   const [move, ...rest] = moves;
   if (move === undefined) {

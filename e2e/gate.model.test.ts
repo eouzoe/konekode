@@ -23,7 +23,7 @@ const swapCase = (key: string): string => {
 const upcomingText = ({ at, path }: Session): string =>
   path.slice(at).find((expected) => expected.kind === 'text')?.key ?? never;
 
-const wrongKeys = (session: Session): string[] => {
+const wrongKeys = (session: Session): Array<string> => {
   const wanted = expectedNow(session)?.key ?? '';
   const candidates = [
     never,

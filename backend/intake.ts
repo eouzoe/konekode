@@ -6,7 +6,8 @@ import { accountOf, dayLimits, hasRoom, secondsToNextDay } from './budget';
 import { intakeApi, type Ticket } from './contract';
 import { bodyLimit, plainHeaders, retryLater, status, textLimit } from './limits';
 import { platform } from './platform';
-import { type Origin, type Storage } from './store';
+
+import type { Origin, Storage } from './store';
 
 type Reply = HttpServerResponse.HttpServerResponse;
 

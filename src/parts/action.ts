@@ -1,7 +1,7 @@
 import { Button } from '@effect/ui-kit';
-import { type Html } from '@effect/ui/html';
 
-import { type ActionOptions } from '@/eui/contract';
+import type { ActionOptions } from '@/eui/contract';
+import type { Html } from '@effect/ui/html';
 
 const Action = <Msg>(h: Html.H<Msg>, options: ActionOptions<Msg>) =>
   Button(h, { onPress: options.onPress, props: { disabled: options.disabled || options.busy } })

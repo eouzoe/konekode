@@ -8,7 +8,7 @@ import { storedPosition } from './stored';
 import { expect, test, type Page } from './test';
 
 interface Trip {
-  readonly actions: string[];
+  readonly actions: Array<string>;
   fresh: boolean;
   readonly page: Page;
   readonly random: () => number;
@@ -113,7 +113,7 @@ const acts: Record<string, (trip: Trip) => Promise<boolean>> = {
   },
 };
 
-const weights: readonly (readonly [string, number])[] = [
+const weights: ReadonlyArray<readonly [string, number]> = [
   ['right', 30],
   ['next', 20],
   ['key', 20],

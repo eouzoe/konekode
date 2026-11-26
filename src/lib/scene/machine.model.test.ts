@@ -7,7 +7,7 @@ import { sceneMachine, type BeatMeta } from './machine';
 
 const plain = (id: string): BeatMeta => ({ expect: null, id, next: false, wait: '', when: '' });
 
-const beats: BeatMeta[] = [
+const beats: Array<BeatMeta> = [
   plain('ask'),
   { ...plain('yes'), when: 'fullscreen' },
   { ...plain('no'), when: 'windowed' },
@@ -23,7 +23,7 @@ const lastIndex = beats.length - 1;
 interface Shape {
   readonly index: number;
   readonly mismatch: boolean;
-  readonly passed: readonly string[];
+  readonly passed: ReadonlyArray<string>;
 }
 
 const skippedGate = ({ index, passed }: Shape): string | undefined =>

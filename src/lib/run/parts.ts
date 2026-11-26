@@ -1,7 +1,7 @@
 import { packed } from './packed';
 
 interface Manifest {
-  readonly parts: readonly string[];
+  readonly parts: ReadonlyArray<string>;
   readonly size: number;
 }
 

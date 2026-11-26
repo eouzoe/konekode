@@ -21,7 +21,7 @@ const pages = {
   },
 } as const satisfies Readonly<Record<string, Page>>;
 
-const listed: readonly Page[] = Object.values(pages);
+const listed: ReadonlyArray<Page> = Object.values(pages);
 
 const indexable = (flag?: string): boolean => flag === 'true';
 
@@ -44,7 +44,7 @@ const robotsText = (open: boolean, origin: URL | string): string => {
 const escapeXml = (text: string): string =>
   text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
-const sitemapXml = (origin: URL | string, paths: readonly string[]): string => {
+const sitemapXml = (origin: URL | string, paths: ReadonlyArray<string>): string => {
   const entries = paths.map(
     (path) => `  <url><loc>${escapeXml(absolute(origin, path))}</loc></url>`,
   );

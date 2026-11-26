@@ -35,7 +35,7 @@ test('the home page fits a phone without scrolling sideways', async ({ page }) =
 });
 
 test('the home page does not fetch the compiler', async ({ page }) => {
-  const requested: string[] = [];
+  const requested: Array<string> = [];
   page.on('request', (request) => {
     requested.push(request.url());
   });

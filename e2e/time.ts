@@ -1,4 +1,4 @@
-import { type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 const origin = Date.parse('2026-01-05T01:00:00Z');
 const second = 1000;

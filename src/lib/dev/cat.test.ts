@@ -30,7 +30,7 @@ test('a row becomes one run per stretch of the same colour', () => {
   expect(runsOf({ rows: ['........'], top: 0 })).toEqual([]);
 });
 
-const covered = (rows: readonly string[]): number[] => rows.map((row) => row.indexOf('O'));
+const covered = (rows: ReadonlyArray<string>): Array<number> => rows.map((row) => row.indexOf('O'));
 
 test('the overlays cover exactly the rows they replace', () => {
   expect(covered(blink.rows)).toEqual(covered(body.rows.slice(blink.top, blink.top + 4)));

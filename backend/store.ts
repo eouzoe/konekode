@@ -1,7 +1,6 @@
-import { type Effect } from 'effect';
-
-import { type Account, type Usage } from './budget';
-import { type Ticket } from './contract';
+import type { Account, Usage } from './budget';
+import type { Ticket } from './contract';
+import type { Effect } from 'effect';
 
 interface Origin {
   readonly agent: string;

@@ -25,7 +25,7 @@ const apply = (draft: Draft, event: LearningEvent): void => {
   }
 };
 
-const unitState = (events: readonly LearningEvent[], unit: string): UnitState => {
+const unitState = (events: ReadonlyArray<LearningEvent>, unit: string): UnitState => {
   const draft: Draft = { passed: new Set<string>(), position: null };
   for (const event of ordered(events)) {
     if (event.unit === unit) {
@@ -46,7 +46,7 @@ const note = (byUnit: Map<string, Set<string>>, event: LearningEvent): void => {
   }
 };
 
-const unlockedItems = (events: readonly LearningEvent[]): Set<string> => {
+const unlockedItems = (events: ReadonlyArray<LearningEvent>): Set<string> => {
   const byUnit = new Map<string, Set<string>>();
   for (const event of ordered(events)) {
     note(byUnit, event);

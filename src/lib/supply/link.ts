@@ -1,6 +1,6 @@
 import { number, object } from '@/lib/zod';
 
-import { type Link } from './plan';
+import type { Link } from './plan';
 
 const connectionSchema = object({ downlink: number().optional(), rtt: number().optional() });
 
