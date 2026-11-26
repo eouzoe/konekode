@@ -56,6 +56,7 @@
   "explain.other": "第 {line} 行有電腦看不懂的地方。",
   "explain.original": "編譯器的原始訊息：",
   "page.who": "小精靈",
+  "page.next": "下一句",
   "page.back": "上一句",
   "page.restart": "從頭開始",
   "page.moreByKey": "按任意鍵繼續",

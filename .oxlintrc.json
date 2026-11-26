@@ -187,7 +187,7 @@
       }
     },
     {
-      "files": ["src/eui/**/*.ts"],
+      "files": ["src/eui/**/*.ts", "src/parts/**/*.ts"],
       "rules": {
         "eslint/new-cap": "off",
         "eslint/no-ternary": "off",

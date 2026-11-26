@@ -17,6 +17,7 @@ import {
   press as pressDrill,
   remind,
 } from '@/lib/typing/drill';
+import { Action } from '@/parts/action';
 import { beats, starter, template } from '@/units/start';
 
 import {
@@ -31,6 +32,7 @@ import {
   WaitBeforeAuto,
   WaitBeforeStep,
 } from './commands';
+import { Happened, PlayCue } from './contract';
 import {
   checked,
   currentOf,
@@ -207,6 +209,8 @@ const autoCommand = (token: number, delay: number) =>
     Command.map((done) => LessonMessage.CompletedWaitAuto({ token: done })),
   );
 
+const cue = (happened: Happened) => PlayCue.make({ happened });
+
 const runCommand = (by: 'sprite' | 'student', source: string, input: string, token: number) =>
   RunProgram.make({ by, input, source, token }).pipe(
     Command.map((result) => LessonMessage.CompletedRunProgram(result)),
@@ -251,6 +255,7 @@ const enter = (model: LessonModel, unit: string, calm: boolean) => {
   return {
     commands: [
       quiet(NoteReached.make({ beat: beat?.id ?? '', unit })),
+      cue(Happened.ReachedBeat({ beat: beat?.id ?? '', stage: beat?.stage ?? 'empty' })),
       ...(beat?.unlock ?? [])
         .filter((item) => !model.unlocked.includes(item))
         .map((item) => quiet(NoteUnlock.make({ item, unit }))),
@@ -300,7 +305,13 @@ const drillKey = (model: LessonModel, key: string, unit: string, where: Where, c
   const flow = checked(beats, flowOf(updated), where, { kind: 'drill', output: '' });
   const beat = currentOf(beats, flowOf(model));
   return {
-    commands: beat === undefined ? [] : [quiet(NoteCheck.make({ beat: beat.id, unit }))],
+    commands:
+      beat === undefined
+        ? []
+        : [
+            quiet(NoteCheck.make({ beat: beat.id, unit })),
+            cue(Happened.PassedCheck({ beat: beat.id, kind: 'drill' })),
+          ],
     model: flow === null ? updated : withFlow(updated, flow),
   };
 };
@@ -317,10 +328,14 @@ const deskKey = (model: LessonModel, key: string) => {
     return quietHint(pressed.session);
   })();
   const updated = { ...model, hint, student: pressed.session };
-  if (!pressed.runs || model.busy) {
-    return { commands: [], model: updated };
-  }
   const beat = beats[model.index];
+  const wrong =
+    pressed.verdict === 'wrong'
+      ? [cue(Happened.PressedWrongKey({ beat: beat?.id ?? '', key }))]
+      : [];
+  if (!pressed.runs || model.busy) {
+    return { commands: wrong, model: updated };
+  }
   return {
     commands: [runCommand('student', pressed.session.buffer.text, beat?.input ?? '', model.token)],
     model: { ...updated, busy: true, note: '' },
@@ -612,19 +627,27 @@ const Lesson = LessonDef.make({
     CompletedRunProgram: ($, { by, finished, output, token, view }) => {
       const ran = { ...$.model, busy: by === 'student' ? false : $.model.busy, ran: view };
       const beat = beats[$.model.index];
+      const finishedRun = cue(
+        Happened.FinishedRun({ beat: beat?.id ?? '', by, state: view.state }),
+      );
       if (by !== 'student' || token !== $.model.token || !finished || beat?.wait !== 'run') {
-        return $.set(ran);
+        return $.set(ran).run(finishedRun);
       }
       const flow = checked(beats, flowOf(ran), whereOf(ran, $.props.fine), { kind: 'run', output });
       if (flow === null) {
-        return $.set(ran);
+        return $.set(ran).run(finishedRun);
       }
       if (flow.mismatch) {
-        return $.set({ ...withFlow(ran, flow), note: diagnose(beat.expect ?? '', output) });
+        return $.set({ ...withFlow(ran, flow), note: diagnose(beat.expect ?? '', output) }).run(
+          finishedRun,
+          cue(Happened.MissedCheck({ beat: beat.id, kind: 'run' })),
+        );
       }
       const out = arrive(ran, flow, $.props.unit, $.props.calm);
       return $.set(out.model).run(
         quiet(NoteCheck.make({ beat: beat.id, unit: $.props.unit })),
+        finishedRun,
+        cue(Happened.PassedCheck({ beat: beat.id, kind: 'run' })),
         ...out.commands,
       );
     },
@@ -672,29 +695,31 @@ const Lesson = LessonDef.make({
       .attr('data-busy', String(model.busy))
       .children(
         h.div.class('stage').children(stageView(h, model)),
-        h.div
-          .class('dialogue')
-          .children(
-            h.span.class('who').children(ui['page.who']),
-            wordsView(h, model),
-            h.p.class('note').attr('aria-live', 'polite').children(model.note),
-            h.div
-              .class('tools')
-              .children(
-                h.button
-                  .attr('type', 'button')
-                  .on('click', LessonMessage.ClickedBack())
-                  .children(ui['page.back']),
-                h.button
-                  .attr('type', 'button')
-                  .on('click', LessonMessage.ClickedNext())
-                  .children('▼'),
-                h.button
-                  .attr('type', 'button')
-                  .on('click', LessonMessage.ClickedRestart())
-                  .children(ui['page.restart']),
-              ),
+        h.div.class('dialogue').children(
+          h.span.class('who').children(ui['page.who']),
+          wordsView(h, model),
+          h.p.class('note').attr('aria-live', 'polite').children(model.note),
+          h.div.class('tools').children(
+            Action(h, {
+              disabled: false,
+              label: ui['page.back'],
+              onPress: LessonMessage.ClickedBack(),
+              variant: 'secondary',
+            }),
+            Action(h, {
+              disabled: model.phase === 'blocked',
+              label: ui['page.next'],
+              onPress: LessonMessage.ClickedNext(),
+              variant: 'primary',
+            }),
+            Action(h, {
+              disabled: false,
+              label: ui['page.restart'],
+              onPress: LessonMessage.ClickedRestart(),
+              variant: 'quiet',
+            }),
           ),
+        ),
       ),
 });
 

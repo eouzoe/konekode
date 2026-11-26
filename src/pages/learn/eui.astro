@@ -1,0 +1,105 @@
+---
+import { HtmlServer } from '@effect/ui/html';
+import { Effect } from 'effect';
+
+import { Lesson } from '@/eui/lesson';
+import { cues } from '@/parts/cues';
+import Base from '@/layouts/base.astro';
+import { lessonData, pages } from '@/lib/site/pages';
+
+const data = lessonData(Astro.site ?? Astro.url, pages.start);
+const props = { calm: false, fine: true, full: false, unit: 'start' };
+const rendered = await Effect.runPromise(HtmlServer.renderToHtml(Lesson, props, { static: true }).pipe(Effect.provide(cues)));
+const state = HtmlServer.serializeState(rendered.state);
+---
+
+<Base page={pages.start} data={data} full>
+  <div id="lesson" data-unit="start" set:html={rendered.html} />
+  <script type="application/json" id="lesson-state" set:html={state} />
+</Base>
+
+<script>
+  import '@/eui/main';
+</script>
+
+<style is:global>
+  #lesson .scene {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 1rem;
+    width: min(100% - 3rem, 80rem);
+    height: 100dvh;
+    margin: 0 auto;
+    padding: 1.5rem 0;
+  }
+  #lesson .stage {
+    min-height: 0;
+    overflow-y: auto;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 0.75rem;
+  }
+  #lesson .code,
+  #lesson .buffer,
+  #lesson .target {
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--panel);
+    font-family: var(--mono);
+    font-size: 1.25rem;
+    line-height: 1.7;
+    white-space: pre;
+    width: min(100%, 52rem);
+    overflow-x: auto;
+  }
+  #lesson .line {
+    display: block;
+    min-height: 1.7em;
+  }
+  #lesson .line[data-marked='true'] {
+    background: color-mix(in oklch, var(--accent) 22%, transparent);
+  }
+  #lesson .cursor {
+    background: var(--accent);
+    color: var(--page);
+  }
+  #lesson .desk[data-mode='insert'] .cursor {
+    background: none;
+    box-shadow: -2px 0 0 var(--accent);
+    color: inherit;
+  }
+  #lesson .typed {
+    color: var(--soft);
+  }
+  #lesson .next {
+    background: var(--accent);
+    color: var(--page);
+  }
+  #lesson .drill[data-demo='true'] .target {
+    outline: 2px dashed var(--accent);
+  }
+  #lesson .dialogue {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    background: var(--panel);
+    font-size: 1.125rem;
+  }
+  #lesson .words p.later {
+    display: none;
+  }
+  #lesson .words p {
+    margin: 0.25rem 0;
+  }
+  #lesson .tools {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  #lesson .output[data-state='error'] pre {
+    color: var(--danger, crimson);
+  }
+</style>
