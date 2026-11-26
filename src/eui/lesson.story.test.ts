@@ -3,7 +3,14 @@ import { expect, test } from 'bun:test';
 import { Component } from '@effect/ui';
 import { Story } from '@effect/ui/testing';
 
-import { NoteCheck, NoteReached, NoteUnlock, OpenEngine, WaitBeforeStep } from './commands';
+import {
+  NoteCheck,
+  NoteReached,
+  NoteUnlock,
+  OpenEngine,
+  WaitBeforeStep,
+  WarmCompiler,
+} from './commands';
 import { PlayCue } from './contract';
 import { Lesson, LessonMessage } from './lesson';
 
@@ -19,6 +26,9 @@ test('story: the drill gate passes only after the whole template is typed and Es
       }
       if (entry.command.name === 'NoteReached') {
         story.resolve(NoteReached, undefined);
+      }
+      if (entry.command.name === 'WarmCompiler') {
+        story.resolve(WarmCompiler, true);
       }
       if (entry.command.name === 'cues/PlayCue') {
         story.resolve(PlayCue, Component.noop);

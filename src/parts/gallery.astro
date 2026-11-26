@@ -1,0 +1,20 @@
+---
+import Base from '@/layouts/base.astro';
+import { pages } from '@/lib/site/pages';
+---
+
+<Base page={pages.start} data={{}}>
+  <div id="gallery"></div>
+</Base>
+
+<script>
+  import { BrowserHost } from '@effect/ui/html';
+  import { Effect, Layer } from 'effect';
+
+  import { Gallery } from '@/parts/gallery';
+
+  const root = document.querySelector('#gallery');
+  if (root !== null) {
+    Layer.launch(BrowserHost.mount(Gallery, {}, root)).pipe(Effect.runFork);
+  }
+</script>

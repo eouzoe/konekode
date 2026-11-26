@@ -149,7 +149,7 @@ const runStart = (
   unit: string,
   origin: string,
   rules: Rules,
-): { readonly queue: readonly Move[]; readonly sprite: Buffer } | null => {
+): { readonly goal: string; readonly queue: readonly Move[]; readonly sprite: Buffer } | null => {
   const beat = beats[index];
   if (beat?.stage !== 'run' || beat.keys === undefined) {
     return null;
@@ -160,6 +160,7 @@ const runStart = (
     .slice(Math.max(keysStart(beats, index), 0), index)
     .flatMap((earlier) => earlier.keys ?? []);
   return {
+    goal: run(start, keysOf(plan?.path ?? []), everything(rules)).text,
     queue: beat.keys.flatMap((token) => movesOf(token)),
     sprite: run(start, keysOf(before), everything(rules)),
   };

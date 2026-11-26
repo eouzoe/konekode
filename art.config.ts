@@ -9,6 +9,7 @@ import { refsRoute } from './src/art/refs';
 const pages = [
   { entrypoint: './src/art/unit.astro', pattern: '/art/unit' },
   { entrypoint: './src/art/home.astro', pattern: '/art/home' },
+  { entrypoint: './src/parts/gallery.astro', pattern: '/parts' },
 ];
 
 const refsFolder = (): string =>

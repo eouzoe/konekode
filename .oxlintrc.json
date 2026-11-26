@@ -199,7 +199,8 @@
         "import/max-dependencies": "off",
         "eslint/no-redeclare": "off",
         "unicorn/no-useless-undefined": "off",
-        "unicorn/no-useless-spread": "off"
+        "unicorn/no-useless-spread": "off",
+        "eslint/max-lines-per-function": "off"
       }
     }
   ]

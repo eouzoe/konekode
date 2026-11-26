@@ -1,11 +1,15 @@
 import { Command, Subscription, UiSchema } from '@effect/ui';
 import { Html, HtmlSubscription } from '@effect/ui/html';
-import { Duration, Schema, Stream } from 'effect';
+import { Duration, Effect, Queue, Schema, Stream } from 'effect';
 
 import { createBuffer } from '@/lib/edit/buffer';
+import { effectOf } from '@/lib/edit/effect';
+import { between, goalOf } from '@/lib/edit/goal';
 import { press as pressDesk, type Session } from '@/lib/edit/session';
 import { diagnose } from '@/lib/run/diagnose';
-import { freeHint, quietHint, wrongHint } from '@/lib/run/view';
+import { busyStatus } from '@/lib/run/outcome';
+import { watchLoading } from '@/lib/run/runner';
+import { effectText, freeHint, quietHint, wrongHint } from '@/lib/run/view';
 import { fullscreenMark } from '@/lib/scene/conditions';
 import { fullscreenKeys } from '@/lib/site/device';
 import { ui } from '@/lib/text/ui';
@@ -16,8 +20,15 @@ import {
   isDone,
   press as pressDrill,
   remind,
+  type Drill,
 } from '@/lib/typing/drill';
 import { Action } from '@/parts/action';
+import { Cell } from '@/parts/cell';
+import { Dialogue } from '@/parts/dialogue';
+import { Keyboard } from '@/parts/keyboard';
+import { Paper } from '@/parts/paper';
+import { Progress } from '@/parts/progress';
+import { Snippet } from '@/parts/snippet';
 import { beats, starter, template } from '@/units/start';
 
 import {
@@ -31,8 +42,17 @@ import {
   Runner,
   WaitBeforeAuto,
   WaitBeforeStep,
+  WarmCompiler,
 } from './commands';
-import { Happened, PlayCue } from './contract';
+import {
+  Happened,
+  PlayCue,
+  type CellState,
+  type DialogueLine,
+  type DialogueState,
+  type PaperState,
+} from './contract';
+import { ShowCode } from './editor';
 import {
   checked,
   currentOf,
@@ -46,6 +66,7 @@ import {
   type Flow,
   type Where,
 } from './flow';
+import { drillHint, keyboardOf, keyOf, modeLabel } from './keys';
 import { drillStart, drillStep, rulesOf, runStart, runStep, studentTurn } from './sprite';
 
 const Mode = Schema.Literals(['insert', 'normal']);
@@ -101,10 +122,15 @@ const LessonModel = Schema.Struct({
   drill: DrillModel,
   drillQueue: Schema.Array(Schema.String),
   drillShow: Schema.NullOr(DrillShow),
+  flash: Schema.String,
+  flashes: Schema.Number,
   full: Schema.Boolean,
+  goal: Schema.String,
   hint: Schema.String,
   index: Schema.Number,
   keycap: Schema.String,
+  lastKey: Schema.NullOr(Schema.Struct({ key: Schema.String, right: Schema.Boolean })),
+  loaded: Schema.Number,
   mismatch: Schema.Boolean,
   moves: Schema.Array(Move),
   note: Schema.String,
@@ -140,6 +166,7 @@ const LessonMessage = UiSchema.TaggedEnum({
   },
   CompletedWaitAuto: { token: Schema.Number },
   CompletedWaitStep: { token: Schema.Number },
+  LoadedCompiler: { percent: Schema.Number },
   PressedKey: { key: Schema.String },
   TickedReveal: {},
 });
@@ -152,6 +179,7 @@ const LessonDef = Html.component({
 });
 
 const revealPace = 30;
+const complete = 100;
 const segmenter = new Intl.Segmenter('zh-Hant', { granularity: 'grapheme' });
 const keyLabel = ui[fullscreenKeys.pc];
 const backwardKeys = new Set(['ArrowLeft', 'ArrowUp', 'PageUp']);
@@ -238,8 +266,10 @@ const enter = (model: LessonModel, unit: string, calm: boolean) => {
     ...model,
     drillQueue: drill?.queue ?? [],
     drillShow: drill?.state ?? null,
+    goal: demo?.goal ?? model.goal,
     hint: gate ? quietHint(student) : '',
     keycap: '',
+    lastKey: null,
     moves: demo?.queue ?? [],
     note: '',
     ran: demo !== null || gate ? null : model.ran,
@@ -298,9 +328,18 @@ const drillKey = (model: LessonModel, key: string, unit: string, where: Where, c
       ? arrive(model, goBack(beats, flowOf(model), where), unit, calm)
       : { commands: [], model };
   }
-  const updated = { ...model, drill: next };
+  const right = next.feedback !== 'wrong-key' && next.feedback !== 'need-insert';
+  const updated = {
+    ...model,
+    drill: next,
+    lastKey: { key: keyOf(key === 'Enter' ? '\n' : key), right },
+  };
+  const beatId = beats[model.index]?.id ?? '';
+  const pressedCue = right
+    ? cue(Happened.PressedRightKey({ beat: beatId, key }))
+    : cue(Happened.PressedWrongKey({ beat: beatId, key }));
   if (isDone(before) || !isDone(next)) {
-    return { commands: [], model: updated };
+    return { commands: [pressedCue], model: updated };
   }
   const flow = checked(beats, flowOf(updated), where, { kind: 'drill', output: '' });
   const beat = currentOf(beats, flowOf(model));
@@ -309,6 +348,7 @@ const drillKey = (model: LessonModel, key: string, unit: string, where: Where, c
       beat === undefined
         ? []
         : [
+            pressedCue,
             quiet(NoteCheck.make({ beat: beat.id, unit })),
             cue(Happened.PassedCheck({ beat: beat.id, kind: 'drill' })),
           ],
@@ -327,7 +367,14 @@ const deskKey = (model: LessonModel, key: string) => {
     }
     return quietHint(pressed.session);
   })();
-  const updated = { ...model, hint, student: pressed.session };
+  const effect = effectOf(model.student.buffer, pressed.session.buffer, key);
+  const updated = {
+    ...model,
+    flash: effect === null ? model.flash : effectText(effect),
+    flashes: effect === null ? model.flashes : model.flashes + 1,
+    hint,
+    student: pressed.session,
+  };
   const beat = beats[model.index];
   const wrong =
     pressed.verdict === 'wrong'
@@ -409,10 +456,15 @@ const initial = (full: boolean): LessonModel => ({
   drill: createDrill(template),
   drillQueue: [],
   drillShow: null,
+  flash: '',
+  flashes: 0,
   full,
+  goal: '',
   hint: '',
   index: 0,
   keycap: '',
+  lastKey: null,
+  loaded: 0,
   mismatch: false,
   moves: [],
   note: '',
@@ -427,42 +479,9 @@ const initial = (full: boolean): LessonModel => ({
   unlocked: [],
 });
 
-const lineView = LessonDef.fragment((h, text: string, cursor: number | null, at: number) => {
-  if (cursor === null || cursor < at || cursor > at + text.length) {
-    return h.span.class('line').children(text === '' ? ' ' : text);
-  }
-  const offset = cursor - at;
-  return h.span
-    .class('line')
-    .children(
-      text.slice(0, offset),
-      h.span.class('cursor').children(text.charAt(offset) === '' ? ' ' : text.charAt(offset)),
-      text.slice(offset + 1),
-    );
-});
-
-const bufferView = LessonDef.fragment(
-  (h, text: string, cursor: number, mode: string, owner: string) => {
-    let at = 0;
-    const lines = text.split('\n').map((line) => {
-      const view = lineView(h, line, cursor, at);
-      at += line.length + 1;
-      return view;
-    });
-    return h.div
-      .class('desk')
-      .attr('data-owner', owner)
-      .attr('data-mode', mode)
-      .children(
-        h.pre.class('buffer').children(lines),
-        h.p.class('mode').children(mode === 'insert' ? '-- INSERT --' : ''),
-      );
-  },
-);
-
 const codeView = LessonDef.fragment((h, model: LessonModel) => {
   const marked = new Set((beats[model.index]?.lines ?? '').split(','));
-  return h.div.class('code').children(
+  const lines = h.pre.class('lines').children(
     template.split('\n').map((line, at) =>
       h.span
         .class('line')
@@ -470,60 +489,119 @@ const codeView = LessonDef.fragment((h, model: LessonModel) => {
         .children(line === '' ? ' ' : line),
     ),
   );
+  return Paper(h, {
+    body: [lines],
+    hint: '',
+    mode: '',
+    owner: 'student',
+    state: 'reading',
+    title: '',
+  });
 });
 
+const shownDrill = (model: LessonModel): Drill => {
+  const shown = model.drillShow;
+  if (shown?.demo === true) {
+    return shown.show;
+  }
+  return model.drill;
+};
+
 const drillView = LessonDef.fragment((h, model: LessonModel) => {
-  const drill = model.drillShow?.demo === true ? model.drillShow.show : model.drill;
-  const done = drill.target.slice(0, drill.position);
+  const demo = model.drillShow?.demo === true;
+  const drill = shownDrill(model);
   const next = expectedChar(drill);
-  const rest = drill.target.slice(drill.position + 1);
-  return h.div
-    .class('drill')
-    .attr('data-demo', String(model.drillShow?.demo === true))
-    .attr('data-feedback', drill.feedback)
+  const target = h.pre
+    .class('target')
     .children(
-      h.pre
-        .class('target')
-        .children(
-          h.span.class('typed').children(done),
-          h.span.class('next').children(next === '\n' ? '↵\n' : next),
-          h.span.class('rest').children(rest),
-        ),
-      h.p.class('mode').children(drill.mode === 'insert' ? '-- INSERT --' : 'NORMAL'),
-      drill.feedback === 'none' ? null : h.p.class('feedback').children(drill.feedback),
+      h.span.class('typed').children(drill.target.slice(0, drill.position)),
+      h.span.class('next').children(next === '\n' ? '↵\n' : next),
+      h.span.class('rest').children(drill.target.slice(drill.position + 1)),
     );
+  return h.div.class('drill').children(
+    Paper(h, {
+      body: [target],
+      hint: demo ? '' : drillHint(drill),
+      mode: modeLabel(drill.mode),
+      owner: demo ? 'sprite' : 'student',
+      state: isDone(drill) ? 'passed' : 'editing',
+      title: '',
+    }),
+    Keyboard(h, {
+      mode: modeLabel(drill.mode),
+      rows: keyboardOf(drill, demo ? null : model.lastKey),
+    }),
+  );
 });
+
+const outputState = (model: LessonModel): CellState => {
+  if (model.busy) {
+    return 'value';
+  }
+  if (model.ran === null) {
+    return 'empty';
+  }
+  return model.ran.state === 'ok' ? 'ok' : 'error';
+};
+
+const paperState = (model: LessonModel): PaperState => {
+  if (model.busy) {
+    return 'running';
+  }
+  return model.phase === 'blocked' ? 'editing' : 'reading';
+};
 
 const runView = LessonDef.fragment((h, model: LessonModel) => {
   const beat = beats[model.index];
-  const desk =
-    model.sprite === null
-      ? bufferView(
-          h,
-          model.student.buffer.text,
-          model.student.buffer.cursor,
-          model.student.buffer.mode,
-          'student',
-        )
-      : bufferView(h, model.sprite.text, model.sprite.cursor, model.sprite.mode, 'sprite');
+  const { sprite, student: session } = model;
+  const shown = sprite ?? session.buffer;
+  const hints =
+    sprite === null ? goalOf(session, rulesOf(model.unlocked)) : between(sprite.text, model.goal);
+  const code = h.div.class('screen').onMount(
+    ShowCode({
+      cursor: shown.cursor,
+      flash: model.flash,
+      flashes: model.flashes,
+      hints,
+      mode: shown.mode,
+      text: shown.text,
+    }),
+  );
   return h.div.class('run').children(
-    beat?.snippet === undefined ? null : h.pre.class('snippet').children(beat.snippet),
-    desk,
-    model.keycap === '' ? null : h.p.class('keycap').children(model.keycap),
-    model.hint === '' ? null : h.p.class('hint').children(model.hint),
+    beat?.snippet === undefined ? null : Snippet(h, { text: beat.snippet }),
+    Paper(h, {
+      body: [code],
+      hint: model.hint,
+      mode: model.keycap === '' ? modeLabel(shown.mode) : model.keycap,
+      owner: sprite === null ? 'student' : 'sprite',
+      state: paperState(model),
+      title: '',
+    }),
     beat?.input === undefined
       ? null
-      : h.div.class('field').children(h.p(ui['page.input']), h.pre(beat.input)),
+      : Cell(h, {
+          kind: 'input',
+          label: ui['page.input'],
+          state: 'value',
+          status: '',
+          text: beat.input,
+        }),
     beat?.expect === undefined
       ? null
-      : h.div.class('field').children(h.p(ui['page.expect']), h.pre(beat.expect)),
-    h.div
-      .class('output')
-      .attr('data-state', model.busy ? 'busy' : (model.ran?.state ?? 'idle'))
-      .children(
-        h.p.class('status').children(model.busy ? ui['run.running'] : (model.ran?.status ?? '')),
-        h.pre.attr('data-role', 'output').children(model.ran?.text ?? ''),
-      ),
+      : Cell(h, {
+          kind: 'expect',
+          label: ui['page.expect'],
+          state: 'value',
+          status: '',
+          text: beat.expect,
+        }),
+    Cell(h, {
+      kind: 'output',
+      label: ui['page.output'],
+      state: outputState(model),
+      status: model.busy ? ui['run.running'] : (model.ran?.status ?? ''),
+      text: model.ran?.text ?? '',
+    }),
   );
 });
 
@@ -541,28 +619,75 @@ const stageView = LessonDef.fragment((h, model: LessonModel) => {
   return null;
 });
 
-const wordsView = LessonDef.fragment((h, model: LessonModel) =>
+const linesOf = (model: LessonModel): readonly DialogueLine[] =>
+  beats.flatMap((beat, at) => {
+    if (!isShown(beats, model.index, at)) {
+      return [];
+    }
+    return [{ id: beat.id, text: at === model.index ? partOf(at, model.shown) : sayOf(at) }];
+  });
+
+const dialogueState = (model: LessonModel): DialogueState => {
+  if (model.phase === 'revealing') {
+    return 'revealing';
+  }
+  return model.phase === 'blocked' ? 'student' : 'shown';
+};
+
+const loadingWords = LessonDef.fragment((h) =>
   h.div.class('words').children(
-    beats.map((beat, at) => {
-      if (model.phase === 'loading') {
-        return h.p
-          .key(beat.id)
-          .attr('data-beat-id', beat.id)
-          .class(at > 0 && 'later')
-          .children(sayOf(at));
-      }
-      if (!isShown(beats, model.index, at)) {
-        return null;
-      }
-      const text = at === model.index ? partOf(at, model.shown) : sayOf(at);
-      return h.p.key(beat.id).attr('data-beat-id', beat.id).children(text);
-    }),
+    beats.map((beat, at) =>
+      h.p
+        .key(beat.id)
+        .attr('data-beat-id', beat.id)
+        .class(at > 0 && 'later')
+        .children(sayOf(at)),
+    ),
   ),
 );
+
+const dialogueView = LessonDef.fragment((h, model: LessonModel) => {
+  if (model.phase === 'loading') {
+    return h.div
+      .class('part-dialogue')
+      .attr('data-part', 'dialogue')
+      .children(h.span.class('who').children(ui['page.who']), loadingWords(h));
+  }
+  return Dialogue(h, {
+    lines: linesOf(model),
+    more: model.phase === 'ready',
+    note: model.note,
+    onPress: LessonMessage.ClickedNext(),
+    state: dialogueState(model),
+    who: ui['page.who'],
+  });
+});
+
+const progressView = LessonDef.fragment((h, model: LessonModel) => {
+  if (model.loaded >= complete || model.loaded === 0) {
+    return null;
+  }
+  return Progress(h, {
+    label: busyStatus(model.loaded),
+    percent: model.loaded,
+    state: 'running',
+  });
+});
 
 const Lesson = LessonDef.make({
   init: ($) => initial($.props.full),
   subscriptions: ({ model }) => [
+    model.opening &&
+      model.loaded < complete &&
+      Subscription.make('compiler', 'loading', () =>
+        Stream.callback<ReturnType<typeof LessonMessage.LoadedCompiler>>((queue) =>
+          Effect.sync(() => {
+            watchLoading((percent) => {
+              Queue.offerUnsafe(queue, LessonMessage.LoadedCompiler({ percent }));
+            });
+          }),
+        ),
+      ),
     model.phase === 'loading' &&
       !model.opening &&
       Subscription.make('boot', model.token, () => Stream.make(LessonMessage.Booted())),
@@ -593,6 +718,7 @@ const Lesson = LessonDef.make({
             OpenEngine.make({ unit: $.props.unit }).pipe(
               Command.map((opened) => LessonMessage.CompletedOpenEngine(opened)),
             ),
+            quiet(WarmCompiler.make()),
           ),
     ChangedFullscreen: ($, { full }) => $.evolve({ full }),
     ClickedBack: ($) => {
@@ -670,6 +796,10 @@ const Lesson = LessonDef.make({
       const out = stepDemo($.model, $.props.unit, whereOf($.model, $.props.fine), $.props.calm);
       return $.set(out.model).run(...out.commands);
     },
+    LoadedCompiler: ($, { percent }) =>
+      percent >= complete && $.model.loaded < complete
+        ? $.evolve({ loaded: percent }).run(cue(Happened.LoadedCompiler()))
+        : $.evolve({ loaded: Math.max(percent, $.model.loaded) }),
     PressedKey: ($, { key }) => {
       const out = onKey($.model, key, $.props.unit, whereOf($.model, $.props.fine), $.props.calm);
       return $.set(out.model).run(...out.commands);
@@ -694,31 +824,30 @@ const Lesson = LessonDef.make({
       .attr('data-stage', beats[model.index]?.stage ?? 'empty')
       .attr('data-busy', String(model.busy))
       .children(
-        h.div.class('stage').children(stageView(h, model)),
-        h.div.class('dialogue').children(
-          h.span.class('who').children(ui['page.who']),
-          wordsView(h, model),
-          h.p.class('note').attr('aria-live', 'polite').children(model.note),
-          h.div.class('tools').children(
-            Action(h, {
-              disabled: false,
-              label: ui['page.back'],
-              onPress: LessonMessage.ClickedBack(),
-              variant: 'secondary',
-            }),
-            Action(h, {
-              disabled: model.phase === 'blocked',
-              label: ui['page.next'],
-              onPress: LessonMessage.ClickedNext(),
-              variant: 'primary',
-            }),
-            Action(h, {
-              disabled: false,
-              label: ui['page.restart'],
-              onPress: LessonMessage.ClickedRestart(),
-              variant: 'quiet',
-            }),
-          ),
+        h.div.class('stage').children(progressView(h, model), stageView(h, model)),
+        dialogueView(h, model),
+        h.div.class('tools').children(
+          Action(h, {
+            busy: false,
+            disabled: false,
+            label: ui['page.back'],
+            onPress: LessonMessage.ClickedBack(),
+            variant: 'secondary',
+          }),
+          Action(h, {
+            busy: false,
+            disabled: model.phase === 'blocked',
+            label: ui['page.next'],
+            onPress: LessonMessage.ClickedNext(),
+            variant: 'primary',
+          }),
+          Action(h, {
+            busy: false,
+            disabled: false,
+            label: ui['page.restart'],
+            onPress: LessonMessage.ClickedRestart(),
+            variant: 'quiet',
+          }),
         ),
       ),
 });

@@ -4,7 +4,7 @@ import { Duration, Effect, Schema } from 'effect';
 import { openEngine, unitProgress, unlockedNow } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
 import { describe } from '@/lib/run/outcome';
-import { runProgram } from '@/lib/run/runner';
+import { runProgram, warmUp } from '@/lib/run/runner';
 import { noteCheck, noteReached, restart } from '@/lib/scene/session';
 
 const RunView = Schema.Struct({ state: Schema.String, status: Schema.String, text: Schema.String });
@@ -54,6 +54,10 @@ const RunProgram = Command.make(
     }),
 );
 
+const WarmCompiler = Command.make('WarmCompiler', { args: {} }, () =>
+  Effect.promise(() => warmUp()),
+);
+
 const NoteReached = Command.make(
   'NoteReached',
   { args: { beat: Schema.String, unit: Schema.String } },
@@ -98,4 +102,5 @@ export {
   Runner,
   WaitBeforeAuto,
   WaitBeforeStep,
+  WarmCompiler,
 };
