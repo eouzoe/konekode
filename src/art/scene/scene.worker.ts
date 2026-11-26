@@ -31,7 +31,7 @@ DOMAdapter.set(WebWorkerAdapter);
 
 type Page = BirpcReturn<PageCalls, SceneCalls>;
 
-const seconds = { crossfade: 2.4, leave: 1.1, pulse: 0.9, recede: 1.2 };
+const seconds = { crossfade: 2.4, leave: 2.3, pulse: 0.9, recede: 1.2 };
 const push = { zoom: 1.6 };
 
 const drift = { across: -0.18, down: 0.55 };
@@ -186,7 +186,7 @@ const leave = async (world: World): Promise<void> => {
   const duration = timed(world.motion, seconds.leave);
   await Promise.all([
     gsap.to(world.sway, { duration, ease: 'power2.in', pan: 0, zoom: push.zoom }),
-    gsap.to(world.shade, { alpha: 1, duration, ease: 'power1.in' }),
+    gsap.to(world.shade, { alpha: 1, duration, ease: 'power2.in' }),
   ]);
   world.shade.alpha = 1;
 };

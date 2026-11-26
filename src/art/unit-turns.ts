@@ -64,7 +64,7 @@ const runOnce = async (turn: Turn): Promise<boolean> => {
     return true;
   }
   run.note(diagnose(turn.beat.expect ?? '', output));
-  cue('wrong');
+  void cue('wrong');
   return false;
 };
 
@@ -100,7 +100,7 @@ const studentTurn = async (turn: Turn): Promise<void> => {
   }
   keyboard.next();
   if (turn.passed()) {
-    cue('correct');
+    void cue('correct');
     await run.celebrate();
   }
   hint.textContent = '';

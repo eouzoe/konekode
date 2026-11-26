@@ -1,26 +1,18 @@
-import { refsRoute } from './refs';
+import { audioPath, tracks, type Gate, type Layer, type Track } from './sound-tracks';
+import { silence, voiceOf, type Voice } from './sound-voice';
 
-type Track = 'home' | 'study';
 type Cue = 'click' | 'correct' | 'enter' | 'wrong';
 type Switch = 'off' | 'on';
 
-interface Layer {
-  readonly delay: number;
-  readonly end: number;
-  readonly entries: readonly number[];
-  readonly fade: number;
-  readonly file: string;
-  readonly start: number;
-}
-
-interface Voice {
-  readonly gain: GainNode;
-  readonly source: AudioBufferSourceNode;
+interface Waiting {
+  readonly buffer: AudioBuffer;
+  readonly layer: Layer;
 }
 
 interface Playing {
   readonly track: Track;
-  readonly voices: readonly Voice[];
+  readonly voices: Voice[];
+  readonly waiting: Waiting[];
 }
 
 interface Graph {
@@ -37,16 +29,8 @@ interface Probe {
   readonly switch: Switch;
 }
 
-const homeTurn = 71;
-const tracks: Readonly<Record<Track, readonly Layer[]>> = {
-  home: [
-    { delay: 0, end: 120, entries: [0], fade: 2, file: 'home-rain', start: 0 },
-    { delay: 1, end: 142, entries: [0, homeTurn], fade: 1, file: 'home', start: 0 },
-  ],
-  study: [{ delay: 0, end: 214, entries: [0], fade: 2.5, file: 'study', start: 1 }],
-};
 const cues: readonly Cue[] = ['click', 'correct', 'enter', 'wrong'];
-const level = { cue: 0.8, music: 0.6, silent: 0.0001 };
+const level = { cue: 0.8 };
 const leaving = 0.9;
 const kept = { cues: 40, samples: 2048 };
 const saved = 'konekode.sound';
@@ -62,8 +46,7 @@ const sound: {
 
 const buffers = new Map<string, Promise<AudioBuffer>>();
 
-const urlOf = (name: string): string =>
-  new URL(`${refsRoute}/1999/audio/web/${name}.mp3`, location.href).href;
+const urlOf = (name: string): string => new URL(audioPath(name), location.href).href;
 
 const load = (graph: Graph, name: string): Promise<AudioBuffer> => {
   const cached = buffers.get(name);
@@ -71,7 +54,7 @@ const load = (graph: Graph, name: string): Promise<AudioBuffer> => {
     return cached;
   }
   const fetchAndDecode = async (): Promise<AudioBuffer> => {
-    const response = await fetch(urlOf(name));
+    const response = await fetch(urlOf(name), { priority: 'low' });
     return graph.context.decodeAudioData(await response.arrayBuffer());
   };
   const loading = fetchAndDecode();
@@ -96,14 +79,6 @@ const mark = (): void => {
   });
 };
 
-const silence = (graph: Graph, voice: Voice, seconds: number): void => {
-  const now = graph.context.currentTime;
-  voice.gain.gain.cancelScheduledValues(now);
-  voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-  voice.gain.gain.exponentialRampToValueAtTime(level.silent, now + seconds);
-  voice.source.stop(now + seconds);
-};
-
 const stopMusic = (seconds: number): void => {
   const { graph, playing } = sound;
   if (graph !== null && playing !== null) {
@@ -115,51 +90,53 @@ const stopMusic = (seconds: number): void => {
   mark();
 };
 
-const entryOf = (layer: Layer): number =>
-  layer.entries[Math.floor(Math.random() * layer.entries.length)] ?? layer.start;
+const gates = new Set<Gate>();
 
-const voiceOf = (graph: Graph, layer: Layer, buffer: AudioBuffer): Voice => {
-  const begins = graph.context.currentTime + layer.delay;
-  const gain = graph.context.createGain();
-  gain.gain.setValueAtTime(level.silent, begins);
-  gain.gain.exponentialRampToValueAtTime(level.music, begins + layer.fade);
-  gain.connect(graph.master);
-  const source = graph.context.createBufferSource();
-  Object.assign(source, { buffer, loop: true, loopEnd: layer.end, loopStart: layer.start });
-  source.connect(gain);
-  source.start(begins, entryOf(layer));
-  return { gain, source };
+const isOpen = (layer: Layer): boolean => layer.gate === undefined || gates.has(layer.gate);
+
+const join = (graph: Graph, playing: Playing, pair: Waiting): void => {
+  if (isOpen(pair.layer)) {
+    playing.voices.push(voiceOf(graph, pair.layer, pair.buffer));
+    return;
+  }
+  playing.waiting.push(pair);
 };
 
-const voicesOf = (
-  graph: Graph,
-  layers: readonly Layer[],
-  loaded: readonly AudioBuffer[],
-): Voice[] =>
-  layers.flatMap((layer, index) => {
-    const buffer = loaded[index];
-    if (buffer === undefined) {
-      return [];
-    }
-    return [voiceOf(graph, layer, buffer)];
-  });
+const arrive = async (graph: Graph, playing: Playing, layer: Layer): Promise<void> => {
+  const buffer = await load(graph, layer.file);
+  performance.mark(`sound:decoded:${layer.file}`);
+  if (sound.playing === playing) {
+    join(graph, playing, { buffer, layer });
+  }
+};
+
+const open = (gate: Gate): void => {
+  gates.add(gate);
+  const { graph, playing } = sound;
+  if (graph === null || playing === null) {
+    return;
+  }
+  const ready = playing.waiting.filter((pair) => isOpen(pair.layer));
+  const still = playing.waiting.filter((pair) => !isOpen(pair.layer));
+  playing.waiting.splice(0, playing.waiting.length, ...still);
+  playing.voices.push(...ready.map((pair) => voiceOf(graph, pair.layer, pair.buffer)));
+};
 
 const due = (track: Track): boolean =>
   sound.wanted === track && sound.switch === 'on' && sound.playing?.track !== track;
 
-const startMusic = async (): Promise<void> => {
+const startMusic = (): void => {
   const { graph, wanted } = sound;
   if (graph === null || wanted === null || !due(wanted)) {
     return;
   }
-  const layers = tracks[wanted];
-  const loaded = await Promise.all(layers.map((layer) => load(graph, layer.file)));
-  if (!due(wanted)) {
-    return;
-  }
   stopMusic(leaving);
-  sound.playing = { track: wanted, voices: voicesOf(graph, layers, loaded) };
+  const playing: Playing = { track: wanted, voices: [], waiting: [] };
+  sound.playing = playing;
   mark();
+  for (const layer of tracks[wanted]) {
+    void arrive(graph, playing, layer);
+  }
 };
 
 const build = (): Graph => {
@@ -174,20 +151,34 @@ const build = (): Graph => {
 
 const firstGesture = new AbortController();
 
-const unlock = (): void => {
-  firstGesture.abort();
-  sound.graph ??= build();
-  void sound.graph.context.resume();
-  for (const name of cues) {
-    void load(sound.graph, name);
+const prepare = (): Graph => {
+  if (sound.graph !== null) {
+    return sound.graph;
   }
-  void startMusic();
+  const graph = build();
+  sound.graph = graph;
+  performance.mark('sound:built');
+  graph.context.addEventListener('statechange', () => {
+    performance.mark(`sound:${graph.context.state}`);
+    if (graph.context.state === 'running') {
+      firstGesture.abort();
+    }
+    mark();
+  });
+  for (const name of cues) {
+    void load(graph, name);
+  }
+  return graph;
+};
+
+const unlock = (): void => {
+  void prepare().context.resume();
   mark();
 };
 
 const music = (track: Track): void => {
   sound.wanted = track;
-  void startMusic();
+  startMusic();
 };
 
 const leave = (): number => {
@@ -203,7 +194,7 @@ const record = (name: Cue): void => {
   }
 };
 
-const sounding = async (graph: Graph, name: Cue): Promise<void> => {
+const sounding = async (graph: Graph, name: Cue): Promise<number> => {
   const buffer = await load(graph, name);
   const gain = graph.context.createGain();
   gain.gain.value = level.cue;
@@ -212,15 +203,16 @@ const sounding = async (graph: Graph, name: Cue): Promise<void> => {
   source.buffer = buffer;
   source.connect(gain);
   source.start();
+  return buffer.duration;
 };
 
-const cue = (name: Cue): void => {
+const cue = (name: Cue): Promise<number> => {
   const { graph } = sound;
   if (graph === null || sound.switch === 'off') {
-    return;
+    return Promise.resolve(0);
   }
   record(name);
-  void sounding(graph, name);
+  return sounding(graph, name);
 };
 
 const levelOf = (probe: AnalyserNode): number => {
@@ -251,6 +243,10 @@ if (localStorage.getItem(saved) === 'off') {
 for (const type of gestures) {
   document.addEventListener(type, unlock, { capture: true, signal: firstGesture.signal });
 }
+if (sound.switch === 'on') {
+  void prepare().context.resume();
+}
 mark();
 
-export { cue, leave, music, probe, type Cue, type Probe, type Track };
+export { cue, leave, music, open, probe, type Cue, type Probe };
+export { type Track } from './sound-tracks';

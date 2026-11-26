@@ -164,14 +164,14 @@ const step = (type: 'BACK' | 'NEXT' | 'SCREEN'): void => {
 
 listenMoves(parts.ui, {
   back: () => {
-    cue('click');
+    void cue('click');
     step('BACK');
   },
   next: () => {
     step('NEXT');
   },
   restart: () => {
-    cue('click');
+    void cue('click');
     start(0);
   },
   taking,

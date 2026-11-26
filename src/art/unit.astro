@@ -2,8 +2,10 @@
 import './style.css';
 
 import { refsRoute } from './refs';
+import { preloads } from './sound-tracks';
 
 const picked = `${refsRoute}/1999/sprites/picked`;
+const sounds = preloads('study', ['click', 'correct', 'wrong']);
 ---
 
 <html lang="zh-TW">
@@ -13,6 +15,7 @@ const picked = `${refsRoute}/1999/sprites/picked`;
     <meta name="robots" content="noindex" />
     <title>美術：起步單元</title>
     <link rel="icon" href="data:," />
+    {sounds.map((href) => <link rel="preload" href={href} as="fetch" crossorigin="anonymous" />)}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
