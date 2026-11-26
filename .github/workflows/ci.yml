@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -163,10 +163,12 @@ jobs:
         with:
           name: dist
           path: dist
+      - run: bun x alchemy provider check-env --provider Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - run: bun x alchemy deploy --stage prod --yes --no-input
         env:
-          ALCHEMY_FAST_DISTILLED: '1'
-          BUN_OPTIONS: --conditions=distilled-lazy
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - run: bun backend/check-stage.ts prod "$(git rev-parse --short HEAD)"
@@ -197,16 +199,15 @@ jobs:
         with:
           name: dist
           path: dist
-      - run: bun x alchemy deploy --stage dev --yes --no-input
+      - run: bun x alchemy provider check-env --provider Cloudflare
         env:
-          ALCHEMY_FAST_DISTILLED: '1'
-          BUN_OPTIONS: --conditions=distilled-lazy
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          KONEKODE_PREVIEW_VIEWER: ${{ secrets.KONEKODE_PREVIEW_VIEWER }}
+      - run: bun x alchemy deploy --stage dev --yes --no-input
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - run: bun backend/check-stage.ts dev "$(git rev-parse --short HEAD)"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          KONEKODE_CHECK_CLIENT_ID: ${{ secrets.KONEKODE_CHECK_CLIENT_ID }}
-          KONEKODE_CHECK_CLIENT_SECRET: ${{ secrets.KONEKODE_CHECK_CLIENT_SECRET }}

@@ -2,17 +2,10 @@ import { Schema } from 'effect';
 
 import { bodyLimit, closedFor, intakePath, status } from './limits';
 
-interface Token {
-  readonly id: string;
-  readonly secret: string;
-}
-
 interface Target {
   readonly api: string | null;
   readonly live: boolean;
-  readonly local: boolean;
   readonly site: URL;
-  readonly token: Token | null;
   readonly version: string | null;
 }
 
@@ -30,7 +23,6 @@ interface Probe {
 }
 
 const ok = 200;
-const firstRedirect = 300;
 const firstError = 400;
 const securityHeaders = [
   'content-security-policy',
@@ -64,40 +56,12 @@ const shown = (values: ReadonlyArray<string>): string => {
   return values.join(', ');
 };
 
-const accessHeaders = (token: Token | null): Record<string, string> => {
-  if (token === null) {
-    return {};
-  }
-  return { 'cf-access-client-id': token.id, 'cf-access-client-secret': token.secret };
-};
-
-const send = (probe: Probe, path: string, init: RequestInit = {}): Promise<Response> => {
-  const headers = new Headers(init.headers);
-  for (const [name, value] of Object.entries(accessHeaders(probe.target.token))) {
-    headers.set(name, value);
-  }
-  return probe.fetch(new Request(new URL(path, probe.target.site), { ...init, headers }));
-};
+const send = (probe: Probe, path: string, init: RequestInit = {}): Promise<Response> =>
+  probe.fetch(new Request(new URL(path, probe.target.site), init));
 
 const textOf = async (probe: Probe, path: string): Promise<string> => {
   const response = await send(probe, path);
   return response.text();
-};
-
-const wall = async (probe: Probe): Promise<Array<Result>> => {
-  const name = '登入牆';
-  if (probe.target.local) {
-    return [result(name, true, '本機沒有 Access，略過')];
-  }
-  const bare = await probe.fetch(new Request(probe.target.site, { redirect: 'manual' }));
-  if (probe.target.live) {
-    return [result(name, bare.status === ok, `prod 不擋，沒登入回 ${String(bare.status)}`)];
-  }
-  const inside = await send(probe, '/');
-  return [
-    result(name, bare.status >= firstRedirect, `沒登入回 ${String(bare.status)}`),
-    result(`${name}（服務憑證）`, inside.status === ok, `帶服務憑證回 ${String(inside.status)}`),
-  ];
 };
 
 const pageResults = async (probe: Probe, path: string): Promise<Array<Result>> => {
@@ -251,7 +215,7 @@ const dashboardOnly = [
 ];
 
 const checkAll = async (probe: Probe): Promise<Array<Result>> => {
-  const checks = [wall, site, assets, intake, isolation, github];
+  const checks = [site, assets, intake, isolation, github];
   const groups = await Promise.all(checks.map((check) => check(probe)));
   return groups.flat();
 };
@@ -269,4 +233,4 @@ const report = (results: ReadonlyArray<Result>): string =>
     ...dashboardOnly.map((each) => `… 要到 Cloudflare 面板看：${each}`),
   ].join('\n');
 
-export { checkAll, report, type Probe, type Result, type Target, type Token };
+export { checkAll, report, type Probe, type Result, type Target };

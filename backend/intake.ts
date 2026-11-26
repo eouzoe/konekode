@@ -1,11 +1,15 @@
-import { Clock, Effect, Layer } from 'effect';
-import { HttpServerResponse, type HttpServerRequest } from 'effect/http';
+import { ByteSize, Clock, Effect, Layer } from 'effect';
+import {
+  HttpIncomingMessage,
+  HttpServer,
+  HttpServerResponse,
+  type HttpServerRequest,
+} from 'effect/http';
 import { HttpApiBuilder } from 'effect/http-api';
 
 import { accountOf, dayLimits, hasRoom, secondsToNextDay } from './budget';
 import { intakeApi, type Ticket } from './contract';
 import { bodyLimit, plainHeaders, retryLater, status, textLimit } from './limits';
-import { platform } from './platform';
 
 import type { Origin, Storage } from './store';
 
@@ -100,7 +104,10 @@ const accept = <Needs>(
     return Effect.succeed(reply(status.tooLarge));
   }
   const unavailable = Effect.succeed(replyAfter(status.unavailable, retryLater));
-  return keep(store, upload, originOf(request)).pipe(Effect.catchCause(() => unavailable));
+  return keep(store, upload, originOf(request)).pipe(
+    Effect.tapCause((cause) => Effect.logError('intake could not be stored', cause)),
+    Effect.catchDefect(() => unavailable),
+  );
 };
 
 const intakeFor = <Needs>(store: Storage<Needs>) => {
@@ -109,7 +116,12 @@ const intakeFor = <Needs>(store: Storage<Needs>) => {
       accept(store, { body: payload, request, ticket: query }),
     ),
   );
-  return HttpApiBuilder.layer(intakeApi).pipe(Layer.provide(handlers), Layer.provide(platform));
+  const readLimit = Layer.succeed(HttpIncomingMessage.MaxBodySize, ByteSize.bytes(bodyLimit));
+  return HttpApiBuilder.layer(intakeApi).pipe(
+    Layer.provide(handlers),
+    Layer.provide(HttpServer.layerServices),
+    Layer.provide(readLimit),
+  );
 };
 
 export { intakeFor };

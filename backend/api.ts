@@ -6,9 +6,9 @@ import { HttpRouter } from 'effect/http';
 import { storeIn } from './d1';
 import { Intake } from './db';
 import { intakeFor } from './intake';
-import { build, compatibility, observability } from './stage';
+import { apiObservability, apiTelemetry, build, compatibility } from './stage';
 
-const bindings = Layer.mergeAll(D1.QueryDatabaseBinding, Telemetry());
+const bindings = Layer.mergeAll(D1.QueryDatabaseBinding, Telemetry(apiTelemetry));
 
 const api = Worker(
   'Api',
@@ -16,7 +16,7 @@ const api = Worker(
     build,
     compatibility,
     main: import.meta.url,
-    observability,
+    observability: apiObservability,
     placement: { mode: 'smart' },
     workersDev: { enabled: false, previewsEnabled: false },
   },

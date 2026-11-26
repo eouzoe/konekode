@@ -49,10 +49,15 @@ const refusal = (request: Request, url: URL): number | null => {
   return null;
 };
 
-const forward = (request: Request, api: Fetcher): Promise<Response> => {
+const forward = async (request: Request, api: Fetcher): Promise<Response> => {
   const headers = new Headers(request.headers);
   headers.set('content-type', intakeContentType);
-  return api.fetch(new Request(request, { headers }));
+  const answer = await api.fetch(new Request(request, { headers }));
+  const guarded = new Response(answer.body, answer);
+  for (const [name, value] of Object.entries(plainHeaders)) {
+    guarded.headers.set(name, value);
+  }
+  return guarded;
 };
 
 const intake = (request: Request, url: URL, env: Env): Promise<Response> | Response => {

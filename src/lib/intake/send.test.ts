@@ -3,10 +3,13 @@ import { expect, test } from 'bun:test';
 import { Option, Schema } from 'effect';
 import { assert, constantFrom, integer, property, record, stringMatching, uuid } from 'fast-check';
 
-import { ticket } from '../../../backend/contract';
+import { ticket, type Ticket as Envelope } from '../../../backend/contract';
 import { intakePath, seqLimit } from '../../../backend/limits';
-import { address, type Ticket } from './send';
+import { address, type Encoding, type Ticket } from './send';
 
+type Same<Left, Right> = [Left] extends [Right] ? ([Right] extends [Left] ? true : false) : false;
+
+const ticketMatches: Same<Ticket & { readonly encoding: Encoding }, Envelope> = true;
 const base = 'https://cp.example';
 const identifier = uuid().map((value) => value.toLowerCase());
 const sent = record({
@@ -22,6 +25,10 @@ const readBack = (path: string): unknown => {
   const fields = Object.fromEntries(new URL(path, base).searchParams);
   return Option.getOrNull(Schema.decodeUnknownOption(ticket)(fields));
 };
+
+test('the envelope the page builds has exactly the fields the backend reads', () => {
+  expect(ticketMatches).toBe(true);
+});
 
 test('whatever envelope the page sends, the backend reads back unchanged', () => {
   assert(

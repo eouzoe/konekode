@@ -9,14 +9,13 @@ test('the backend address is the site address with the Worker name in front', ()
   );
 });
 
-test('a local stage has no backend address to try and no wall', () => {
+test('a local stage has no backend address to try', () => {
   const target = targetOf(
     'e2e',
     { api: 'konekode-api-e2e-abc', site: 'http://localhost:38689' },
     null,
   );
   expect(target.api).toBeNull();
-  expect(target.local).toBe(true);
   expect(target.live).toBe(false);
 });
 

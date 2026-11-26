@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { checkAll, report, type Target, type Token } from './checks';
+import { checkAll, report, type Target } from './checks';
 
 const argumentsStart = 2;
 const outputs = Schema.Struct({ api: Schema.String, site: Schema.String });
@@ -12,15 +12,6 @@ const optional = (value: string | undefined): string | null => {
     return null;
   }
   return value;
-};
-
-const tokenFromEnv = (): Token | null => {
-  const id = optional(process.env.KONEKODE_CHECK_CLIENT_ID);
-  const secret = optional(process.env.KONEKODE_CHECK_CLIENT_SECRET);
-  if (id === null || secret === null) {
-    return null;
-  }
-  return { id, secret };
 };
 
 const backendFlags = (): Array<string> => {
@@ -55,9 +46,7 @@ const targetOf = (stage: string, recorded: Outputs, version: string | null): Tar
   return {
     api: apiAddress(site, recorded.api),
     live: stage === 'prod',
-    local: site.hostname === 'localhost',
     site,
-    token: tokenFromEnv(),
     version,
   };
 };

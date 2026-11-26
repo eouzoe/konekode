@@ -5,7 +5,7 @@ import { Effect, Layer } from 'effect';
 
 import api from './backend/api';
 import { Intake } from './backend/db';
-import { compatibility, intakeState, isLive, named, observability, build } from './backend/stage';
+import { compatibility, intakeState, named, observability, build } from './backend/stage';
 
 const local = (): boolean =>
   process.env.ALCHEMY_DEV === 'true' || process.env.KONEKODE_LOCAL === '1';
@@ -25,31 +25,6 @@ const localPort = (): { readonly dev?: { readonly port: number } } => {
   return { dev: { port } };
 };
 
-const viewer = (): string => {
-  const email = process.env.KONEKODE_PREVIEW_VIEWER ?? '';
-  if (email === '') {
-    throw new Error(
-      'KONEKODE_PREVIEW_VIEWER is needed to deploy a preview: run it through secretspec',
-    );
-  }
-  return email;
-};
-
-const previewAccess = (stage: string) => {
-  if (isLive(stage) || local()) {
-    return {};
-  }
-  return {
-    access: {
-      policies: [
-        { decision: 'allow', include: [{ email: viewer() }], name: 'viewer' },
-        { decision: 'non_identity', include: ['anyValidServiceToken'], name: 'checks' },
-      ],
-      sessionDuration: '24h',
-    },
-  } as const;
-};
-
 export default Stack(
   'Konekode',
   { providers: Layer.mergeAll(providers(), drizzleProviders()), state: records() },
@@ -65,7 +40,6 @@ export default Stack(
         runWorkerFirst: ['/api/*', '/learn/*'],
       },
       ...localPort(),
-      ...previewAccess(stage),
       build,
       compatibility,
       env: { API: backend, INTAKE: intakeState(stage) },

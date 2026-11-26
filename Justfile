@@ -7,7 +7,7 @@ dev: pch
 edit: pch
     PUBLIC_MODE=dev bun --bun run dev
 
-lean := "BUN_OPTIONS=--conditions=distilled-lazy ALCHEMY_FAST_DISTILLED=1"
+lean := "BUN_OPTIONS=--conditions=distilled-lazy"
 
 version := `git rev-parse --short HEAD` + `test -z "$(git status --porcelain)" || printf %s -dirty`
 

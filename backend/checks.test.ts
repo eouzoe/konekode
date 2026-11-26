@@ -117,9 +117,7 @@ const fakeFetch =
 const target = (live: boolean): Target => ({
   api: apiAddress,
   live,
-  local: true,
   site: new URL(origin),
-  token: null,
   version,
 });
 

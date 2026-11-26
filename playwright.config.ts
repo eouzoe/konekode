@@ -38,7 +38,6 @@ export default defineConfig({
   webServer: {
     command: `bun -e "${fresh}" && bun x alchemy dev --stage ${stage} --no-input`,
     env: {
-      ALCHEMY_FAST_DISTILLED: '1',
       BUN_OPTIONS: '--conditions=distilled-lazy',
       KONEKODE_LOCAL: '1',
       SITE_PORT: String(port),

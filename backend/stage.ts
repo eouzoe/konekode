@@ -11,6 +11,12 @@ const observability = {
   logs: { enabled: true, headSamplingRate: everything, invocationLogs: true, persist: true },
   traces: { enabled: true, headSamplingRate: everything, persist: true },
 };
+const apiObservability = { enabled: true, issues: { enabled: true } };
+const apiTelemetry = {
+  headSamplingRate: everything,
+  logs: { enabled: true, headSamplingRate: everything, invocationLogs: true, persist: true },
+  persist: true,
+};
 const build = { output: { sourcemap: true } };
 const nearTaiwan = 'apac';
 
@@ -37,4 +43,14 @@ const intakeState = (stage: string): string => {
   return intakeOpen;
 };
 
-export { compatibility, intakeState, isLive, named, observability, build, locationFor };
+export {
+  apiObservability,
+  apiTelemetry,
+  build,
+  compatibility,
+  intakeState,
+  isLive,
+  locationFor,
+  named,
+  observability,
+};

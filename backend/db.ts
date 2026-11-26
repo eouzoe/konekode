@@ -8,8 +8,11 @@ const props = Stack.useSync((stack) => ({
   migrations: './migrations',
   name: named('cp-intake', stack.stage),
 }));
-const keepWhenLive = RemovalPolicy.retain(Stack.useSync((stack) => isLive(stack.stage)));
+const live = Stack.useSync((stack) => isLive(stack.stage));
 
-const Intake = D1.Database('Intake', props).pipe(keepWhenLive);
+const Intake = D1.Database('Intake', props).pipe(
+  RemovalPolicy.retain(live),
+  RemovalPolicy.protect(live),
+);
 
 export { Intake };

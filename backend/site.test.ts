@@ -141,3 +141,20 @@ test('a page is marked with the platform it is opened on', async () => {
   expect(await response.text()).toContain('class="on-mac"');
   expect(response.headers.get('vary')).toContain('Sec-CH-UA-Platform');
 });
+
+test('whatever the backend answers, the site adds nosniff before it leaves', async () => {
+  const plain = new Response('Bad Request', { status: 400 });
+  const env: Env = {
+    API: fetcher([], () => plain),
+    ASSETS: fetcher([], () => new Response('page')),
+    INTAKE: open,
+  };
+  const request = new Request(address, {
+    body: 'x',
+    headers: { origin },
+    method: 'POST',
+  });
+  const response = await answer(request, env);
+  expect(response.status).toBe(400);
+  expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+});

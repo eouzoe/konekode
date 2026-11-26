@@ -1,14 +1,20 @@
 import { intakePath, status } from '../../../backend/limits';
 
-import type { Ticket as Envelope } from '../../../backend/contract';
-
 const { stored } = status;
 
-type Ticket = Omit<Envelope, 'encoding'>;
+type Encoding = 'gzip' | 'identity';
+
+interface Ticket {
+  readonly actor: string;
+  readonly kind: 'events' | 'replay';
+  readonly seq: number;
+  readonly session: string;
+  readonly site: string;
+}
 
 interface Packed {
   readonly body: ArrayBuffer;
-  readonly encoding: Envelope['encoding'];
+  readonly encoding: Encoding;
 }
 
 interface Answer {
@@ -19,7 +25,7 @@ interface Answer {
 const keepaliveLimit = 60_000;
 const unreached: Answer = { retryAfter: null, status: 0 };
 
-const address = (ticket: Ticket, encoding: Envelope['encoding']): string => {
+const address = (ticket: Ticket, encoding: Encoding): string => {
   const query = new URLSearchParams({
     actor: ticket.actor,
     encoding,
@@ -98,6 +104,7 @@ export {
   uploadLast,
   uploadNow,
   type Answer,
+  type Encoding,
   type Packed,
   type Ticket,
 };
