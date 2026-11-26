@@ -54,6 +54,7 @@ import {
 } from './contract';
 import { ShowCode } from './editor';
 import {
+  adapted,
   checked,
   currentOf,
   goBack,
@@ -723,7 +724,16 @@ const Lesson = LessonDef.make({
             ),
             quiet(WarmCompiler.make()),
           ),
-    ChangedFullscreen: ($, { full }) => $.evolve({ full }),
+    ChangedFullscreen: ($, { full }) => {
+      const model = { ...$.model, full };
+      const out = arrive(
+        model,
+        adapted(beats, flowOf(model), whereOf(model, $.props.fine)),
+        $.props.unit,
+        $.props.calm,
+      );
+      return $.set(out.model).run(...out.commands);
+    },
     ClickedBack: ($) => {
       const out = arrive(
         $.model,
@@ -745,7 +755,7 @@ const Lesson = LessonDef.make({
     },
     ClickedRestart: ($) => $.run(quiet(RestartUnit.make({ unit: $.props.unit }))),
     CompletedOpenEngine: ($, { passed, position, unlocked }) => {
-      const index = startAt(beats, position);
+      const index = startAt(beats, position, whereOf($.model, $.props.fine));
       const out = enter(
         { ...$.model, index, passed, phase: 'revealing', unlocked },
         $.props.unit,

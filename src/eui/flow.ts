@@ -98,16 +98,37 @@ const checked = (
 const played = (beats: ReadonlyArray<Beat>, flow: Flow, where: Where): Flow | null =>
   currentOf(beats, flow)?.after === 'next' ? goNext(beats, flow, where) : null;
 
-const startAt = (beats: ReadonlyArray<Beat>, position: string | null): number =>
-  Math.max(
+const adapted = (beats: ReadonlyArray<Beat>, flow: Flow, where: Where): Flow | null => {
+  if (
+    !where.full ||
+    flow.phase === 'blocked' ||
+    flow.phase === 'loading' ||
+    needsCheck(beats, flow) ||
+    currentOf(beats, flow)?.when === 'fullscreen'
+  ) {
+    return null;
+  }
+  const index = [flow.index + forward, flow.index + backward].find(
+    (at) => beats[at]?.when === 'fullscreen',
+  );
+  return index === undefined ? null : { ...flow, index, mismatch: false, phase: 'revealing' };
+};
+
+const startAt = (beats: ReadonlyArray<Beat>, position: string | null, where: Where): number => {
+  const at = Math.max(
     beats.findIndex((beat) => beat.id === position),
     0,
   );
+  const shown = beats.findIndex((beat, index) => index >= at && applies(beat, where));
+  return shown === -1 ? at : shown;
+};
 
 const isShown = (beats: ReadonlyArray<Beat>, index: number, at: number): boolean =>
   at <= index && beats.slice(at + forward, index + forward).every((beat) => beat.append === true);
 
 export {
+  adapted,
+  applies,
   checked,
   currentOf,
   goBack,
