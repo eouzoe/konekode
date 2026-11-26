@@ -8,6 +8,7 @@ const Paper = <Msg, Body extends View.Children<Msg>>(h: Html.H<Msg>, options: Pa
     .attr('data-part', 'paper')
     .attr('data-state', options.state)
     .attr('data-owner', options.owner)
+    .attr('data-mode', options.editMode ?? undefined)
     .children(
       h.p.attr('data-slot', 'title').children(options.title),
       h.div.attr('data-slot', 'body').children(options.body),

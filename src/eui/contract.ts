@@ -1,35 +1,65 @@
-import { Command, Component, UiSchema } from '@effect/ui';
-import { Schema } from 'effect';
+import { Command, Component, Mount, UiSchema } from '@effect/ui';
+import { Context, Effect, Schema, Stream } from 'effect';
 
 const Check = Schema.Literals(['drill', 'run']);
 
 const Happened = UiSchema.TaggedEnum({
+  Entered: { page: Schema.String },
   FinishedRun: {
     beat: Schema.String,
     by: Schema.Literals(['sprite', 'student']),
     state: Schema.String,
   },
   FinishedUnit: { unit: Schema.String },
+  Leaving: { from: Schema.String, to: Schema.String },
   LoadedCompiler: {},
   MissedCheck: { beat: Schema.String, kind: Check },
   PassedCheck: { beat: Schema.String, kind: Check },
+  Pressed: { part: Schema.String, variant: Schema.String },
   PressedRightKey: { beat: Schema.String, key: Schema.String },
   PressedWrongKey: { beat: Schema.String, key: Schema.String },
   ReachedBeat: { beat: Schema.String, stage: Schema.String },
 });
 type Happened = typeof Happened.Type;
 
+class Cues extends Context.Service<
+  Cues,
+  { readonly play: (happened: Happened) => Effect.Effect<void> }
+>()('cues/Cues') {}
+
 class PlayCue extends Command.Service<PlayCue>()('cues/PlayCue', {
   args: { happened: Happened },
   mode: 'queue',
   success: Component.Noop,
-}) {}
+}) {
+  static readonly layer = this.toLayer(
+    Effect.gen(function* playing() {
+      const cues = yield* Cues;
+      return ({ happened }) => Effect.as(cues.play(happened), Component.noop);
+    }),
+  );
+}
+
+const PressFeedback = Mount.make(
+  'PressFeedback',
+  { args: { part: Schema.String, variant: Schema.String } },
+  (node: HTMLElement, args) =>
+    Effect.gen(function* pressing() {
+      const cues = yield* Cues;
+      yield* Stream.runForEach(Stream.fromEventListener(node, 'click'), () =>
+        cues.play(Happened.Pressed({ part: args.part, variant: args.variant })),
+      );
+      return Component.noop;
+    }),
+);
 
 type ActionVariant = 'icon' | 'primary' | 'quiet' | 'secondary';
+type ActionIcon = 'back' | 'github' | 'next' | 'restart' | 'settings';
 
 interface ActionOptions<Msg> {
   readonly busy: boolean;
   readonly disabled: boolean;
+  readonly icon: ActionIcon | null;
   readonly label: string;
   readonly onPress: Msg;
   readonly variant: ActionVariant;
@@ -57,9 +87,11 @@ interface ChapterOptions {
 }
 
 type PaperState = 'editing' | 'passed' | 'reading' | 'running';
+type EditMode = 'insert' | 'normal';
 
 interface PaperOptions<Body> {
   readonly body: Body;
+  readonly editMode: EditMode | null;
   readonly hint: string;
   readonly mode: string;
   readonly owner: 'sprite' | 'student';
@@ -112,8 +144,11 @@ interface ProgressOptions {
 }
 
 export {
+  Cues,
   Happened,
   PlayCue,
+  PressFeedback,
+  type ActionIcon,
   type ActionOptions,
   type ActionVariant,
   type CellKind,
@@ -123,6 +158,7 @@ export {
   type DialogueLine,
   type DialogueOptions,
   type DialogueState,
+  type EditMode,
   type KeyCapView,
   type KeyboardOptions,
   type KeyState,

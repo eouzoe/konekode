@@ -11,10 +11,11 @@ import { pages } from '@/lib/site/pages';
   import { BrowserHost } from '@effect/ui/html';
   import { Effect, Layer } from 'effect';
 
+  import { services } from '@/parts/cues';
   import { Gallery } from '@/parts/gallery';
 
   const root = document.querySelector('#gallery');
   if (root !== null) {
-    Layer.launch(BrowserHost.mount(Gallery, {}, root)).pipe(Effect.runFork);
+    Layer.launch(BrowserHost.mount(Gallery, {}, root).pipe(Layer.provide(services))).pipe(Effect.runFork);
   }
 </script>

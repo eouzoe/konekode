@@ -1,6 +1,7 @@
 import { Button } from '@effect/ui-kit';
 
-import type { ActionOptions } from '@/eui/contract';
+import { PressFeedback, type ActionOptions } from '@/eui/contract';
+
 import type { Html } from '@effect/ui/html';
 
 const Action = <Msg>(h: Html.H<Msg>, options: ActionOptions<Msg>) =>
@@ -8,8 +9,10 @@ const Action = <Msg>(h: Html.H<Msg>, options: ActionOptions<Msg>) =>
     .class('part-action')
     .attr('data-part', 'action')
     .attr('data-variant', options.variant)
+    .attr('data-icon', options.icon ?? undefined)
     .attr('data-busy', String(options.busy))
     .attr('aria-label', options.label)
+    .onMount(PressFeedback({ part: 'action', variant: options.variant }))
     .children(options.variant === 'icon' ? '' : options.label);
 
 export { Action };

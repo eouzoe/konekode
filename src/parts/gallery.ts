@@ -80,6 +80,7 @@ const Gallery = GalleryDef.make({
           Action(h, {
             busy: false,
             disabled: false,
+            icon: variant === 'icon' ? 'settings' : null,
             label: variant,
             onPress: GalleryMessage.PressedAction({ variant }),
             variant,
@@ -88,6 +89,7 @@ const Gallery = GalleryDef.make({
         Action(h, {
           busy: false,
           disabled: true,
+          icon: null,
           label: '停用',
           onPress: GalleryMessage.PressedAction({ variant: 'disabled' }),
           variant: 'primary',
@@ -95,6 +97,7 @@ const Gallery = GalleryDef.make({
         Action(h, {
           busy: true,
           disabled: false,
+          icon: null,
           label: '忙碌',
           onPress: GalleryMessage.PressedAction({ variant: 'busy' }),
           variant: 'primary',
@@ -119,6 +122,7 @@ const Gallery = GalleryDef.make({
         ...paperStates.map((state) =>
           Paper(h, {
             body: [h.pre.children(sample)],
+            editMode: state === 'editing' ? 'insert' : null,
             hint: state === 'editing' ? '按 i 開始輸入' : '',
             mode: '-- NORMAL --',
             owner: 'student',
@@ -139,6 +143,7 @@ const Gallery = GalleryDef.make({
               }),
             ),
           ],
+          editMode: 'normal',
           hint: '',
           mode: '-- NORMAL --',
           owner: 'sprite',
@@ -146,10 +151,10 @@ const Gallery = GalleryDef.make({
           title: 'CodeMirror',
         }),
       ]),
-      section(
-        h,
-        '輸入輸出格',
-        cellStates.map((state) =>
+      section(h, '輸入輸出格', [
+        Cell(h, { kind: 'input', label: '輸入', state: 'value', status: '', text: '3 5' }),
+        Cell(h, { kind: 'expect', label: '應該輸出', state: 'value', status: '', text: '5\n3\n' }),
+        ...cellStates.map((state) =>
           Cell(h, {
             kind: 'output',
             label: '輸出',
@@ -158,7 +163,7 @@ const Gallery = GalleryDef.make({
             text: state === 'empty' ? '' : '11\n',
           }),
         ),
-      ),
+      ]),
       section(h, '片段卡', [Snippet(h, { text: 'cout << 11;' })]),
       section(
         h,

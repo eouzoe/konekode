@@ -491,6 +491,7 @@ const codeView = LessonDef.fragment((h, model: LessonModel) => {
   );
   return Paper(h, {
     body: [lines],
+    editMode: null,
     hint: '',
     mode: '',
     owner: 'student',
@@ -521,6 +522,7 @@ const drillView = LessonDef.fragment((h, model: LessonModel) => {
   return h.div.class('drill').children(
     Paper(h, {
       body: [target],
+      editMode: drill.mode,
       hint: demo ? '' : drillHint(drill),
       mode: modeLabel(drill.mode),
       owner: demo ? 'sprite' : 'student',
@@ -571,6 +573,7 @@ const runView = LessonDef.fragment((h, model: LessonModel) => {
     beat?.snippet === undefined ? null : Snippet(h, { text: beat.snippet }),
     Paper(h, {
       body: [code],
+      editMode: shown.mode,
       hint: model.hint,
       mode: model.keycap === '' ? modeLabel(shown.mode) : model.keycap,
       owner: sprite === null ? 'student' : 'sprite',
@@ -748,7 +751,10 @@ const Lesson = LessonDef.make({
         $.props.unit,
         $.props.calm,
       );
-      return $.set(out.model).run(...out.commands);
+      return $.set(out.model).run(
+        cue(Happened.Entered({ page: `learn/${$.props.unit}` })),
+        ...out.commands,
+      );
     },
     CompletedRunProgram: ($, { by, finished, output, token, view }) => {
       const ran = { ...$.model, busy: by === 'student' ? false : $.model.busy, ran: view };
@@ -830,6 +836,7 @@ const Lesson = LessonDef.make({
           Action(h, {
             busy: false,
             disabled: false,
+            icon: 'back',
             label: ui['page.back'],
             onPress: LessonMessage.ClickedBack(),
             variant: 'secondary',
@@ -837,6 +844,7 @@ const Lesson = LessonDef.make({
           Action(h, {
             busy: false,
             disabled: model.phase === 'blocked',
+            icon: 'next',
             label: ui['page.next'],
             onPress: LessonMessage.ClickedNext(),
             variant: 'primary',
@@ -844,6 +852,7 @@ const Lesson = LessonDef.make({
           Action(h, {
             busy: false,
             disabled: false,
+            icon: 'restart',
             label: ui['page.restart'],
             onPress: LessonMessage.ClickedRestart(),
             variant: 'quiet',

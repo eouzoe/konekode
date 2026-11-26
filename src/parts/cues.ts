@@ -1,8 +1,9 @@
-import { Component } from '@effect/ui';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 
-import { PlayCue } from '@/eui/contract';
+import { Cues, PlayCue } from '@/eui/contract';
 
-const cues = PlayCue.toLayer(() => Effect.succeed(Component.noop));
+const cues = Layer.succeed(Cues, { play: () => Effect.void });
 
-export { cues };
+const services = PlayCue.layer.pipe(Layer.provideMerge(cues));
+
+export { services };
