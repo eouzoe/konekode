@@ -21,10 +21,6 @@
   env.E2E_MESA = lib.optionalString pkgs.stdenv.isLinux "${pkgs.mesa}";
   env.E2E_GLVND = lib.optionalString pkgs.stdenv.isLinux "${pkgs.libglvnd}";
 
-  cachix.pull = [ "devenv" ];
-
-  git-hooks.enable = false;
-
   dotenv.enable = false;
 
   processes.dev = {
