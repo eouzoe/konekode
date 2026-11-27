@@ -1,5 +1,6 @@
+import { say, ui } from '@konekode/course/ui';
+
 import { expectedNow, isGuided, type Pressed, type Session } from '@/lib/edit/session';
-import { say, ui } from '@/lib/text/ui';
 import { describeCommand, describeNext, needsTelling } from '@/lib/typing/hint';
 import { messages } from '@/lib/typing/messages';
 

@@ -1,4 +1,5 @@
-import { beats } from '../src/units/start';
+import { beats } from '@konekode/course/start';
+
 import { current, currentId } from './scene-view';
 import { open, programs, advance } from './start-support';
 import { storedPosition, storedSummary } from './stored';

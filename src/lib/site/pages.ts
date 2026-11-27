@@ -1,4 +1,4 @@
-import strings from '@/units/text/zh-TW/site.json' with { type: 'json' };
+import strings from '@konekode/course/text/zh-TW/site.json' with { type: 'json' };
 
 type SiteKey = keyof typeof strings;
 

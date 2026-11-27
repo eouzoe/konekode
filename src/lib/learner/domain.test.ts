@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { allDomains } from '@/units/index';
+import { allDomains } from '@/lib/learner/units';
 
 import { components } from './domain';
 

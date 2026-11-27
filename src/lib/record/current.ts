@@ -1,8 +1,9 @@
+import { contentId } from '@konekode/course/content';
+
 import { faultCounts, onFault, report, type Fault } from '@/lib/fault/fault';
 import { countOf, setCount, type Counted, type Tally } from '@/lib/fault/tally';
 import { actorId, newId, sessionId } from '@/lib/identity/actor';
 import { siteVersion } from '@/lib/site/version';
-import { contentId } from '@/units/content';
 
 import { browserPersistence, slowAfter, type Storage, type Trouble } from './browser';
 import { faultKind, faultSummaryKind, type LearningEvent } from './event';

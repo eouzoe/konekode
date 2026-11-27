@@ -1,18 +1,17 @@
 import { UiSchema, type View } from '@effect/ui';
 import { Html } from '@effect/ui/html';
+import { Action } from '@konekode/views/action';
+import { Cell } from '@konekode/views/cell';
+import { Chapter } from '@konekode/views/chapter';
+import { Dialogue } from '@konekode/views/dialogue';
+import { Keyboard } from '@konekode/views/keyboard';
+import { Notice } from '@konekode/views/notice';
+import { Paper } from '@konekode/views/paper';
+import { Progress } from '@konekode/views/progress';
+import { Snippet } from '@konekode/views/snippet';
 import { Schema } from 'effect';
 
 import { ShowCode } from '@/eui/editor';
-
-import { Action } from './action';
-import { Cell } from './cell';
-import { Chapter } from './chapter';
-import { Dialogue } from './dialogue';
-import { Keyboard } from './keyboard';
-import { Notice } from './notice';
-import { Paper } from './paper';
-import { Progress } from './progress';
-import { Snippet } from './snippet';
 
 import type {
   ActionVariant,
@@ -23,7 +22,7 @@ import type {
   NoticeKind,
   PaperState,
   ProgressState,
-} from '@/eui/contract';
+} from '@konekode/contracts/parts';
 
 const GalleryMessage = UiSchema.TaggedEnum({
   PressedAction: { variant: Schema.String },

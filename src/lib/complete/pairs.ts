@@ -1,4 +1,4 @@
-import type { PairItem } from './catalog';
+import type { PairItem } from '@konekode/contracts/catalog';
 
 interface Open {
   readonly closer: string;

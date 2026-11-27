@@ -49,7 +49,7 @@ const saveSentence = async (files: Files, { id, locale, text, unit }: Edit): Pro
 
 const filesFor = ({ locale, unit }: Edit): Files => ({
   log: process.env.TEXT_LOG ?? '',
-  text: fileURLToPath(new URL(`src/units/text/${locale}/${unit}.json`, import.meta.url)),
+  text: fileURLToPath(new URL(`packages/course/src/text/${locale}/${unit}.json`, import.meta.url)),
 });
 
 const bodyOf = async (request: IncomingMessage): Promise<string> => {

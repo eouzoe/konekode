@@ -1,4 +1,4 @@
-import { ui } from '@/lib/text/ui';
+import { ui } from '@konekode/course/ui';
 
 const messages = {
   begin: ui['typing.begin'],

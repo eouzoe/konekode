@@ -13,7 +13,7 @@ import {
 } from './buffer';
 import { indentSplit } from './indent';
 
-import type { PairItem } from '@/lib/complete/catalog';
+import type { PairItem } from '@konekode/contracts/catalog';
 
 type Typed = (buffer: Buffer, rules: Rules) => Buffer | null;
 

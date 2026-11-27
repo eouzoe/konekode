@@ -1,5 +1,22 @@
 import { Command, Component, Subscription, UiSchema } from '@effect/ui';
 import { Html, HtmlSubscription } from '@effect/ui/html';
+import {
+  Happened,
+  PlayCue,
+  type CellState,
+  type DialogueLine,
+  type DialogueState,
+  type PaperState,
+} from '@konekode/contracts/parts';
+import { beats, starter, template } from '@konekode/course/start';
+import { ui } from '@konekode/course/ui';
+import { Action } from '@konekode/views/action';
+import { Cell } from '@konekode/views/cell';
+import { Dialogue } from '@konekode/views/dialogue';
+import { Keyboard } from '@konekode/views/keyboard';
+import { Paper } from '@konekode/views/paper';
+import { Progress } from '@konekode/views/progress';
+import { Snippet } from '@konekode/views/snippet';
 import { Duration, Effect, Layer, Schema, Stream } from 'effect';
 
 import { createBuffer } from '@/lib/edit/buffer';
@@ -11,7 +28,6 @@ import { busyStatus } from '@/lib/run/outcome';
 import { effectText, freeHint, quietHint, wrongHint } from '@/lib/run/view';
 import { fullscreenMark } from '@/lib/scene/conditions';
 import { fullscreenKeys } from '@/lib/site/device';
-import { ui } from '@/lib/text/ui';
 import {
   createDrill,
   escape,
@@ -21,23 +37,7 @@ import {
   remind,
   type Drill,
 } from '@/lib/typing/drill';
-import { Action } from '@/parts/action';
-import { Cell } from '@/parts/cell';
-import { Dialogue } from '@/parts/dialogue';
-import { Keyboard } from '@/parts/keyboard';
-import { Paper } from '@/parts/paper';
-import { Progress } from '@/parts/progress';
-import { Snippet } from '@/parts/snippet';
-import { beats, starter, template } from '@/units/start';
 
-import {
-  Happened,
-  PlayCue,
-  type CellState,
-  type DialogueLine,
-  type DialogueState,
-  type PaperState,
-} from './contract';
 import { ShowCode } from './editor';
 import {
   adapted,

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { array, assert, constantFrom, integer, property, record } from 'fast-check';
 
-import { allDomains } from '@/units/index';
+import { allDomains } from '@/lib/learner/units';
 
 import { keptKinds, modelKinds, progressKinds } from './kinds';
 import { handledKinds, learnerModel } from './model';

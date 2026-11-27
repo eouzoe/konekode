@@ -1,12 +1,23 @@
 {
   "name": "cp-lab-site",
   "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ],
+    "catalog": {
+      "@effect/ui": "https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b",
+      "@effect/ui-kit": "https://pkg.pr.new/Effect-TS/ui/@effect/ui-kit@87a704b",
+      "@types/bun": "1.4.4",
+      "effect": "4.1.6"
+    }
+  },
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro sync && effect-tsgo tsc --noEmit --runExternalCode -p tsconfig.typecheck.json && tsc -p sw/tsconfig.json",
+    "typecheck": "astro sync && effect-tsgo tsc --noEmit --runExternalCode -p tsconfig.typecheck.json && tsc -p sw/tsconfig.json && effect-tsgo tsc --noEmit -p packages/contracts && effect-tsgo tsc --noEmit -p packages/course && effect-tsgo tsc --noEmit -p packages/views",
     "lint": "oxlint",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check ."
@@ -20,9 +31,12 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.44.1",
     "@effect/sql-d1": "4.1.6",
-    "@effect/ui": "https://pkg.pr.new/Effect-TS/ui/@effect/ui@87a704b",
-    "@effect/ui-kit": "https://pkg.pr.new/Effect-TS/ui/@effect/ui-kit@87a704b",
+    "@effect/ui": "catalog:",
+    "@effect/ui-kit": "catalog:",
     "@fingerprintjs/fingerprintjs": "5.3.0",
+    "@konekode/contracts": "workspace:*",
+    "@konekode/course": "workspace:*",
+    "@konekode/views": "workspace:*",
     "@lezer/highlight": "^1.2.5",
     "@rrweb/record": "2.2.2",
     "@yowasp/clang": "^22.0.0-git20695-13",
@@ -30,7 +44,7 @@
     "astro": "^7.4.13",
     "brotli-dec-wasm": "^2.3.2",
     "drizzle-orm": "1.0.0-rc.5",
-    "effect": "4.1.6",
+    "effect": "catalog:",
     "gsap": "3.15.1",
     "isbot": "^5.2.4",
     "konekode-engine": "https://github.com/eouzoe/konekode-engine/releases/download/v0.1.2/konekode-engine-0.1.2.tgz",
@@ -46,7 +60,7 @@
     "@effect/platform-node": "4.1.6",
     "@effect/tsgo": "0.73.7",
     "@playwright/test": "1.64.1",
-    "@types/bun": "1.4.4",
+    "@types/bun": "catalog:",
     "@xstate/test": "2.0.0-beta.1",
     "drizzle-kit": "1.0.0-rc.5",
     "fast-check": "^4.11.0",

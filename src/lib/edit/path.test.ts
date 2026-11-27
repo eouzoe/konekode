@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { checksOf, planOf } from '@/units/index';
+import { checksOf, planOf } from '@konekode/course/units';
 
 import { expand } from './path';
 

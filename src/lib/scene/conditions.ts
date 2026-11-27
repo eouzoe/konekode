@@ -1,5 +1,6 @@
+import { say } from '@konekode/course/ui';
+
 import { fullscreenKeys, thisPlatform, type Platform } from '@/lib/site/device';
-import { say } from '@/lib/text/ui';
 
 const fullScreenQuery = '(display-mode: fullscreen)';
 const fullscreenMark = '{fullscreen}';

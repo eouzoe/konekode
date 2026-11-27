@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 
+import { beats as startBeats } from '@konekode/course/start';
 import {
   array,
   assert,
@@ -17,7 +18,6 @@ import {
 import { createActor } from 'xstate';
 
 import { sceneMachine, type BeatMeta } from '@/lib/scene/machine';
-import { beats as startBeats } from '@/units/start';
 
 import {
   adapted,
@@ -31,7 +31,7 @@ import {
   type Where,
 } from './flow';
 
-import type { Beat } from '@/lib/unit/format';
+import type { Beat } from '@konekode/contracts/unit';
 
 type Op =
   | { readonly type: 'AUTO' | 'BACK' | 'NEXT' | 'PLAYED' | 'REVEALED' }

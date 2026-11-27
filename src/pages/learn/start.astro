@@ -7,8 +7,8 @@ import { fullscreenKeys } from '@/lib/site/device';
 import { lessonData, pages, site } from '@/lib/site/pages';
 import { dues } from '@/lib/supply/plan';
 import { rules } from '@/lib/supply/rules';
-import { ui } from '@/lib/text/ui';
-import { beats, starter, template } from '@/units/start';
+import { ui } from '@konekode/course/ui';
+import { beats, starter, template } from '@konekode/course/start';
 
 const codeLines = template.split('\n');
 const data = lessonData(Astro.site ?? Astro.url, pages.start);

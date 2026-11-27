@@ -1,4 +1,4 @@
-import { say, ui } from '@/lib/text/ui';
+import { say, ui } from '@konekode/course/ui';
 
 import { explain } from './explain';
 

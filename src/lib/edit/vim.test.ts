@@ -1,9 +1,8 @@
 import { expect, test } from 'bun:test';
 
+import { keys as commandKeys } from '@konekode/contracts/catalog';
+import { checksOf, starterOf } from '@konekode/course/units';
 import { array, number, object, string } from 'zod';
-
-import { keys as commandKeys } from '@/lib/complete/catalog';
-import { checksOf, starterOf } from '@/units/index';
 
 import { createBuffer, lastColumn, type Rules } from './buffer';
 import { run } from './step';

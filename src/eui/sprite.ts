@@ -1,4 +1,6 @@
-import { catalog } from '@/lib/complete/catalog';
+import { catalog } from '@konekode/contracts/catalog';
+import { planOf } from '@konekode/course/units';
+
 import { createEngine } from '@/lib/complete/engine';
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand, keysOf } from '@/lib/edit/path';
@@ -14,10 +16,9 @@ import {
   type Drill,
 } from '@/lib/typing/drill';
 import { typeInto } from '@/lib/typing/keypress';
-import { planOf } from '@/units/index';
 
 import type { Session } from '@/lib/edit/session';
-import type { Beat } from '@/lib/unit/format';
+import type { Beat } from '@konekode/contracts/unit';
 
 interface DrillShow {
   readonly demo: boolean;

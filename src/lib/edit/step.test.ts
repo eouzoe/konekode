@@ -1,9 +1,8 @@
 import { expect, test } from 'bun:test';
 
+import { catalog, keys as commandKeys } from '@konekode/contracts/catalog';
+import { checksOf, planOf, starterOf } from '@konekode/course/units';
 import { array, assert, constantFrom, property } from 'fast-check';
-
-import { catalog, keys as commandKeys } from '@/lib/complete/catalog';
-import { checksOf, planOf, starterOf } from '@/units/index';
 
 import { createBuffer, lastColumn, lineStart, type Buffer, type Rules } from './buffer';
 import { keysOf } from './path';

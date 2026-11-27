@@ -1,4 +1,5 @@
-import { checksOf, planOf } from '../src/units/index';
+import { checksOf, planOf } from '@konekode/course/units';
+
 import { openAt } from './fuzz-support';
 import { arrive, tap } from './gate-support';
 import { studentEditor } from './gate-view';

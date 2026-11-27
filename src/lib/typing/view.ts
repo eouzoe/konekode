@@ -1,6 +1,7 @@
+import { ui } from '@konekode/course/ui';
+
 import { engine } from '@/lib/complete/current';
 import { autoClosed } from '@/lib/complete/pairs';
-import { ui } from '@/lib/text/ui';
 
 import { expectedChar, hasStarted, insertKey, isDone, isTyped, type Drill } from './drill';
 import { describeNext } from './hint';

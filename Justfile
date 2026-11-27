@@ -34,14 +34,14 @@ format:
     bun x oxfmt --write .
 
 test:
-    bun test src backend
+    bun test src backend packages
 
 engine-verify:
     bun src/lib/learner/engine.verify.ts
 
 results:
-    bun src/units/results.build.ts
-    bun x oxfmt --write src/units/results.ts
+    bun packages/course/src/results.build.ts
+    bun x oxfmt --write packages/course/src/results.ts
 
 check: typecheck lint test build
     bun x oxfmt --check .

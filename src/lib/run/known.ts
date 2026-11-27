@@ -1,5 +1,5 @@
-import { allChecks } from '@/units/index';
-import { results } from '@/units/results';
+import { results } from '@konekode/course/results';
+import { allChecks } from '@konekode/course/units';
 
 import type { Outcome } from './protocol';
 

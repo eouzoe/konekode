@@ -1,4 +1,4 @@
-import { say } from '@/lib/text/ui';
+import { say } from '@konekode/course/ui';
 
 interface Problem {
   readonly line: string;

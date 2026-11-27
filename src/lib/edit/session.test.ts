@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 
-import { catalog, keys as commandKeys } from '@/lib/complete/catalog';
-import { checksOf, planOf, starterOf } from '@/units/index';
+import { catalog, keys as commandKeys } from '@konekode/contracts/catalog';
+import { checksOf, planOf, starterOf } from '@konekode/course/units';
 
 import { createBuffer, type Rules } from './buffer';
 import { expand, keysOf } from './path';

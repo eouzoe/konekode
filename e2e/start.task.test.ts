@@ -1,4 +1,5 @@
-import { say, ui } from '../src/lib/text/ui';
+import { say, ui } from '@konekode/course/ui';
+
 import { studentEditor } from './gate-view';
 import { currentId } from './scene-view';
 import {

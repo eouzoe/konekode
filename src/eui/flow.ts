@@ -1,4 +1,4 @@
-import type { Beat } from '@/lib/unit/format';
+import type { Beat } from '@konekode/contracts/unit';
 
 type Phase = 'blocked' | 'loading' | 'ready' | 'revealing';
 type Check = 'drill' | 'run';

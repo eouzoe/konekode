@@ -1,7 +1,8 @@
+import { ui } from '@konekode/course/ui';
+import { beatsOf } from '@konekode/course/units';
+
 import { engine } from '@/lib/complete/current';
 import { onRecorded } from '@/lib/record/current';
-import { ui } from '@/lib/text/ui';
-import { beatsOf } from '@/units/index';
 
 interface Keys {
   readonly nudge: () => void;

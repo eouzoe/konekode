@@ -1,4 +1,5 @@
-import { ui } from '../src/lib/text/ui';
+import { ui } from '@konekode/course/ui';
+
 import { studentEditor } from './gate-view';
 import { currentId } from './scene-view';
 import { open, status, output, programs, draftAt, editorText, spriteEditor } from './start-support';

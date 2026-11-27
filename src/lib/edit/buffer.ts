@@ -1,4 +1,4 @@
-import type { PairItem } from '@/lib/complete/catalog';
+import type { PairItem } from '@konekode/contracts/catalog';
 
 type Mode = 'insert' | 'normal';
 

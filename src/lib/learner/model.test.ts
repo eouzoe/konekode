@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { array, assert, constantFrom, integer, property, record, type Arbitrary } from 'fast-check';
 
-import { allDomains } from '@/units/index';
+import { allDomains } from '@/lib/learner/units';
 
 import { components } from './domain';
 import { dayLength } from './memory';

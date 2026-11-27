@@ -1,3 +1,5 @@
+import { say, type UiKey } from '@konekode/course/ui';
+
 import { timing } from '../src/lib/intake/plan';
 import {
   blockedWait,
@@ -6,7 +8,6 @@ import {
   stallWait,
   storeName,
 } from '../src/lib/record/browser';
-import { say, type UiKey } from '../src/lib/text/ui';
 import { currentId } from './scene-view';
 import { open as openLesson } from './start-support';
 import { expect, test, type Page } from './test';

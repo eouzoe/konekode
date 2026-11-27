@@ -1,3 +1,5 @@
+import { contentId } from '@konekode/course/content';
+import { engineContent } from '@konekode/course/units';
 import init, { Engine, keptKinds } from 'konekode-engine';
 
 import { report } from '@/lib/fault/fault';
@@ -14,8 +16,6 @@ import {
   union,
   type infer as Infer,
 } from '@/lib/zod';
-import { contentId } from '@/units/content';
-import { engineContent } from '@/units/index';
 
 import type { LearningEvent } from '@/lib/record/event';
 

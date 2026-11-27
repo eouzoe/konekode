@@ -1,4 +1,4 @@
-import { say, type UiKey } from '@/lib/text/ui';
+import { say, type UiKey } from '@konekode/course/ui';
 
 import { onFault, type Fault } from './fault';
 

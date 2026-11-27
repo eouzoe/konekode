@@ -9,6 +9,7 @@
   "include": [
     ".astro/types.d.ts",
     "src/**/*.ts",
+    "packages/*/src/**/*.ts",
     "src/**/*.astro",
     "backend/**/*.ts",
     "alchemy.run.ts",

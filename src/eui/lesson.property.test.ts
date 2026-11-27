@@ -2,6 +2,8 @@ import { expect, test } from 'bun:test';
 
 import { Component } from '@effect/ui';
 import { Story } from '@effect/ui/testing';
+import { PlayCue } from '@konekode/contracts/parts';
+import { beats, template } from '@konekode/course/start';
 import { Schema } from 'effect';
 import {
   array,
@@ -19,9 +21,7 @@ import {
 } from 'fast-check';
 
 import { expectedChar } from '@/lib/typing/drill';
-import { beats, template } from '@/units/start';
 
-import { PlayCue } from './contract';
 import {
   Lesson,
   LessonMessage,

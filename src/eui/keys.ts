@@ -1,4 +1,5 @@
-import { ui } from '@/lib/text/ui';
+import { ui } from '@konekode/course/ui';
+
 import { expectedChar, hasStarted, insertKey, isTyped, type Drill } from '@/lib/typing/drill';
 import {
   enterKey,
@@ -11,7 +12,7 @@ import {
 } from '@/lib/typing/keyboard';
 import { messages } from '@/lib/typing/messages';
 
-import type { KeyCapView, KeyState } from './contract';
+import type { KeyCapView, KeyState } from '@konekode/contracts/parts';
 
 interface LastKey {
   readonly key: string;

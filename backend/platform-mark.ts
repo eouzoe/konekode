@@ -1,5 +1,6 @@
+import strings from '@konekode/course/text/zh-TW/ui.json' with { type: 'json' };
+
 import { fullscreenKeys, platformOf, type Platform } from '../src/lib/site/device';
-import strings from '../src/units/text/zh-TW/ui.json' with { type: 'json' };
 
 const ok = 200;
 

@@ -1,4 +1,4 @@
-import { beatsOf } from '@/units/index';
+import { beatsOf } from '@konekode/course/units';
 
 interface Parts {
   readonly field: HTMLTextAreaElement;

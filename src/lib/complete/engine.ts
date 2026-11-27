@@ -1,4 +1,4 @@
-import type { Item, PairItem } from './catalog';
+import type { Item, PairItem } from '@konekode/contracts/catalog';
 
 interface Engine {
   readonly brackets: () => Array<string>;

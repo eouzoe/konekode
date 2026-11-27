@@ -7,7 +7,12 @@
     "perf": "error"
   },
   "rules": {
-    "typescript/consistent-type-imports": ["error", { "fixStyle": "inline-type-imports" }],
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports"
+      }
+    ],
     "typescript/no-import-type-side-effects": "error",
     "import/no-duplicates": "error",
     "import/no-self-import": "error",
@@ -50,8 +55,20 @@
     "typescript/unified-signatures": "off",
     "typescript/no-empty-object-type": "off",
     "typescript/no-confusing-non-null-assertion": "off",
-    "typescript/array-type": ["error", { "default": "generic", "readonly": "generic" }],
-    "typescript/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }]
+    "typescript/array-type": [
+      "error",
+      {
+        "default": "generic",
+        "readonly": "generic"
+      }
+    ],
+    "typescript/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ]
   },
   "env": {
     "browser": true,
@@ -87,11 +104,12 @@
         "src/**/*.test.ts",
         "backend/**/*.test.ts",
         "**/*.build.ts",
-        "src/units/contest.ts",
+        "packages/course/src/contest.ts",
         "backend/stages.ts",
         "backend/checks.ts",
         "backend/check-stage.ts",
-        "backend/migration.ts"
+        "backend/migration.ts",
+        "packages/**/*.test.ts"
       ],
       "globals": {
         "Bun": "readonly"
@@ -129,6 +147,23 @@
       "files": ["backend/**/*.ts", "alchemy.run.ts"],
       "globals": {
         "HTMLRewriter": "readonly"
+      }
+    },
+    {
+      "files": ["packages/**/*.ts"],
+      "rules": {
+        "import/no-relative-parent-imports": "error",
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/*"],
+                "message": "A package sees only what its package.json declares; the site is not one of them."
+              }
+            ]
+          }
+        ]
       }
     }
   ]

@@ -1,11 +1,12 @@
-import { catalog } from '../src/lib/complete/catalog';
+import { catalog } from '@konekode/contracts/catalog';
+import { beatsOf, planOf, starterOf } from '@konekode/course/units';
+
 import { createEngine } from '../src/lib/complete/engine';
 import { createBuffer, type Rules } from '../src/lib/edit/buffer';
 import { goalOf, type Hint } from '../src/lib/edit/goal';
 import { expand, keysOf } from '../src/lib/edit/path';
 import { knownKeys, run } from '../src/lib/edit/step';
 import { nextKey } from '../src/lib/run/view';
-import { beatsOf, planOf, starterOf } from '../src/units/index';
 
 import type { Session } from '../src/lib/edit/session';
 import type { Page } from '@playwright/test';

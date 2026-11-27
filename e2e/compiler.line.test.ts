@@ -1,4 +1,5 @@
-import { ui } from '../src/lib/text/ui';
+import { ui } from '@konekode/course/ui';
+
 import { open, output, status } from './start-support';
 import { expect, test, type Page } from './test';
 

@@ -4,7 +4,7 @@ import { components, unitDomain, type UnitDomain } from './domain';
 import { componentOf, observe, type Component, type Domains } from './model';
 
 import type { Data, LearningEvent } from '@/lib/record/event';
-import type { Beat, Task } from '@/lib/unit/format';
+import type { Beat, Task } from '@konekode/contracts/unit';
 
 interface Content {
   readonly beats: ReadonlyArray<Beat>;

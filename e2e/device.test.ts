@@ -1,7 +1,7 @@
+import { ui } from '@konekode/course/ui';
 import { devices, type Route } from '@playwright/test';
 
 import { fullscreenMark } from '../src/lib/scene/conditions';
-import { ui } from '../src/lib/text/ui';
 import { currentId } from './scene-view';
 import { expect, test, type Page } from './test';
 

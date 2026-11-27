@@ -1,3 +1,6 @@
+import { ui } from '@konekode/course/ui';
+import { beatsOf } from '@konekode/course/units';
+
 import { components } from '@/lib/learner/domain';
 import {
   engineComponents,
@@ -8,8 +11,6 @@ import {
 } from '@/lib/learner/engine';
 import { flushLog, onRecorded, track } from '@/lib/record/current';
 import { clearDraft } from '@/lib/run/draft';
-import { ui } from '@/lib/text/ui';
-import { beatsOf } from '@/units/index';
 
 import { textEditor, type Editor } from './edit';
 import { jumpTo, skipFrom, type Entry } from './jump';

@@ -6,7 +6,7 @@ import { chunks } from '@/lib/perform/rhythm';
 import { array, boolean, object, string, type infer as Infer } from '@/lib/zod';
 
 import type { Desk } from './desk';
-import type { Plan } from '@/lib/unit/format';
+import type { Plan } from '@konekode/contracts/unit';
 
 interface Move {
   readonly keys: ReadonlyArray<string>;

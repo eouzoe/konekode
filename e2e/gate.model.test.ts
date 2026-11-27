@@ -1,5 +1,6 @@
+import { checksOf, planOf } from '@konekode/course/units';
+
 import { expectedNow, type Session } from '../src/lib/edit/session';
-import { checksOf, planOf } from '../src/units/index';
 import { openAt } from './fuzz-support';
 import { arrive, expectSame, tap } from './gate-support';
 import { studentEditor } from './gate-view';

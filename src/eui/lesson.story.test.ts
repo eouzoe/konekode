@@ -2,8 +2,8 @@ import { expect, test } from 'bun:test';
 
 import { Component } from '@effect/ui';
 import { Story } from '@effect/ui/testing';
+import { PlayCue } from '@konekode/contracts/parts';
 
-import { PlayCue } from './contract';
 import {
   Lesson,
   LessonMessage,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { beats } from '@/units/start';
+import { beats } from '@konekode/course/start';
 
 import {
   downloadMs,

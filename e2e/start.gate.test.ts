@@ -1,5 +1,6 @@
+import { say, ui } from '@konekode/course/ui';
+
 import { calmAfter } from '../src/lib/run/view';
-import { say, ui } from '../src/lib/text/ui';
 import { describeCommand, describeNext } from '../src/lib/typing/hint';
 import { studentEditor } from './gate-view';
 import { current, currentId } from './scene-view';

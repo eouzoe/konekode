@@ -1,10 +1,11 @@
+import { planFor, programOf, type Beat } from '@konekode/contracts/unit';
+import { beats as allBeats, starter, tasks } from '@konekode/course/start';
+
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand } from '@/lib/edit/path';
 import { knownKeys, step } from '@/lib/edit/step';
 import { knownOutcome } from '@/lib/run/known';
 import { isFullScreen } from '@/lib/scene/conditions';
-import { planFor, programOf, type Beat } from '@/lib/unit/format';
-import { beats as allBeats, starter, tasks } from '@/units/start';
 
 const fromEnd = -1;
 
@@ -96,6 +97,6 @@ export {
 export { describeNext, needsTelling } from '@/lib/typing/hint';
 export { messages } from '@/lib/typing/messages';
 export { createBuffer, type Buffer } from '@/lib/edit/buffer';
-export { type Beat } from '@/lib/unit/format';
-export { starter, template } from '@/units/start';
+export { type Beat } from '@konekode/contracts/unit';
+export { starter, template } from '@konekode/course/start';
 export { beats, keysNow, outputOf, press, runBufferAt, runs };

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 
-import { catalog } from './catalog';
+import { catalog } from '@konekode/contracts/catalog';
+
 import { createEngine } from './engine';
 
 const everything = new Set(catalog.map((item) => item.id));

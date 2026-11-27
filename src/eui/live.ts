@@ -1,6 +1,5 @@
+import { services as cues } from '@konekode/views/cues';
 import { Layer } from 'effect';
-
-import { services as cues } from '@/parts/cues';
 
 import { LessonCommands } from './lesson';
 import { Compiler, Learner } from './services';

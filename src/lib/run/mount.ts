@@ -1,6 +1,7 @@
+import { planOf, starterOf } from '@konekode/course/units';
+
 import { engine } from '@/lib/complete/current';
 import { createBuffer, lastColumn, type Buffer, type Rules } from '@/lib/edit/buffer';
-import { planOf, starterOf } from '@/units/index';
 
 import { createDesk, type Desk } from './desk';
 import { readDraft, writeDraft } from './draft';

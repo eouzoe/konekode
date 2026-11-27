@@ -1,8 +1,8 @@
+import { checksOf, planOf } from '@konekode/course/units';
 import { array } from 'zod';
 
 import { expand } from '../src/lib/edit/path';
 import { beatSchema, type BeatMeta } from '../src/lib/scene/machine';
-import { checksOf, planOf } from '../src/units/index';
 import { send, studentEditor } from './gate-view';
 import { currentId, type Current } from './scene-view';
 import { storedPosition, storedSummary } from './stored';

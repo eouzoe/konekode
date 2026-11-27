@@ -1,5 +1,6 @@
+import { beatsOf, checksOf, planOf } from '@konekode/course/units';
+
 import { expectedNow, press } from '../src/lib/edit/session';
-import { beatsOf, checksOf, planOf } from '../src/units/index';
 import { generator, openAnywhere, pickFrom } from './fuzz-support';
 import { arrive, expectSame, tap, type Walk } from './gate-support';
 import { studentEditor } from './gate-view';

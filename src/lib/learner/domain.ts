@@ -1,7 +1,8 @@
-import { keys } from '@/lib/complete/catalog';
+import { keys } from '@konekode/contracts/catalog';
+import { pathOf, type Beat, type Task } from '@konekode/contracts/unit';
+
 import { expand } from '@/lib/edit/path';
 import { insertKey } from '@/lib/typing/drill';
-import { pathOf, type Beat, type Task } from '@/lib/unit/format';
 
 interface UnitDomain {
   readonly shows: ReadonlyMap<string, ReadonlyArray<string>>;

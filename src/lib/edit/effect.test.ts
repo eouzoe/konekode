@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { catalog, keys as commandKeys } from '@/lib/complete/catalog';
+import { catalog, keys as commandKeys } from '@konekode/contracts/catalog';
 
 import { createBuffer, type Buffer, type Rules } from './buffer';
 import { effectOf } from './effect';
