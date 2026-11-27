@@ -27,6 +27,10 @@ const ticket = Schema.Struct({
 
 type Ticket = typeof ticket.Type;
 
+const identifying = Object.entries(ticket.fields).flatMap(([name, field]) =>
+  field === identifier ? [name] : [],
+);
+
 const body = Schema.Uint8Array.pipe(HttpApiSchema.asUint8Array({ contentType: intakeContentType }));
 
 class Unreadable extends Schema.TaggedError<Unreadable>()('Unreadable', {}) {}
@@ -76,7 +80,7 @@ const accept = HttpApiEndpoint.post('accept', intakePath, {
   payload: body,
   query: ticket,
   success: HttpApiSchema.NoContent,
-});
+}).annotate(HttpApi.RedactedNames, { query: identifying });
 
 const intakeGroup = HttpApiGroup.make('Intake').add(accept);
 

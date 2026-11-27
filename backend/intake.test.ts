@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 
-import { Effect, Layer, Option, Schema } from 'effect';
+import { Effect, Layer, Option, Schema, Tracer } from 'effect';
 import { HttpRouter } from 'effect/http';
 import { TestClock } from 'effect/testing';
 
@@ -224,6 +224,37 @@ test('every answer from the intake tells the browser not to guess its type', asy
   expect(answers.map((response) => response.headers.get('x-content-type-options'))).toEqual(
     Array.from({ length: answers.length }, () => 'nosniff'),
   );
+});
+
+const traced = async (request: Request): Promise<Array<Tracer.NativeSpan>> => {
+  const spans: Array<Tracer.NativeSpan> = [];
+  const recorder = Tracer.make({
+    span: (options) => {
+      const span = new Tracer.NativeSpan(options);
+      spans.push(span);
+      return span;
+    },
+  });
+  const app = intakeApp.pipe(
+    Layer.provide(Layer.succeed(Store, recording().store)),
+    Layer.provide(clockAt(lateAfternoon)),
+    Layer.provideMerge(Layer.succeed(Tracer.Tracer, recorder)),
+  );
+  const { dispose, handler } = HttpRouter.toWebHandler(app, { disableLogger: true });
+  await handler(request);
+  await dispose();
+  return spans;
+};
+
+test('no span records who sent a batch, whether it was kept or refused', async () => {
+  const recorded = await Promise.all([traced(fresh()), traced(post(query({ kind: 'nope' })))]);
+  for (const spans of recorded) {
+    const server = spans.find((span) => span.attributes.has('url.full'));
+    expect(String(server?.attributes.get('url.full'))).toContain('actor=');
+    const written = JSON.stringify(spans.map((span) => [span.name, [...span.attributes]]));
+    expect(written).not.toContain(actor);
+    expect(written).not.toContain(session);
+  }
 });
 
 test('a failing database answers 503 so the browser retries later', async () => {

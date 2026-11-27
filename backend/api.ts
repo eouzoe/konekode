@@ -1,12 +1,28 @@
 import { D1, Telemetry, Worker } from '@alchemy.run/cloudflare';
-import { Effect, Layer } from 'effect';
+import { ALCHEMY_DEV } from 'alchemy';
+import { layerOtlp } from 'alchemy/Telemetry';
+import { Config, Effect, Layer, Option } from 'effect';
 import { HttpRouter } from 'effect/http';
 
 import { D1Store } from './d1';
 import { intakeApp } from './intake';
 import { apiObservability, apiTelemetry, build, compatibility } from './stage';
 
-const bindings = Layer.mergeAll(D1.QueryDatabaseBinding, Telemetry(apiTelemetry));
+const localCollector = Config.option(Config.URL('KONEKODE_OTLP'));
+
+const telemetry = Layer.unwrap(
+  Effect.gen(function* choosing() {
+    if (!(yield* ALCHEMY_DEV)) {
+      return Telemetry(apiTelemetry);
+    }
+    return Option.match(yield* localCollector, {
+      onNone: () => Telemetry(apiTelemetry),
+      onSome: (url) => layerOtlp({ url: url.href }),
+    });
+  }).pipe(Effect.orDie),
+);
+
+const bindings = Layer.mergeAll(D1.QueryDatabaseBinding, telemetry);
 
 const api = Worker(
   'Api',
