@@ -1,6 +1,6 @@
 import { Option, Schema } from 'effect';
 
-import { bodyLimit, closedFor, intakePath, status } from './limits';
+import { bodyLimit, closedFor, intakePath, status, versionHeader } from './limits';
 
 interface Target {
   readonly api: string | null;
@@ -20,6 +20,8 @@ type Fetch = (input: Request) => Promise<Response>;
 interface Probe {
   readonly fetch: Fetch;
   readonly githubToken?: string | undefined;
+  readonly now?: () => number;
+  readonly sleep?: (milliseconds: number) => Promise<void>;
   readonly target: Target;
 }
 
@@ -96,6 +98,18 @@ const scriptsOf = async (probe: Probe): Promise<Array<string>> => {
   return [...new Set(paths)];
 };
 
+const scriptTexts = async (
+  probe: Probe,
+  scripts: ReadonlyArray<string>,
+): Promise<Array<string>> => {
+  const first = await Promise.all(scripts.map((path) => textOf(probe, path)));
+  const imported = first.flatMap((text) =>
+    [...text.matchAll(importPattern)].map((match) => `/_astro/${match.groups?.name ?? ''}`),
+  );
+  const second = [...new Set(imported)].filter((path) => !scripts.includes(path));
+  return [...first, ...(await Promise.all(second.map((path) => textOf(probe, path))))];
+};
+
 const versionResult = async (
   probe: Probe,
   scripts: ReadonlyArray<string>,
@@ -104,12 +118,7 @@ const versionResult = async (
   if (version === null) {
     return [];
   }
-  const first = await Promise.all(scripts.map((path) => textOf(probe, path)));
-  const imported = first.flatMap((text) =>
-    [...text.matchAll(importPattern)].map((match) => `/_astro/${match.groups?.name ?? ''}`),
-  );
-  const second = [...new Set(imported)].filter((path) => !scripts.includes(path));
-  const texts = [...first, ...(await Promise.all(second.map((path) => textOf(probe, path))))];
+  const texts = await scriptTexts(probe, scripts);
   const found = texts.some((text) => text.includes(version));
   return [result('版本', found, `頁面的程式裡有「${version}」：${String(found)}`)];
 };
@@ -270,7 +279,7 @@ const dashboardOnly = [
   '遷移：__alchemy_migrations 三筆、時間是原本的',
 ];
 
-const checkAll = async (probe: Probe): Promise<Array<Result>> => {
+const checkEvery = async (probe: Probe): Promise<Array<Result>> => {
   const checks = [
     guarded('頁面', site),
     guarded('靜態檔', assets),
@@ -280,6 +289,99 @@ const checkAll = async (probe: Probe): Promise<Array<Result>> => {
   ];
   const groups = await Promise.all(checks.map((check) => check(probe)));
   return groups.flat();
+};
+
+const waitLimit = 60_000;
+const waitEvery = 2000;
+const millisecondsPerSecond = 1000;
+const arrivalCheck = '新版到位';
+
+interface Kind {
+  readonly name: string;
+  readonly read: (probe: Probe, version: string) => Promise<string | null>;
+}
+
+type Seen = ReadonlyMap<string, string | null>;
+
+interface Arrival {
+  readonly passed: boolean;
+  readonly seen: Seen;
+  readonly waited: number;
+}
+
+const scriptsVersion = async (probe: Probe, version: string): Promise<string | null> => {
+  const texts = await scriptTexts(probe, await scriptsOf(probe));
+  if (texts.some((text) => text.includes(version))) {
+    return version;
+  }
+  return null;
+};
+
+const workerVersion =
+  (path: string) =>
+  async (probe: Probe): Promise<string | null> => {
+    const response = await send(probe, path);
+    return response.headers.get(versionHeader);
+  };
+
+const kinds: ReadonlyArray<Kind> = [
+  { name: '頁面的程式', read: scriptsVersion },
+  ...['/learn/start/', ...missingAssets].map((path) => ({ name: path, read: workerVersion(path) })),
+];
+
+const pause = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+
+const round = async (probe: Probe, version: string, seen: Seen): Promise<Seen> => {
+  const pending = kinds.filter((kind) => seen.get(kind.name) !== version);
+  const read = await Promise.all(
+    pending.map((kind) => kind.read(probe, version).catch(() => null)),
+  );
+  return new Map([
+    ...seen,
+    ...pending.map((kind, index) => [kind.name, read[index] ?? null] as const),
+  ]);
+};
+
+const waitFor = async (
+  probe: Probe,
+  version: string,
+  start: number,
+  seen: Seen,
+): Promise<Arrival> => {
+  const now = probe.now ?? Date.now;
+  const next = await round(probe, version, seen);
+  const waited = now() - start;
+  if (kinds.every((kind) => next.get(kind.name) === version)) {
+    return { passed: true, seen: next, waited };
+  }
+  if (waited >= waitLimit) {
+    return { passed: false, seen: next, waited };
+  }
+  await (probe.sleep ?? pause)(waitEvery);
+  return waitFor(probe, version, start, next);
+};
+
+const arrivalResult = async (probe: Probe, version: string): Promise<Result> => {
+  const start = (probe.now ?? Date.now)();
+  const arrival = await waitFor(probe, version, start, new Map());
+  const seconds = String(Math.round(arrival.waited / millisecondsPerSecond));
+  const each = kinds.map((kind) => `${kind.name}：${arrival.seen.get(kind.name) ?? '無'}`);
+  return result(arrivalCheck, arrival.passed, `等了 ${seconds} 秒；${each.join('，')}`);
+};
+
+const checkAll = async (probe: Probe): Promise<Array<Result>> => {
+  const { version } = probe.target;
+  if (version === null) {
+    return checkEvery(probe);
+  }
+  const arrived = await arrivalResult(probe, version);
+  if (!arrived.passed) {
+    return [arrived];
+  }
+  return [arrived, ...(await checkEvery(probe))];
 };
 
 const mark = (passed: boolean): string => {

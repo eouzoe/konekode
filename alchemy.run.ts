@@ -42,7 +42,11 @@ export default Stack(
       ...localPort(),
       build,
       compatibility,
-      env: { API: backend, INTAKE: intakeState(stage) },
+      env: {
+        API: backend,
+        INTAKE: intakeState(stage),
+        VERSION: process.env.SITE_VERSION ?? 'local',
+      },
       main: './backend/site.ts',
       name: named('cp', stage),
       observability,

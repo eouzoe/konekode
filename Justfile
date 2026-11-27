@@ -56,7 +56,7 @@ e2e-stage stage *args:
     KONEKODE_E2E_BASE="$(bun -e "import { outputsOf } from './backend/check-stage'; console.log((await outputsOf('{{ stage }}')).site)")" just e2e-direct {{args}}
 
 deploy stage: check e2e
-    {{ lean }} secretspec run -- bun x alchemy deploy --stage {{stage}}
+    SITE_VERSION="{{ version }}" {{ lean }} secretspec run -- bun x alchemy deploy --stage {{stage}}
 
 check-stage stage version="":
     bun backend/check-stage.ts '{{ stage }}' '{{ version }}'

@@ -21,6 +21,7 @@ const status = {
 };
 
 const plainHeaders = { 'x-content-type-options': 'nosniff' };
+const versionHeader = 'x-site-version';
 
 export {
   bodyLimit,
@@ -34,4 +35,5 @@ export {
   seqLimit,
   status,
   textLimit,
+  versionHeader,
 };

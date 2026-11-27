@@ -57,6 +57,8 @@ if (import.meta.main) {
   const results = await checkAll({
     fetch: (input) => fetch(input),
     githubToken: process.env.GITHUB_TOKEN,
+    now: () => Date.now(),
+    sleep: (milliseconds) => Bun.sleep(milliseconds),
     target,
   });
   process.stdout.write(`${report(results)}\n`);

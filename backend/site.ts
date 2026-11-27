@@ -6,6 +6,7 @@ import {
   intakePath,
   plainHeaders,
   status,
+  versionHeader,
 } from './limits';
 import { markPlatform } from './platform-mark';
 
@@ -17,6 +18,7 @@ interface Env {
   readonly API: Fetcher;
   readonly ASSETS: Fetcher;
   readonly INTAKE: string;
+  readonly VERSION: string;
 }
 
 const refuse = (code: number): Response =>
@@ -82,7 +84,7 @@ const uncached = (page: Response): Response => {
   return kept;
 };
 
-const serve = async (request: Request, env: Env): Promise<Response> => {
+const answer = async (request: Request, env: Env): Promise<Response> => {
   const url = new URL(request.url);
   if (url.pathname === intakePath) {
     return intake(request, url, env);
@@ -91,6 +93,13 @@ const serve = async (request: Request, env: Env): Promise<Response> => {
     return refuse(status.notFound);
   }
   return markPlatform(request, uncached(await env.ASSETS.fetch(request)));
+};
+
+const serve = async (request: Request, env: Env): Promise<Response> => {
+  const answered = await answer(request, env);
+  const stamped = new Response(answered.body, answered);
+  stamped.headers.set(versionHeader, env.VERSION);
+  return stamped;
 };
 
 const site = { fetch: serve };

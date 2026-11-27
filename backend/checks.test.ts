@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test';
 import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/http';
 
-import { checkAll, report, type Result, type Target } from './checks';
+import { checkAll, report, type Probe, type Result, type Target } from './checks';
 import { intakeApp } from './intake';
 import { intakeClosed, intakeOpen } from './limits';
 import site, { type Env, type Fetcher } from './site';
@@ -32,6 +32,7 @@ interface Shape {
   readonly dropHeader?: string;
   readonly intake: string;
   readonly live: boolean;
+  readonly served?: (path: string) => string;
 }
 
 const robotsMeta = (live: boolean): string => {
@@ -116,6 +117,7 @@ const fakeFetch =
       API: api,
       ASSETS: { fetch: (inner) => Promise.resolve(asset(new URL(inner.url).pathname, shape)) },
       INTAKE: shape.intake,
+      VERSION: shape.served?.(new URL(request.url).pathname) ?? version,
     };
     return compressed(request, await site.fetch(await onTheWire(request), env));
   };
@@ -197,4 +199,75 @@ test('a missing header and an open intake on prod are named in the report', asyn
     '入口關著的 Retry-After',
   ]);
   expect(report(results)).toContain('✘ 安全標頭 /：少了：x-frame-options');
+});
+
+interface Clock {
+  at: number;
+  readonly slept: Array<number>;
+}
+
+const clocked = (): [Clock, Pick<Probe, 'now' | 'sleep'>] => {
+  const clock: Clock = { at: 0, slept: [] };
+  return [
+    clock,
+    {
+      now: () => clock.at,
+      sleep: (milliseconds) => {
+        clock.at += milliseconds;
+        clock.slept.push(milliseconds);
+        return Promise.resolve();
+      },
+    },
+  ];
+};
+
+const lateMissing = (late: number): ((path: string) => string) => {
+  const asked = new Map<string, number>();
+  return (path) => {
+    if (!path.startsWith('/_astro/does-not-exist') && !path.startsWith('/parts/')) {
+      return version;
+    }
+    const times = (asked.get(path) ?? 0) + 1;
+    asked.set(path, times);
+    if (times > late) {
+      return version;
+    }
+    return 'old0000';
+  };
+};
+
+test('when the new version is already everywhere the checks start without sleeping', async () => {
+  const [clock, timing] = clocked();
+  const shape = { intake: intakeOpen, live: false };
+  const results = await checkAll({ fetch: fakeFetch(shape), target: target(false), ...timing });
+  expect(failed(results)).toEqual([]);
+  expect(clock.slept).toEqual([]);
+  expect(results[0]?.name).toBe('新版到位');
+  expect(results.map((each) => each.name)).toContain('上傳 204');
+});
+
+test('a page already new while missing files still answer from the old version waits two rounds before checking', async () => {
+  const [clock, timing] = clocked();
+  const shape = { intake: intakeOpen, live: false, served: lateMissing(2) };
+  const results = await checkAll({ fetch: fakeFetch(shape), target: target(false), ...timing });
+  expect(failed(results)).toEqual([]);
+  expect(clock.slept).toEqual([2000, 2000]);
+  expect(results[0]?.detail).toContain('等了 4 秒');
+  expect(results.map((each) => each.name)).toContain('缺檔不快取');
+});
+
+test('a version that never arrives fails after sixty seconds, names what each kind answered and runs nothing else', async () => {
+  const [clock, timing] = clocked();
+  const shape = { intake: intakeOpen, live: false, served: lateMissing(Infinity) };
+  const results = await checkAll({ fetch: fakeFetch(shape), target: target(false), ...timing });
+  expect(results.map((each) => each.name)).toEqual(['新版到位']);
+  expect(failed(results)).toEqual(['新版到位']);
+  expect(clock.at).toBe(60_000);
+  const [arrival] = results;
+  expect(arrival?.detail).toContain('等了 60 秒');
+  expect(arrival?.detail).toContain('頁面的程式：abc1234');
+  expect(arrival?.detail).toContain('/learn/start/：abc1234');
+  expect(arrival?.detail).toContain('/parts/0000000000000000：old0000');
+  expect(arrival?.detail).toContain('/_astro/does-not-exist-0000.js：old0000');
+  expect(report(results)).toContain('✘ 新版到位');
 });

@@ -2,12 +2,20 @@ import { expect, test } from 'bun:test';
 
 import { assert, asyncProperty, constantFrom, integer, stringMatching, tuple } from 'fast-check';
 
-import { bodyLimit, closedFor, intakeContentType, intakeOpen as open, intakePath } from './limits';
+import {
+  bodyLimit,
+  closedFor,
+  intakeContentType,
+  intakeOpen as open,
+  intakePath,
+  versionHeader,
+} from './limits';
 import site, { type Env, type Fetcher } from './site';
 
 const origin = 'https://example.test';
 const ticket = 'actor=a&session=b&site=c&kind=events&encoding=gzip&seq=1';
 const address = `${origin}${intakePath}?${ticket}`;
+const deployed = 'abc1234';
 
 interface Seen {
   readonly api: Array<Request>;
@@ -27,6 +35,7 @@ const environment = (intake: string): [Env, Seen] => {
     API: fetcher(seen.api, () => new Response(null, { status: 204 })),
     ASSETS: fetcher(seen.assets, () => new Response('page')),
     INTAKE: intake,
+    VERSION: deployed,
   };
   return [env, seen];
 };
@@ -135,6 +144,7 @@ test('a page is marked with the platform it is opened on', async () => {
     API: fetcher([], () => new Response(null, { status: 204 })),
     ASSETS: fetcher(seen, html),
     INTAKE: 'closed',
+    VERSION: deployed,
   };
   const request = new Request(`${origin}/learn/start/`, {
     headers: { 'sec-ch-ua-platform': '"macOS"' },
@@ -150,6 +160,7 @@ test('whatever the backend answers, the site adds nosniff before it leaves', asy
     API: fetcher([], () => plain),
     ASSETS: fetcher([], () => new Response('page')),
     INTAKE: open,
+    VERSION: deployed,
   };
   const request = new Request(address, {
     body: 'x',
@@ -174,6 +185,7 @@ const assetsAnswering = (status: number): Env => ({
     () => new Response(null, { headers: { 'cache-control': longCache }, status }),
   ),
   INTAKE: open,
+  VERSION: deployed,
 });
 
 test('an error from the static assets is never kept by a cache, whatever the path', async () => {
@@ -192,6 +204,19 @@ test('a successful static asset keeps the cache rule it was served with', async 
       const response = await answer(new Request(`${origin}${path}`), assetsAnswering(status));
       expect(response.status).toBe(status);
       expect(response.headers.get('cache-control')).toBe(longCache);
+    }),
+  );
+});
+
+test('every answer the site gives carries the version it was deployed as, whatever the path and status', async () => {
+  const anyPath = tuple(
+    constantFrom('/_astro/', '/parts/', '/', '/learn/', '/api/', intakePath),
+    stringMatching(/^[a-z0-9.-]{0,24}$/u),
+  ).map(([prefix, rest]) => `${prefix}${rest}`);
+  await assert(
+    asyncProperty(anyPath, integer({ max: 599, min: 200 }), async (path, status) => {
+      const response = await answer(new Request(`${origin}${path}`), assetsAnswering(status));
+      expect(response.headers.get(versionHeader)).toBe(deployed);
     }),
   );
 });
