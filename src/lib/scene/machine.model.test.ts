@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 
-import { assertTestCoverage, propertyTest, testPaths } from '@xstate/test';
+import { assertTestCoverage, mergeEventGenerators, propertyTest, testPaths } from '@xstate/test';
+import { eventsFromSchemas } from '@xstate/test/effect-schema';
 import { boolean, constant, constantFrom, record, string } from 'fast-check';
 
 import { sceneMachine, type BeatMeta } from './machine';
@@ -38,7 +39,7 @@ const check = (context: Shape): void => {
   }
 };
 
-const events = {
+const explicit = {
   CHECKED: [
     {
       case: 'expected',
@@ -61,6 +62,8 @@ const events = {
   ],
   REVEALED: constant({}),
 };
+
+const events = mergeEventGenerators(eventsFromSchemas(sceneMachine), explicit);
 
 test('隨機操作：沒過關到不了關卡後面，位置不會出界', async () => {
   const { coverage } = await propertyTest(sceneMachine, {

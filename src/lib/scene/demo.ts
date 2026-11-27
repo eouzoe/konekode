@@ -1,4 +1,6 @@
-import { array, string } from '@/lib/zod';
+import { Schema } from 'effect';
+
+const decodeKeys = Schema.decodeUnknownSync(Schema.Array(Schema.String));
 
 const demoStart = (beats: ReadonlyArray<HTMLElement>, index: number): number =>
   beats.findLastIndex((beat, at) => at <= index && (beat.dataset.demo ?? '').startsWith('reset'));
@@ -25,7 +27,7 @@ const readKeys = (beat: HTMLElement | undefined): Array<string> | null => {
     return null;
   }
   const value: unknown = JSON.parse(raw);
-  return array(string()).parse(value);
+  return [...decodeKeys(value)];
 };
 
 interface Detail {

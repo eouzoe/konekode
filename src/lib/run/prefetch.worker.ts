@@ -1,10 +1,13 @@
-import { array, object, string } from '@/lib/zod';
+import { Schema } from 'effect';
 
 import { listPath } from './packed';
 
 import type { PrefetchMessage } from './protocol';
 
-const listSchema = object({ parts: array(string().regex(/^[\da-f]{64}$/u)) });
+const listSchema = Schema.Struct({
+  parts: Schema.Array(Schema.String.pipe(Schema.check(Schema.isPattern(/^[\da-f]{64}$/u)))),
+});
+const decodeList = Schema.decodeUnknownSync(listSchema);
 
 const lanes = 3;
 const quietMs = 20_000;
@@ -78,7 +81,7 @@ const fetchList = async (controller: AbortController): Promise<Array<string>> =>
     if (!response.ok) {
       throw new Error(`${listPath} answered ${String(response.status)}`);
     }
-    return [...listSchema.parse(await response.json()).parts];
+    return [...decodeList(await response.json()).parts];
   } finally {
     clearTimeout(timer);
   }

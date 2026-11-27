@@ -1,17 +1,19 @@
+import { Option, Schema } from 'effect';
+
 import { report } from '@/lib/fault/fault';
-import { number, object, string, type infer as Infer } from '@/lib/zod';
 
 const prefix = 'cp:draft:';
-const draftSchema = object({ cursor: number(), text: string() });
+const draftSchema = Schema.Struct({ cursor: Schema.Finite, text: Schema.String });
+const decodeStored = Schema.decodeUnknownOption(draftSchema);
 
-type Draft = Infer<typeof draftSchema>;
+type Draft = typeof draftSchema.Type;
 
 const decode = (raw: string): Draft => {
   try {
     const value: unknown = JSON.parse(raw);
-    const parsed = draftSchema.safeParse(value);
-    if (parsed.success) {
-      return parsed.data;
+    const parsed = decodeStored(value);
+    if (Option.isSome(parsed)) {
+      return parsed.value;
     }
   } catch {
     return { cursor: 0, text: raw };

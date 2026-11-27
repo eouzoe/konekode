@@ -1,19 +1,25 @@
-import { array, boolean, number, object, record, string, union } from 'zod';
+import { Effect, Schema } from 'effect';
 
 import { readStored } from './stored';
 import { expect, test } from './test';
 
 import type { Page } from '@playwright/test';
 
-const value = union([boolean(), number(), string()]);
-const data = record(string(), value);
-const fingerprintEvents = array(object({ data: data.default({}), kind: string() }));
+const value = Schema.Union([Schema.Boolean, Schema.Finite, Schema.String]);
+const data = Schema.Record(Schema.String, value);
+const decodeFingerprints = Schema.decodeUnknownSync(
+  Schema.Array(
+    Schema.Struct({
+      data: data.pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+      kind: Schema.String,
+    }),
+  ),
+);
 
 const fingerprints = async (
   page: Page,
 ): Promise<Array<Record<string, boolean | number | string>>> =>
-  fingerprintEvents
-    .parse(await readStored(page))
+  decodeFingerprints(await readStored(page))
     .filter((event) => event.kind === 'device.fingerprint')
     .map((event) => event.data);
 

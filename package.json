@@ -53,8 +53,7 @@
     "pixi.js": "8.23.0",
     "serwist": "9.6.0",
     "ts-fsrs": "6.0.1",
-    "xstate": "6.0.0-beta.3",
-    "zod": "^4.6.7"
+    "xstate": "6.0.0-beta.3"
   },
   "devDependencies": {
     "@astrojs/ts-content-mapper": "^0.2.0",

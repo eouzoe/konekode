@@ -1,3 +1,5 @@
+import { Schema } from 'effect';
+
 import { unlockedNow } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
 
@@ -5,13 +7,15 @@ import { beatSchema, type BeatMeta } from './machine';
 
 import type { Beat } from '@konekode/contracts/unit';
 
+const decodeBeat = Schema.decodeUnknownSync(beatSchema);
+
 const readMeta = (beat: HTMLElement): BeatMeta => {
   const { after, expect, id = '', wait = '', when = '' } = beat.dataset;
-  return beatSchema.parse({ expect: expect ?? null, id, next: after === 'next', wait, when });
+  return decodeBeat({ expect: expect ?? null, id, next: after === 'next', wait, when });
 };
 
 const metaOf = (beat: Beat): BeatMeta =>
-  beatSchema.parse({
+  decodeBeat({
     expect: beat.expect ?? null,
     id: beat.id,
     next: beat.after === 'next',

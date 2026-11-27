@@ -1,48 +1,44 @@
+import { Schema } from 'effect';
 import { createMachine, type EventFromLogic } from 'xstate';
 
-import {
-  array,
-  boolean,
-  literal,
-  nullable,
-  number,
-  object,
-  string,
-  type infer as Infer,
-} from '@/lib/zod';
+const checkSchema = Schema.Literals(['', 'drill', 'run']);
+const whenSchema = Schema.Literals(['', 'fullscreen', 'windowed']);
 
-const checkSchema = literal(['', 'drill', 'run']);
-const whenSchema = literal(['', 'fullscreen', 'windowed']);
-
-const beatSchema = object({
-  expect: nullable(string()),
-  id: string(),
-  next: boolean(),
+const beatSchema = Schema.Struct({
+  expect: Schema.NullOr(Schema.String),
+  id: Schema.String,
+  next: Schema.Boolean,
   wait: checkSchema,
   when: whenSchema,
 });
 
-const contextSchema = object({
-  beats: array(beatSchema),
-  index: number(),
-  mismatch: boolean(),
-  passed: array(string()),
+const contextSchema = Schema.Struct({
+  beats: Schema.Array(beatSchema),
+  index: Schema.Finite,
+  mismatch: Schema.Boolean,
+  passed: Schema.Array(Schema.String),
 });
 
-const inputSchema = object({
-  beats: array(beatSchema),
-  passed: array(string()),
-  position: nullable(string()),
+const inputSchema = Schema.Struct({
+  beats: Schema.Array(beatSchema),
+  passed: Schema.Array(Schema.String),
+  position: Schema.NullOr(Schema.String),
 });
 
-const moveSchema = object({ full: boolean() });
-const checkedSchema = object({ full: boolean(), kind: checkSchema, output: string() });
+const moveSchema = Schema.Struct({ full: Schema.Boolean });
+const checkedSchema = Schema.Struct({
+  full: Schema.Boolean,
+  kind: checkSchema,
+  output: Schema.String,
+});
 
-type Check = Infer<typeof checkSchema>;
-type BeatMeta = Infer<typeof beatSchema>;
-type Context = Infer<typeof contextSchema>;
-type Move = Infer<typeof moveSchema>;
-type Checked = Infer<typeof checkedSchema>;
+const standardMove = Schema.toStandardSchemaV1(moveSchema);
+
+type Check = typeof checkSchema.Type;
+type BeatMeta = typeof beatSchema.Type;
+type Context = typeof contextSchema.Type;
+type Move = typeof moveSchema.Type;
+type Checked = typeof checkedSchema.Type;
 
 interface Arrival {
   readonly context: Context;
@@ -154,17 +150,17 @@ const sceneMachine = createMachine({
   id: 'scene',
   initial: 'revealing',
   schemas: {
-    context: contextSchema,
+    context: Schema.toStandardSchemaV1(contextSchema),
     events: {
-      AUTO: moveSchema,
-      BACK: moveSchema,
-      CHECKED: checkedSchema,
-      NEXT: moveSchema,
-      PLAYED: moveSchema,
-      REVEALED: object({}),
-      SCREEN: moveSchema,
+      AUTO: standardMove,
+      BACK: standardMove,
+      CHECKED: Schema.toStandardSchemaV1(checkedSchema),
+      NEXT: standardMove,
+      PLAYED: standardMove,
+      REVEALED: Schema.toStandardSchemaV1(Schema.Struct({})),
+      SCREEN: standardMove,
     },
-    input: inputSchema,
+    input: Schema.toStandardSchemaV1(inputSchema),
   },
   states: {
     blocked: {

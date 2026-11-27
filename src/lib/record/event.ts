@@ -1,14 +1,4 @@
-import {
-  boolean,
-  int,
-  literal,
-  number,
-  object,
-  record,
-  string,
-  union,
-  type infer as Infer,
-} from '@/lib/zod';
+import { Option, Schema } from 'effect';
 
 const currentVersion = 3;
 const faultKind = 'fault';
@@ -18,53 +8,57 @@ const legacyVersion = 1;
 const legacySession = 'legacy';
 const unknownContent = '';
 
-const valueSchema = union([boolean(), number(), string()]);
-const dataSchema = record(string(), valueSchema);
-const moment = int();
-const name = string().min(1);
+const valueSchema = Schema.Union([Schema.Boolean, Schema.Finite, Schema.String]);
+const dataSchema = Schema.Record(Schema.String, valueSchema);
+const moment = Schema.Int;
+const name = Schema.String.pipe(Schema.check(Schema.isMinLength(1)));
 
 const shared = {
-  actor: string(),
+  actor: Schema.String,
   at: moment,
   data: dataSchema,
   id: name,
   kind: name,
-  ref: string(),
+  ref: Schema.String,
   seq: moment,
-  session: string(),
-  unit: string(),
+  session: Schema.String,
+  unit: Schema.String,
 };
 
-const eventSchema = object({
+const eventSchema = Schema.Struct({
   ...shared,
-  content: string(),
-  site: string(),
-  version: literal(currentVersion),
+  content: Schema.String,
+  site: Schema.String,
+  version: Schema.Literal(currentVersion),
 });
 
-const unlabelledSchema = object({ ...shared, version: literal(unlabelledVersion) });
+const unlabelledSchema = Schema.Struct({ ...shared, version: Schema.Literal(unlabelledVersion) });
 
-const legacySchema = object({
+const legacySchema = Schema.Struct({
   at: moment,
-  device: string(),
+  device: Schema.String,
   id: name,
   kind: name,
-  ref: string(),
-  unit: string(),
-  version: literal(legacyVersion),
+  ref: Schema.String,
+  unit: Schema.String,
+  version: Schema.Literal(legacyVersion),
 });
 
-type LearningEvent = Infer<typeof eventSchema>;
-type Data = Infer<typeof dataSchema>;
+const decodeCurrent = Schema.decodeUnknownOption(eventSchema);
+const decodeUnlabelled = Schema.decodeUnknownOption(unlabelledSchema);
+const decodeLegacy = Schema.decodeUnknownOption(legacySchema);
 
-const label = (event: Infer<typeof unlabelledSchema>): LearningEvent => ({
+type LearningEvent = typeof eventSchema.Type;
+type Data = typeof dataSchema.Type;
+
+const label = (event: typeof unlabelledSchema.Type): LearningEvent => ({
   ...event,
   content: unknownContent,
   site: unknownContent,
   version: currentVersion,
 });
 
-const upgrade = (old: Infer<typeof legacySchema>): LearningEvent =>
+const upgrade = (old: typeof legacySchema.Type): LearningEvent =>
   label({
     actor: old.device,
     at: old.at,
@@ -79,19 +73,15 @@ const upgrade = (old: Infer<typeof legacySchema>): LearningEvent =>
   });
 
 const readEvent = (value: unknown): LearningEvent | null => {
-  const current = eventSchema.safeParse(value);
-  if (current.success) {
-    return current.data;
+  const current = decodeCurrent(value);
+  if (Option.isSome(current)) {
+    return current.value;
   }
-  const unlabelled = unlabelledSchema.safeParse(value);
-  if (unlabelled.success) {
-    return label(unlabelled.data);
+  const unlabelled = decodeUnlabelled(value);
+  if (Option.isSome(unlabelled)) {
+    return label(unlabelled.value);
   }
-  const legacy = legacySchema.safeParse(value);
-  if (legacy.success) {
-    return upgrade(legacy.data);
-  }
-  return null;
+  return Option.getOrNull(Option.map(decodeLegacy(value), upgrade));
 };
 
 interface Reading {

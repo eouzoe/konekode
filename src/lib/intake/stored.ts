@@ -1,5 +1,6 @@
+import { Option, Schema } from 'effect';
+
 import { report } from '@/lib/fault/fault';
-import { number, object, record, string, type ZodType } from '@/lib/zod';
 
 import { free, type Hold } from './plan';
 
@@ -7,14 +8,16 @@ import type { Acked } from './pending';
 
 const ackedKey = 'cp:intake:acked';
 const holdKey = 'cp:intake:hold';
-const ackedSchema = record(string(), number());
-const holdSchema = object({ failures: number(), until: number() });
+const ackedSchema = Schema.Record(Schema.String, Schema.Finite);
+const holdSchema = Schema.Struct({ failures: Schema.Finite, until: Schema.Finite });
 
-const readStored = <Value>(key: string, schema: ZodType<Value>, fallback: Value): Value => {
+const readStored = <Value>(key: string, schema: Schema.Decoder<Value>, fallback: Value): Value => {
   try {
-    const parsed = schema.safeParse(JSON.parse(localStorage.getItem(key) ?? 'null'));
-    if (parsed.success) {
-      return parsed.data;
+    const parsed = Schema.decodeUnknownOption(schema)(
+      JSON.parse(localStorage.getItem(key) ?? 'null'),
+    );
+    if (Option.isSome(parsed)) {
+      return parsed.value;
     }
   } catch (error) {
     report('storage.local', key, error);

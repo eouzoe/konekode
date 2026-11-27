@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 
 import { keys as commandKeys } from '@konekode/contracts/catalog';
 import { checksOf, starterOf } from '@konekode/course/units';
-import { array, number, object, string } from 'zod';
+import { Schema } from 'effect';
 
 import { createBuffer, lastColumn, type Rules } from './buffer';
 import { run } from './step';
@@ -85,7 +85,9 @@ const allCases = (): Array<Case> =>
     positions(text).flatMap((start) => kinds.map((groups) => caseAt(text, start, groups))),
   );
 
-const outcomes = array(object({ cursor: number(), text: string() }));
+const decodeOutcomes = Schema.decodeUnknownSync(
+  Schema.Array(Schema.Struct({ cursor: Schema.Finite, text: Schema.String })),
+);
 
 const askVim = async (cases: ReadonlyArray<Case>): Promise<Array<Outcome>> => {
   const base = `${Bun.env.TMPDIR ?? '/tmp'}/oracle-${crypto.randomUUID()}`;
@@ -100,7 +102,7 @@ const askVim = async (cases: ReadonlyArray<Case>): Promise<Array<Outcome>> => {
     stdout: 'ignore',
   });
   await child.exited;
-  const results = outcomes.parse(await output.json());
+  const results = [...decodeOutcomes(await output.json())];
   await Promise.all([input.delete(), output.delete()]);
   return results;
 };

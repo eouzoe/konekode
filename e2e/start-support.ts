@@ -1,5 +1,5 @@
 import { checksOf, planOf } from '@konekode/course/units';
-import { array } from 'zod';
+import { Schema } from 'effect';
 
 import { expand } from '../src/lib/edit/path';
 import { beatSchema, type BeatMeta } from '../src/lib/scene/machine';
@@ -205,7 +205,7 @@ const readMetas = async (page: Page): Promise<Array<BeatMeta>> => {
       return { expect: wanted ?? null, id, next: after === 'next', wait, when };
     }),
   );
-  return array(beatSchema).parse(raw);
+  return [...Schema.decodeUnknownSync(Schema.Array(beatSchema))(raw)];
 };
 
 export {

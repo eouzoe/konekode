@@ -1,44 +1,38 @@
 import { contentId } from '@konekode/course/content';
 import { engineContent } from '@konekode/course/units';
+import { Schema } from 'effect';
 import init, { Engine, keptKinds } from 'konekode-engine';
 
 import { report } from '@/lib/fault/fault';
 import { onRecorded, openLog } from '@/lib/record/current';
-import {
-  array,
-  boolean,
-  int,
-  literal,
-  nullable,
-  object,
-  record,
-  string,
-  union,
-  type infer as Infer,
-} from '@/lib/zod';
 
 import type { LearningEvent } from '@/lib/record/event';
 
-const componentSchema = object({
-  completed: int(),
-  firstRight: int(),
-  id: string(),
-  opportunities: int(),
-  shown: int(),
-  standing: union([literal('done'), literal('shown'), literal('unseen')]),
-  unsettled: boolean(),
+const componentSchema = Schema.Struct({
+  completed: Schema.Int,
+  firstRight: Schema.Int,
+  id: Schema.String,
+  opportunities: Schema.Int,
+  shown: Schema.Int,
+  standing: Schema.Literals(['done', 'shown', 'unseen']),
+  unsettled: Schema.Boolean,
 });
 
-const unitSchema = object({ passed: array(string()), position: nullable(string()) });
-
-const stateSchema = object({
-  components: array(componentSchema),
-  units: record(string(), unitSchema),
-  unlocked: array(string()),
+const unitSchema = Schema.Struct({
+  passed: Schema.Array(Schema.String),
+  position: Schema.NullOr(Schema.String),
 });
 
-type EngineComponent = Infer<typeof componentSchema>;
-type EngineState = Infer<typeof stateSchema>;
+const stateSchema = Schema.Struct({
+  components: Schema.Array(componentSchema),
+  units: Schema.Record(Schema.String, unitSchema),
+  unlocked: Schema.Array(Schema.String),
+});
+
+const decodeState = Schema.decodeUnknownSync(stateSchema);
+
+type EngineComponent = typeof componentSchema.Type;
+type EngineState = typeof stateSchema.Type;
 
 interface UnitState {
   readonly passed: ReadonlySet<string>;
@@ -97,7 +91,7 @@ const currentState = (): EngineState => {
   if (ready === null) {
     return blank;
   }
-  state ??= stateSchema.parse(JSON.parse(ready.engine.state()));
+  state ??= decodeState(JSON.parse(ready.engine.state()));
   return state;
 };
 

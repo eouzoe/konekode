@@ -1,7 +1,7 @@
 import { propertyTest, testCoverageToJSON } from '@xstate/test';
 import { createPlaywrightSut } from '@xstate/test/playwright';
+import { Schema } from 'effect';
 import { constant } from 'fast-check';
-import { array } from 'zod';
 
 import { beatSchema, sceneMachine, type BeatMeta } from '../src/lib/scene/machine';
 import { expect, test, type Page } from './test';
@@ -43,7 +43,7 @@ const readMetas = async (page: Page): Promise<Array<BeatMeta>> => {
       return { expect: wanted ?? null, id, next: after === 'next', wait, when };
     }),
   );
-  return array(beatSchema).parse(raw);
+  return [...Schema.decodeUnknownSync(Schema.Array(beatSchema))(raw)];
 };
 
 const currentId = async (page: Page): Promise<string> =>

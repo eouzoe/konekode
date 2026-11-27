@@ -78,7 +78,7 @@
   "ignorePatterns": ["dist", "dist-dev", ".astro", "node_modules", "src/legacy"],
   "overrides": [
     {
-      "files": ["src/**/*.ts", "src/**/*.astro"],
+      "files": ["src/**/*.ts", "src/**/*.astro", "e2e/**/*.ts"],
       "rules": {
         "no-restricted-imports": [
           "error",
@@ -86,17 +86,11 @@
             "paths": [
               {
                 "name": "zod",
-                "message": "Import from @/lib/zod, which turns off zod's eval probe that the content security policy blocks."
+                "message": "Validate with Schema from effect."
               }
             ]
           }
         ]
-      }
-    },
-    {
-      "files": ["src/lib/zod.ts", "src/**/*.test.ts"],
-      "rules": {
-        "no-restricted-imports": "off"
       }
     },
     {

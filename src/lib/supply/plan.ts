@@ -1,4 +1,4 @@
-import { array, boolean, int, object, string, type infer as Infer } from '@/lib/zod';
+import { Schema } from 'effect';
 
 interface Step {
   readonly auto?: number;
@@ -17,16 +17,16 @@ interface Rule {
   readonly wants: (step: Step) => boolean;
 }
 
-const dueSchema = object({
-  by: int(),
-  bytes: int(),
-  early: boolean(),
-  gate: boolean(),
-  name: string(),
+const dueSchema = Schema.Struct({
+  by: Schema.Int,
+  bytes: Schema.Int,
+  early: Schema.Boolean,
+  gate: Schema.Boolean,
+  name: Schema.String,
 });
-const duesSchema = array(dueSchema);
+const decodeDues = Schema.decodeUnknownSync(Schema.Array(dueSchema));
 
-type Due = Infer<typeof dueSchema>;
+type Due = typeof dueSchema.Type;
 
 const missing = -1;
 
@@ -55,7 +55,7 @@ const readDues = (raw: string | undefined): Array<Due> => {
     return [];
   }
   const value: unknown = JSON.parse(raw);
-  return duesSchema.parse(value);
+  return [...decodeDues(value)];
 };
 
 const pace = { floorMs: 1500, graphemeMs: 30, leadMs: 8000 };

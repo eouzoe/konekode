@@ -1,8 +1,12 @@
-import { number, object } from '@/lib/zod';
+import { Option, Schema } from 'effect';
 
 import type { Link } from './plan';
 
-const connectionSchema = object({ downlink: number().optional(), rtt: number().optional() });
+const connectionSchema = Schema.Struct({
+  downlink: Schema.optional(Schema.Finite),
+  rtt: Schema.optional(Schema.Finite),
+});
+const decodeConnection = Schema.decodeUnknownOption(connectionSchema);
 
 const kilobit = 1000;
 const bitsPerByte = 8;
@@ -13,13 +17,13 @@ const carefulLatencyMs = 300;
 const careful: Link = { bitsPerMs: kilobit, latencyMs: carefulLatencyMs };
 
 const reported = (): Link | null => {
-  const parsed = connectionSchema.safeParse(Reflect.get(navigator, 'connection'));
-  if (!parsed.success || parsed.data.downlink === undefined || parsed.data.downlink <= 0) {
+  const parsed = Option.getOrUndefined(decodeConnection(Reflect.get(navigator, 'connection')));
+  if (parsed?.downlink === undefined || parsed.downlink <= 0) {
     return null;
   }
   return {
-    bitsPerMs: parsed.data.downlink * kilobit,
-    latencyMs: parsed.data.rtt ?? careful.latencyMs,
+    bitsPerMs: parsed.downlink * kilobit,
+    latencyMs: parsed.rtt ?? careful.latencyMs,
   };
 };
 

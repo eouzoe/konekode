@@ -3,7 +3,7 @@ import { ui } from '@konekode/course/ui';
 import { studentEditor } from './gate-view';
 import { currentId } from './scene-view';
 import { open, template } from './start-support';
-import { recordedAs, storedEvents } from './stored';
+import { decodeStored, recordedAs } from './stored';
 import { expect, test } from './test';
 
 test.describe('起步單元：打字練習', () => {
@@ -97,9 +97,9 @@ test.describe('起步單元：打字練習', () => {
             });
           }),
       );
-      const events = storedEvents
-        .parse(value)
-        .filter((event) => event.kind === 'item.unlocked' && event.ref.startsWith('pair.'));
+      const events = decodeStored(value).filter(
+        (event) => event.kind === 'item.unlocked' && event.ref.startsWith('pair.'),
+      );
       return new Set(events.map((event) => event.ref));
     };
     const wanted = new Set(['pair.brace', 'pair.include-angle', 'pair.paren']);

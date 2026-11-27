@@ -1,9 +1,10 @@
+import { Schema } from 'effect';
+
 import { createBuffer, type Buffer, type Rules } from '@/lib/edit/buffer';
 import { expand, keysOf } from '@/lib/edit/path';
 import { knownKeys, run } from '@/lib/edit/step';
 import { guard } from '@/lib/fault/fault';
 import { chunks } from '@/lib/perform/rhythm';
-import { array, boolean, object, string, type infer as Infer } from '@/lib/zod';
 
 import type { Desk } from './desk';
 import type { Plan } from '@konekode/contracts/unit';
@@ -41,15 +42,16 @@ interface Tools {
   readonly run: () => void;
 }
 
-const stageSchema = object({
-  active: boolean(),
-  beat: string(),
-  before: array(string()),
-  focus: boolean(),
-  now: array(string()),
+const stageSchema = Schema.Struct({
+  active: Schema.Boolean,
+  beat: Schema.String,
+  before: Schema.Array(Schema.String),
+  focus: Schema.Boolean,
+  now: Schema.Array(Schema.String),
 });
+const decodeStage = Schema.decodeUnknownSync(stageSchema);
 
-type Stage = Infer<typeof stageSchema>;
+type Stage = typeof stageSchema.Type;
 
 const typePrefix = 'type:';
 const keyPause = 450;
@@ -242,7 +244,7 @@ const createStage = (tools: Tools): ((detail: unknown) => void) => {
     turnBeat: '',
   };
   return (detail) => {
-    const stage = stageSchema.parse(detail);
+    const stage = decodeStage(detail);
     state.turn += 1;
     tools.attend(stage.beat);
     tools.keycap.textContent = '';

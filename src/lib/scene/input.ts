@@ -1,4 +1,4 @@
-import { object, string, type infer as Infer } from '@/lib/zod';
+import { Effect, Option, Schema } from 'effect';
 
 import { watchFullScreen } from './conditions';
 import { readIntent, wouldLeave, type Intent } from './keys';
@@ -14,17 +14,17 @@ interface Handlers {
   readonly screen: () => void;
 }
 
-const reportSchema = object({ beat: string(), output: string().default('') });
+const reportSchema = Schema.Struct({
+  beat: Schema.String,
+  output: Schema.String.pipe(Schema.withDecodingDefault(Effect.succeed(''))),
+});
+const decodeReport = Schema.decodeUnknownOption(reportSchema);
 
-const readReport = (event: Event): Infer<typeof reportSchema> | null => {
+const readReport = (event: Event): typeof reportSchema.Type | null => {
   if (!(event instanceof CustomEvent)) {
     return null;
   }
-  const parsed = reportSchema.safeParse(event.detail);
-  if (!parsed.success) {
-    return null;
-  }
-  return parsed.data;
+  return Option.getOrNull(decodeReport(event.detail));
 };
 
 const runProgram = (root: HTMLElement): boolean => {

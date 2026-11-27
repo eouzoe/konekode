@@ -1,4 +1,4 @@
-import { record, string, unknown } from 'zod';
+import { Schema } from 'effect';
 
 import { listed, pages, robotsMeta, robotsText, site } from '../src/lib/site/pages';
 import { expect, test, type Page } from './test';
@@ -14,7 +14,9 @@ const head = async (page: Page, selector: string, attribute: string): Promise<st
 
 const structured = async (page: Page): Promise<Record<string, unknown>> => {
   const text = await page.locator('script[type="application/ld+json"]').textContent();
-  return record(string(), unknown()).parse(JSON.parse(text ?? '{}'));
+  return Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Unknown))(
+    JSON.parse(text ?? '{}'),
+  );
 };
 
 test('the home page says what the site is and leads to the first unit', async ({ page }) => {

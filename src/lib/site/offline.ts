@@ -1,6 +1,8 @@
-import { array, record, string } from '@/lib/zod';
+import { Schema } from 'effect';
 
-const coreSchema = record(string(), array(string()));
+const decodeCore = Schema.decodeUnknownSync(
+  Schema.Record(Schema.String, Schema.Array(Schema.String)),
+);
 
 const sameOrigin = (address: string): boolean => {
   try {
@@ -18,7 +20,7 @@ const nextPages = async (): Promise<Array<string>> => {
     return [];
   }
   const response = await fetch('/core.json');
-  const core = coreSchema.parse(await response.json());
+  const core = decodeCore(await response.json());
   return [...paths, ...paths.flatMap((path) => core[path] ?? [])];
 };
 
