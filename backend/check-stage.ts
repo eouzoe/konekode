@@ -61,4 +61,4 @@ if (import.meta.main) {
   }
 }
 
-export { apiAddress, targetOf };
+export { apiAddress, outputsOf, targetOf };

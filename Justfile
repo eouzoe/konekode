@@ -58,6 +58,9 @@ deploy stage: check e2e
 check-stage stage version="":
     bun backend/check-stage.ts '{{ stage }}' '{{ version }}'
 
+cpu stage minutes="60":
+    bun backend/cpu.ts '{{ stage }}' '{{ minutes }}'
+
 migration name:
     bun backend/migration.ts '{{ name }}'
 
