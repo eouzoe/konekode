@@ -52,6 +52,9 @@ e2e *args: build
 e2e-run *args:
     __EGL_VENDOR_LIBRARY_DIRS="$E2E_MESA/share/glvnd/egl_vendor.d" LD_LIBRARY_PATH="$E2E_GLVND/lib:$E2E_MESA/lib" LIBGL_ALWAYS_SOFTWARE=1 bun x playwright test {{args}}
 
+e2e-stage stage *args:
+    KONEKODE_E2E_BASE="$(bun -e "import { outputsOf } from './backend/check-stage'; console.log((await outputsOf('{{ stage }}')).site)")" just e2e-run {{args}}
+
 deploy stage: check e2e
     {{ lean }} secretspec run -- bun x alchemy deploy --stage {{stage}}
 

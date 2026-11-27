@@ -15,6 +15,20 @@ const serverSeconds = 90;
 const expectSeconds = 10;
 const actionSeconds = 10;
 const pageSeconds = 30;
+const remote = process.env.KONEKODE_E2E_BASE;
+const local = `http://localhost:${String(port)}`;
+
+const server = {
+  command: `bun -e "${fresh}" && bun x alchemy dev --stage ${stage} --no-input`,
+  env: {
+    BUN_OPTIONS: '--conditions=distilled-lazy',
+    KONEKODE_LOCAL: '1',
+    SITE_PORT: String(port),
+  },
+  reuseExistingServer: true,
+  timeout: serverSeconds * second,
+  url: `${local}/learn/start/`,
+};
 
 export default defineConfig({
   expect: { timeout: expectSeconds * second },
@@ -30,21 +44,11 @@ export default defineConfig({
   timeout: testSeconds * second,
   use: {
     actionTimeout: actionSeconds * second,
-    baseURL: `http://localhost:${String(port)}`,
+    baseURL: remote ?? local,
     navigationTimeout: pageSeconds * second,
     serviceWorkers: 'block',
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: `bun -e "${fresh}" && bun x alchemy dev --stage ${stage} --no-input`,
-    env: {
-      BUN_OPTIONS: '--conditions=distilled-lazy',
-      KONEKODE_LOCAL: '1',
-      SITE_PORT: String(port),
-    },
-    reuseExistingServer: true,
-    timeout: serverSeconds * second,
-    url: `http://localhost:${String(port)}/learn/start/`,
-  },
+  ...(remote === undefined ? { webServer: server } : {}),
   workers: 2,
 });
