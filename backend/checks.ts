@@ -114,6 +114,19 @@ const versionResult = async (
   return [result('版本', found, `頁面的程式裡有「${version}」：${String(found)}`)];
 };
 
+const missingAssets = ['/_astro/does-not-exist-0000.js', '/parts/0000000000000000'];
+const notFound = 404;
+
+const missingResult = async (probe: Probe, path: string): Promise<Result> => {
+  const response = await send(probe, path);
+  const cache = response.headers.get('cache-control') ?? '';
+  return result(
+    '缺檔不快取',
+    response.status === notFound && !cache.includes('max-age=31536000'),
+    `${path}：${String(response.status)}，${cache}`,
+  );
+};
+
 const assets = async (probe: Probe): Promise<Array<Result>> => {
   const scripts = await scriptsOf(probe);
   const [first = '/none'] = scripts;
@@ -121,6 +134,7 @@ const assets = async (probe: Probe): Promise<Array<Result>> => {
   const cache = response.headers.get('cache-control') ?? '';
   return [
     result('靜態檔快取', cache.includes('immutable'), `${first}：${cache}`),
+    ...(await Promise.all(missingAssets.map((path) => missingResult(probe, path)))),
     ...(await versionResult(probe, scripts)),
   ];
 };

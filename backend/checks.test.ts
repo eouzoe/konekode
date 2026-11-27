@@ -51,6 +51,8 @@ const robotsText = (live: boolean): string => {
 const page = (live: boolean): string =>
   `<html><head><meta name="robots" content="${robotsMeta(live)}"><script type="module" src="/_astro/app.js"></script></head></html>`;
 
+const yearLong = 'public, max-age=31536000, immutable';
+
 const asset = (path: string, shape: Shape): Response => {
   const kept = Object.fromEntries(
     Object.entries(headers).filter(([name]) => name !== shape.dropHeader),
@@ -61,10 +63,13 @@ const asset = (path: string, shape: Shape): Response => {
   if (path === '/_astro/version.js') {
     return new Response(`const v=\`${version}\``);
   }
-  if (path.startsWith('/_astro/')) {
+  if (path === '/_astro/app.js') {
     return new Response('import{v}from"./version.js";', {
-      headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+      headers: { 'cache-control': yearLong },
     });
+  }
+  if (path.startsWith('/_astro/') || path.startsWith('/parts/')) {
+    return new Response(null, { headers: { 'cache-control': yearLong }, status: 404 });
   }
   return new Response(page(shape.live), { headers: { ...kept, 'content-type': 'text/html' } });
 };

@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 
+import { assert, asyncProperty, constantFrom, integer, stringMatching, tuple } from 'fast-check';
+
 import { bodyLimit, closedFor, intakeContentType, intakeOpen as open, intakePath } from './limits';
 import site, { type Env, type Fetcher } from './site';
 
@@ -157,4 +159,39 @@ test('whatever the backend answers, the site adds nosniff before it leaves', asy
   const response = await answer(request, env);
   expect(response.status).toBe(400);
   expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+});
+
+const longCache = 'public, max-age=31536000, immutable';
+const assetPath = tuple(
+  constantFrom('/_astro/', '/parts/', '/', '/learn/'),
+  stringMatching(/^[a-z0-9.-]{0,24}$/u),
+).map(([prefix, rest]) => `${prefix}${rest}`);
+
+const assetsAnswering = (status: number): Env => ({
+  API: fetcher([], () => new Response(null, { status: 204 })),
+  ASSETS: fetcher(
+    [],
+    () => new Response(null, { headers: { 'cache-control': longCache }, status }),
+  ),
+  INTAKE: open,
+});
+
+test('an error from the static assets is never kept by a cache, whatever the path', async () => {
+  await assert(
+    asyncProperty(assetPath, integer({ max: 599, min: 400 }), async (path, status) => {
+      const response = await answer(new Request(`${origin}${path}`), assetsAnswering(status));
+      expect(response.status).toBe(status);
+      expect(response.headers.get('cache-control')).toBe('no-store');
+    }),
+  );
+});
+
+test('a successful static asset keeps the cache rule it was served with', async () => {
+  await assert(
+    asyncProperty(assetPath, integer({ max: 299, min: 200 }), async (path, status) => {
+      const response = await answer(new Request(`${origin}${path}`), assetsAnswering(status));
+      expect(response.status).toBe(status);
+      expect(response.headers.get('cache-control')).toBe(longCache);
+    }),
+  );
 });

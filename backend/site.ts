@@ -71,6 +71,17 @@ const intake = (request: Request, url: URL, env: Env): Promise<Response> | Respo
   return forward(request, env.API);
 };
 
+const firstError = 400;
+
+const uncached = (page: Response): Response => {
+  if (page.status < firstError) {
+    return page;
+  }
+  const kept = new Response(page.body, page);
+  kept.headers.set('cache-control', 'no-store');
+  return kept;
+};
+
 const serve = async (request: Request, env: Env): Promise<Response> => {
   const url = new URL(request.url);
   if (url.pathname === intakePath) {
@@ -79,7 +90,7 @@ const serve = async (request: Request, env: Env): Promise<Response> => {
   if (url.pathname.startsWith('/api/')) {
     return refuse(status.notFound);
   }
-  return markPlatform(request, await env.ASSETS.fetch(request));
+  return markPlatform(request, uncached(await env.ASSETS.fetch(request)));
 };
 
 const site = { fetch: serve };

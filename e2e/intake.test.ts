@@ -2,6 +2,8 @@ import { timing } from '../src/lib/intake/plan';
 import { expect, test, type Page } from './test';
 import { laterStarts } from './time';
 
+import type { Worker } from '@playwright/test';
+
 const stored = 204;
 const refusedMethod = 405;
 const refusedTicket = 400;
@@ -51,6 +53,22 @@ const leave = async (page: Page, hidden: boolean): Promise<void> => {
 
 const isIntake = (url: string): boolean => intake.test(url);
 
+const prefetchWatch = (page: Page): (() => Promise<void>) => {
+  const alive = new Set<Worker>();
+  let seen = false;
+  page.on('worker', (worker) => {
+    if (!worker.url().includes('prefetch.worker')) {
+      return;
+    }
+    seen = true;
+    alive.add(worker);
+    worker.on('close', () => alive.delete(worker));
+  });
+  return async () => {
+    await expect.poll(() => seen && alive.size === 0).toBe(true);
+  };
+};
+
 test('events wait until there is enough to send, then reach the server with their session', async ({
   page,
 }) => {
@@ -60,8 +78,10 @@ test('events wait until there is enough to send, then reach the server with thei
       asked.push(request.url());
     }
   });
+  const prefetchSettled = prefetchWatch(page);
   await openUnit(page);
   await page.keyboard.press('ArrowRight');
+  await prefetchSettled();
   await page.clock.fastForward(timing.maxWait - tick);
   expect(asked).toEqual([]);
   const uploaded = page.waitForResponse((response) => isIntake(response.url()));
