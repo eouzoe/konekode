@@ -6,9 +6,9 @@ const firstPort = 20_000;
 const portCount = 20_000;
 const workspace = import.meta.dirname;
 const port =
-  firstPort + (createHash('sha256').update(workspace).digest().readUInt32BE() % portCount);
+  process.env.E2E_PORT ??
+  String(firstPort + (createHash('sha256').update(workspace).digest().readUInt32BE() % portCount));
 const stage = 'e2e';
-const fresh = `for (const path of ['.alchemy/local', '.alchemy/state/Konekode/${stage}']) require('node:fs').rmSync(path, { force: true, recursive: true })`;
 const second = 1000;
 const testSeconds = 420;
 const serverSeconds = 90;
@@ -16,14 +16,14 @@ const expectSeconds = 10;
 const actionSeconds = 10;
 const pageSeconds = 30;
 const remote = process.env.KONEKODE_E2E_BASE;
-const local = `http://localhost:${String(port)}`;
+const local = `http://localhost:${port}`;
 
 const server = {
-  command: `bun -e "${fresh}" && bun x alchemy dev --stage ${stage} --no-input`,
+  command: `bun e2e/fresh.ts && bun x alchemy dev --stage ${stage} --no-input`,
   env: {
     BUN_OPTIONS: '--conditions=distilled-lazy',
     KONEKODE_LOCAL: '1',
-    SITE_PORT: String(port),
+    SITE_PORT: port,
   },
   reuseExistingServer: true,
   timeout: serverSeconds * second,
