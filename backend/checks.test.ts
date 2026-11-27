@@ -1,15 +1,15 @@
 import { expect, test } from 'bun:test';
 
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 import { HttpRouter } from 'effect/http';
 
 import { checkAll, report, type Result, type Target } from './checks';
-import { intakeFor } from './intake';
+import { intakeApp } from './intake';
 import { intakeClosed, intakeOpen } from './limits';
 import site, { type Env, type Fetcher } from './site';
+import { Store, type Storage } from './store';
 
 import type { Usage } from './budget';
-import type { Storage } from './store';
 
 const origin = 'https://cp-preview.example.workers.dev';
 const apiAddress = 'https://cp-api.example.workers.dev/';
@@ -71,7 +71,8 @@ const asset = (path: string, shape: Shape): Response => {
 
 const api: Fetcher = {
   fetch: async (request) => {
-    const { dispose, handler } = HttpRouter.toWebHandler(intakeFor(store));
+    const app = intakeApp.pipe(Layer.provide(Layer.succeed(Store, store)));
+    const { dispose, handler } = HttpRouter.toWebHandler(app, { disableLogger: true });
     const response = await handler(request);
     await dispose();
     return response;

@@ -1,6 +1,7 @@
 import { ByteSize, Clock, Effect, Layer } from 'effect';
 import {
   HttpIncomingMessage,
+  HttpRouter,
   HttpServer,
   HttpServerResponse,
   type HttpServerRequest,
@@ -8,21 +9,9 @@ import {
 import { HttpApiBuilder } from 'effect/http-api';
 
 import { accountOf, dayLimits, hasRoom, secondsToNextDay } from './budget';
-import { intakeApi, type Ticket } from './contract';
-import { bodyLimit, plainHeaders, retryLater, status, textLimit } from './limits';
-
-import type { Origin, Storage } from './store';
-
-type Reply = HttpServerResponse.HttpServerResponse;
-
-const reply = (code: number): Reply =>
-  HttpServerResponse.empty({ headers: plainHeaders, status: code });
-
-const replyAfter = (code: number, seconds: number): Reply =>
-  HttpServerResponse.empty({
-    headers: { ...plainHeaders, 'retry-after': String(seconds) },
-    status: code,
-  });
+import { Full, intakeApi, TooLarge, Unavailable, Unreadable, type Ticket } from './contract';
+import { bodyLimit, plainHeaders, retryLater, textLimit } from './limits';
+import { Store, type Origin, type Storage } from './store';
 
 const text = (value: unknown): string => {
   if (typeof value !== 'string') {
@@ -72,56 +61,60 @@ interface Upload {
   readonly ticket: Ticket;
 }
 
-const keep = <Needs>(
-  store: Storage<Needs>,
-  { body, ticket }: Upload,
-  origin: Origin,
-): Effect.Effect<Reply, never, Needs> =>
-  Effect.gen(function* keeping() {
-    const now = yield* Clock.currentTimeMillis;
-    const account = accountOf(origin.ip, now);
-    const spent = yield* store.spent(account, ticket.actor);
-    const size = body.byteLength;
-    const roomy =
-      hasRoom(spent.network, size, dayLimits.network) &&
-      hasRoom(spent.actor, size, dayLimits.actor);
-    if (!roomy) {
-      return replyAfter(status.tooMany, secondsToNextDay(now));
-    }
-    yield* store.keep({ account, body: copyOf(body), now, origin, ticket });
-    return reply(status.stored);
-  });
+const keep = Effect.fn('intake.accept')(function* keeping(
+  store: Storage,
+  { body, request, ticket }: Upload,
+) {
+  const now = yield* Clock.currentTimeMillis;
+  const origin = originOf(request);
+  const account = accountOf(origin.ip, now);
+  const spent = yield* store.spent(account, ticket.actor);
+  const size = body.byteLength;
+  const roomy =
+    hasRoom(spent.network, size, dayLimits.network) && hasRoom(spent.actor, size, dayLimits.actor);
+  if (!roomy) {
+    return yield* new Full({ seconds: secondsToNextDay(now) });
+  }
+  yield* store.keep({ account, body: copyOf(body), now, origin, ticket });
+});
 
-const accept = <Needs>(
-  store: Storage<Needs>,
+const accept = (
+  store: Storage,
   upload: Upload,
-): Effect.Effect<Reply, never, Needs> => {
-  const { body, request } = upload;
-  if (body.byteLength === 0) {
-    return Effect.succeed(reply(status.unreadable));
+): Effect.Effect<void, Unreadable | TooLarge | Full | Unavailable> => {
+  if (upload.body.byteLength === 0) {
+    return Effect.fail(new Unreadable({}));
   }
-  if (body.byteLength > bodyLimit) {
-    return Effect.succeed(reply(status.tooLarge));
+  if (upload.body.byteLength > bodyLimit) {
+    return Effect.fail(new TooLarge({}));
   }
-  const unavailable = Effect.succeed(replyAfter(status.unavailable, retryLater));
-  return keep(store, upload, originOf(request)).pipe(
-    Effect.tapCause((cause) => Effect.logError('intake could not be stored', cause)),
-    Effect.catchDefect(() => unavailable),
+  return keep(store, upload).pipe(
+    Effect.tapDefect((defect) => Effect.logError('intake could not be stored', defect)),
+    Effect.catchDefect(() => Effect.fail(new Unavailable({ seconds: retryLater }))),
   );
 };
 
-const intakeFor = <Needs>(store: Storage<Needs>) => {
-  const handlers = HttpApiBuilder.group(intakeApi, 'Intake', (group) =>
-    group.handle('accept', ({ payload, query, request }) =>
+const handlers = HttpApiBuilder.group(intakeApi, 'Intake', (group) =>
+  Effect.gen(function* building() {
+    const store = yield* Store;
+    return group.handle('accept', ({ payload, query, request }) =>
       accept(store, { body: payload, request, ticket: query }),
-    ),
-  );
-  const readLimit = Layer.succeed(HttpIncomingMessage.MaxBodySize, ByteSize.bytes(bodyLimit));
-  return HttpApiBuilder.layer(intakeApi).pipe(
-    Layer.provide(handlers),
-    Layer.provide(HttpServer.layerServices),
-    Layer.provide(readLimit),
-  );
-};
+    );
+  }),
+);
 
-export { intakeFor };
+const plain = HttpRouter.middleware(
+  (respond) => Effect.map(respond, HttpServerResponse.setHeaders(plainHeaders)),
+  { global: true },
+);
+
+const readLimit = Layer.succeed(HttpIncomingMessage.MaxBodySize, ByteSize.bytes(bodyLimit));
+
+const intakeApp = HttpApiBuilder.layer(intakeApi).pipe(
+  Layer.provide(handlers),
+  Layer.provide(HttpServer.layerServices),
+  Layer.provide(readLimit),
+  Layer.merge(plain),
+);
+
+export { intakeApp };

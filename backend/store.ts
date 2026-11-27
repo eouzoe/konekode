@@ -1,3 +1,5 @@
+import { Context } from 'effect';
+
 import type { Account, Usage } from './budget';
 import type { Ticket } from './contract';
 import type { Effect } from 'effect';
@@ -26,9 +28,11 @@ interface Parcel {
   readonly ticket: Ticket;
 }
 
-interface Storage<Needs = never> {
-  readonly keep: (parcel: Parcel) => Effect.Effect<void, never, Needs>;
-  readonly spent: (account: Account, actor: string) => Effect.Effect<Spent, never, Needs>;
+interface Storage {
+  readonly keep: (parcel: Parcel) => Effect.Effect<void>;
+  readonly spent: (account: Account, actor: string) => Effect.Effect<Spent>;
 }
 
-export { type Origin, type Parcel, type Spent, type Storage };
+class Store extends Context.Service<Store, Storage>()('konekode/Store') {}
+
+export { Store, type Origin, type Parcel, type Spent, type Storage };

@@ -1,12 +1,14 @@
+import { D1 } from '@alchemy.run/cloudflare';
+import { D1 as drizzleOver } from '@alchemy.run/drizzle';
+import { RuntimeContext } from 'alchemy/RuntimeContext';
 import { and, eq, sql } from 'drizzle-orm';
-import { Effect } from 'effect';
+import { Effect, Layer } from 'effect';
 
 import { usageOf, type Account } from './budget';
+import { Intake } from './db';
 import { intake, intakeActorUsage, intakeUsage } from './schema';
+import { Store, type Parcel, type Spent } from './store';
 
-import type { Parcel, Spent, Storage } from './store';
-import type { D1 } from '@alchemy.run/cloudflare';
-import type { RuntimeContext } from 'alchemy/RuntimeContext';
 import type { EffectSQLiteD1Database } from 'drizzle-orm/effect-d1';
 
 type Database = EffectSQLiteD1Database;
@@ -79,9 +81,17 @@ const keepIn = (
   return client.batch(prepared).pipe(Effect.asVoid, Effect.withSpan('intake.keep'));
 };
 
-const storeIn = (db: Database, client: Client): Storage<RuntimeContext> => ({
-  keep: (parcel) => keepIn(db, client, parcel),
-  spent: (account, actor) => spentBy(db, account, actor),
-});
+const D1Store = Layer.effect(
+  Store,
+  Effect.gen(function* opening() {
+    const client = yield* D1.QueryDatabase(yield* Intake);
+    const db = yield* drizzleOver(client);
+    return Store.of({
+      keep: (parcel) => keepIn(db, client, parcel).pipe(Effect.provide(RuntimeContext.phantom)),
+      spent: (account, actor) =>
+        spentBy(db, account, actor).pipe(Effect.provide(RuntimeContext.phantom)),
+    });
+  }),
+);
 
-export { storeIn };
+export { D1Store };

@@ -1,14 +1,14 @@
 import { expect, test } from 'bun:test';
 
-import { Effect, Option, Schema } from 'effect';
+import { Effect, Layer, Option, Schema } from 'effect';
 import { HttpRouter } from 'effect/http';
+import { TestClock } from 'effect/testing';
 
 import { accountOf, dayLimits, networkOf, secondsToNextDay, type Usage } from './budget';
 import { ticket, type Ticket } from './contract';
-import { intakeFor } from './intake';
+import { intakeApp } from './intake';
 import { bodyLimit, intakeContentType, intakePath } from './limits';
-
-import type { Parcel, Storage } from './store';
+import { Store, type Parcel, type Storage } from './store';
 
 const actor = '11111111-1111-4111-8111-111111111111';
 const session = '22222222-2222-4222-8222-222222222222';
@@ -56,8 +56,17 @@ const failing: Storage = {
   spent: () => Effect.die(new Error('no such table')),
 };
 
-const serve = async (store: Storage, request: Request): Promise<Response> => {
-  const { dispose, handler } = HttpRouter.toWebHandler(intakeFor(store));
+const lateAfternoon = Date.UTC(2026, 10, 20, 16, 0, 0);
+
+const clockAt = (time: number): Layer.Layer<never> =>
+  Layer.effectDiscard(TestClock.setTime(time)).pipe(Layer.provideMerge(TestClock.layer()));
+
+const serve = async (store: Storage, request: Request, time = lateAfternoon): Promise<Response> => {
+  const app = intakeApp.pipe(
+    Layer.provide(Layer.succeed(Store, store)),
+    Layer.provide(clockAt(time)),
+  );
+  const { dispose, handler } = HttpRouter.toWebHandler(app, { disableLogger: true });
   const response = await handler(request);
   await dispose();
   return response;
@@ -130,7 +139,8 @@ test('a valid batch is stored once with where it came from', async () => {
   expect(parcel?.origin.ip).toBe('203.0.113.9');
   expect(parcel?.origin.agent).toBe('probe');
   expect(parcel?.account.network).toBe('203.0.113.9');
-  expect(parcel?.account.day).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+  expect(parcel?.account.day).toBe('2026-11-20');
+  expect(parcel?.now).toBe(lateAfternoon);
   expect(decoded(parcel?.body)).toBe('payload');
 });
 
@@ -160,10 +170,10 @@ test('one browser that has used up its own day is refused while its network stil
 
 test('a refusal says how long until the day turns over', async () => {
   const full = recording({ batches: dayLimits.network.batches, bytes: 0 });
-  const response = await serve(full.store, fresh());
-  const wait = Number(response.headers.get('retry-after'));
-  expect(wait).toBeGreaterThanOrEqual(1);
-  expect(wait).toBeLessThanOrEqual(86_400);
+  const afternoon = await serve(full.store, fresh());
+  const lastSecond = await serve(full.store, fresh(), Date.UTC(2026, 10, 20, 23, 59, 59));
+  expect(afternoon.headers.get('retry-after')).toBe(String(8 * 3600));
+  expect(lastSecond.headers.get('retry-after')).toBe('1');
   expect(secondsToNextDay(Date.UTC(2026, 10, 20, 23, 59, 59))).toBe(1);
   expect(secondsToNextDay(Date.UTC(2026, 10, 20, 0, 0, 0))).toBe(86_400);
   expect(secondsToNextDay(Date.UTC(2026, 10, 20, 16, 0, 0))).toBe(8 * 3600);
