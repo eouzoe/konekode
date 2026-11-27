@@ -1,4 +1,4 @@
-import { type Layer } from './sound-tracks';
+import type { Layer } from './sound-tracks';
 
 interface Mixer {
   readonly context: AudioContext;

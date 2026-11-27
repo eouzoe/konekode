@@ -2,7 +2,8 @@ import { gsap } from 'gsap';
 import { Container, type RenderLayer, Sprite, type Texture } from 'pixi.js';
 
 import { half } from './frame';
-import { type Mark, type SceneLook, type Spot } from './protocol';
+
+import type { Mark, SceneLook, Spot } from './protocol';
 
 interface Lamp {
   readonly bulb: Sprite;
@@ -11,8 +12,8 @@ interface Lamp {
 }
 
 interface Props {
-  readonly lamps: readonly Lamp[];
-  readonly spirits: readonly Container[];
+  readonly lamps: ReadonlyArray<Lamp>;
+  readonly spirits: ReadonlyArray<Container>;
 }
 
 interface Lighting {
@@ -27,7 +28,7 @@ interface Placing {
 }
 
 interface Dressing extends Placing {
-  readonly ambient: gsap.core.Animation[];
+  readonly ambient: Array<gsap.core.Animation>;
   readonly layer: RenderLayer;
   readonly orb: Texture;
 }
@@ -66,7 +67,7 @@ const placeLamp = (placing: Placing, lamp: Lamp, spot: Spot): void => {
   lamp.dusk.position.set(at.across, below);
 };
 
-const arrangeLamps = (placing: Placing, lamps: readonly Lamp[]): void => {
+const arrangeLamps = (placing: Placing, lamps: ReadonlyArray<Lamp>): void => {
   for (const [index, spot] of placing.look.lamps.entries()) {
     const lamp = lamps[index];
     if (lamp !== undefined) {
@@ -75,7 +76,7 @@ const arrangeLamps = (placing: Placing, lamps: readonly Lamp[]): void => {
   }
 };
 
-const arrangeSpirits = (placing: Placing, spirits: readonly Container[]): void => {
+const arrangeSpirits = (placing: Placing, spirits: ReadonlyArray<Container>): void => {
   const { focusX, spirit } = placing.look;
   if (spirit === null) {
     return;
@@ -144,7 +145,7 @@ const buildOrb = (dressing: Dressing): Container => {
   return orb;
 };
 
-const spiritsOf = (dressing: Dressing): Container[] => {
+const spiritsOf = (dressing: Dressing): Array<Container> => {
   if (dressing.look.spirit === null) {
     return [];
   }

@@ -1,6 +1,6 @@
 import { createBirpc, type BirpcReturn } from 'birpc';
 import { gsap } from 'gsap';
-import { DOMAdapter, NoiseFilter, WebWorkerAdapter, type Sprite } from 'pixi.js';
+import { Assets, DOMAdapter, NoiseFilter, WebWorkerAdapter, type Sprite } from 'pixi.js';
 
 import { half } from './frame';
 import { flutter, lightNow, lightUp, type Lamp } from './props';
@@ -27,7 +27,9 @@ import {
   type World,
 } from './world';
 
+await import('pixi.js/unsafe-eval');
 DOMAdapter.set(WebWorkerAdapter);
+Assets.setPreferences({ preferWorkers: false });
 
 type Page = BirpcReturn<PageCalls, SceneCalls>;
 
@@ -246,6 +248,7 @@ const serve = ({ port, ...setup }: Start): void => {
       },
     },
   );
+  void ready.then(async () => page.mark('loaded'));
 };
 
 globalThis.addEventListener(

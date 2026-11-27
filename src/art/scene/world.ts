@@ -9,6 +9,7 @@ import {
   TilingSprite,
 } from 'pixi.js';
 
+import { files } from './files';
 import { cover, half, type Frame } from './frame';
 import { arrange, dress, type Props } from './props';
 import { type Motion, type SceneLook, type Start, type Time, times } from './protocol';
@@ -32,7 +33,7 @@ interface Overlays {
 }
 
 interface World extends Overlays {
-  readonly ambient: gsap.core.Animation[];
+  readonly ambient: Array<gsap.core.Animation>;
   readonly app: Application;
   readonly blur: BlurFilter;
   readonly camera: Container;
@@ -48,20 +49,13 @@ interface World extends Overlays {
 }
 
 const ground = '#0b0a09';
-const files = {
-  glow: '1999/extracted/singlebg__common__bg_2.png',
-  orb: '1999/edited/orb-soft.png',
-  scratches: '1999/extracted/singlebg__common__bg_heibianzhuangshi.webp',
-  splash: '1999/edited/rain-splash.webp',
-  vignette: '1999/extracted/singlebg__dialogue__dialogue_fullbg.png',
-};
 const atRest: Levels = { blur: 0, rain: 0.55, shade: 0.2 };
 const pushedAway: Levels = { blur: 14, rain: 0.2, shade: 0.62 };
 const glowLevel = { peak: 0.75, rest: 0.35 };
 const centred: Frame = { focusY: half, overscan: 1 };
 
-const wanted = (look: SceneLook): string[] => {
-  const optional: readonly (readonly [boolean, string])[] = [
+const wanted = (look: SceneLook): Array<string> => {
+  const optional: ReadonlyArray<readonly [boolean, string]> = [
     [look.glow, files.glow],
     [look.edge, files.vignette],
     [look.spirit !== null || look.lamps.length > 0, files.orb],

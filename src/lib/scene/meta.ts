@@ -1,8 +1,9 @@
 import { unlockedNow } from '@/lib/learner/engine';
 import { track } from '@/lib/record/current';
-import { type Beat } from '@/lib/unit/format';
 
 import { beatSchema, type BeatMeta } from './machine';
+
+import type { Beat } from '@konekode/contracts/unit';
 
 const readMeta = (beat: HTMLElement): BeatMeta => {
   const { after, expect, id = '', wait = '', when = '' } = beat.dataset;

@@ -1,6 +1,7 @@
 import { createBirpc, type BirpcReturn } from 'birpc';
 
 import { refsRoute } from '../refs';
+
 import type { PageCalls, SceneCalls, SceneLook, Screen, Spot, Start, Time } from './protocol';
 
 type Stage = BirpcReturn<SceneCalls, PageCalls>;
@@ -12,7 +13,7 @@ interface StageOptions {
   readonly focusX?: number;
   readonly focusY?: number;
   readonly glow?: boolean;
-  readonly lamps?: readonly Spot[];
+  readonly lamps?: ReadonlyArray<Spot>;
   readonly overscan?: number;
   readonly scene?: string;
   readonly spirit?: Spot;
@@ -86,18 +87,15 @@ const launch = (host: HTMLElement, options: StageOptions): MessagePort => {
   return channel.port1;
 };
 
-const recordOn = (host: HTMLElement): PageCalls => ({
+const recordOn = (host: HTMLElement, page?: PageCalls): PageCalls => ({
   mark: (name) => {
     host.dataset.mark = name;
+    page?.mark(name);
   },
 });
 
-const createStage = (
-  host: HTMLElement,
-  options: StageOptions = {},
-  page: PageCalls = recordOn(host),
-): Stage => {
-  const stage = connect(launch(host, options), page);
+const createStage = (host: HTMLElement, options: StageOptions = {}, page?: PageCalls): Stage => {
+  const stage = connect(launch(host, options), recordOn(host, page));
   new ResizeObserver(() => {
     void stage.resize.asEvent(screenOf(host));
   }).observe(host);

@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./*": "./src/*.ts",
-    "./base.css": "./src/base.css"
+    "./base.css": "./src/base.css",
+    "./home.css": "./src/home.css"
   },
   "dependencies": {
     "@effect/ui": "catalog:",

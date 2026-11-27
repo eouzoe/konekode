@@ -18,10 +18,7 @@ const structured = async (page: Page): Promise<Record<string, unknown>> => {
 test('the home page says what the site is and leads to the first unit', async ({ page }) => {
   await page.goto(pages.home.path);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(site['home.heading']);
-  await expect(page.getByText(site['home.lead'])).toBeVisible();
-  await expect(page.getByText(site['home.enterNote'])).toBeVisible();
-  await expect(page.getByText(site['home.now'])).toBeVisible();
-  await page.getByRole('link', { name: site['home.enter'] }).click();
+  await page.getByRole('link', { name: site['home.start'] }).click();
   await expect(page).toHaveURL(new RegExp(`${pages.start.path}$`, 'u'));
 });
 

@@ -1,7 +1,14 @@
-import { audioPath, tracks, type Gate, type Layer, type Track } from './sound-tracks';
+import {
+  audioPath,
+  cuesOf,
+  tracks,
+  type Cue,
+  type Gate,
+  type Layer,
+  type Track,
+} from './sound-tracks';
 import { silence, voiceOf, type Voice } from './sound-voice';
 
-type Cue = 'click' | 'correct' | 'enter' | 'wrong';
 type Switch = 'off' | 'on';
 
 interface Waiting {
@@ -11,8 +18,8 @@ interface Waiting {
 
 interface Playing {
   readonly track: Track;
-  readonly voices: Voice[];
-  readonly waiting: Waiting[];
+  readonly voices: Array<Voice>;
+  readonly waiting: Array<Waiting>;
 }
 
 interface Graph {
@@ -22,14 +29,13 @@ interface Graph {
 }
 
 interface Probe {
-  readonly cues: readonly Cue[];
+  readonly cues: ReadonlyArray<Cue>;
   readonly level: number;
   readonly music: Track | null;
   readonly running: boolean;
   readonly switch: Switch;
 }
 
-const cues: readonly Cue[] = ['click', 'correct', 'enter', 'wrong'];
 const level = { cue: 0.8 };
 const leaving = 0.9;
 const kept = { cues: 40, samples: 2048 };
@@ -39,27 +45,41 @@ const gestures = ['pointerdown', 'keydown'] as const;
 const sound: {
   graph: Graph | null;
   playing: Playing | null;
-  played: Cue[];
+  played: Array<Cue>;
   switch: Switch;
   wanted: Track | null;
 } = { graph: null, played: [], playing: null, switch: 'on', wanted: null };
 
-const buffers = new Map<string, Promise<AudioBuffer>>();
+const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
 const urlOf = (name: string): string => new URL(audioPath(name), location.href).href;
 
-const load = (graph: Graph, name: string): Promise<AudioBuffer> => {
+const load = (graph: Graph, name: string): Promise<AudioBuffer | null> => {
   const cached = buffers.get(name);
   if (cached !== undefined) {
     return cached;
   }
-  const fetchAndDecode = async (): Promise<AudioBuffer> => {
-    const response = await fetch(urlOf(name), { priority: 'low' });
-    return graph.context.decodeAudioData(await response.arrayBuffer());
+  const fetchAndDecode = async (): Promise<AudioBuffer | null> => {
+    try {
+      const response = await fetch(urlOf(name), { priority: 'low' });
+      return await graph.context.decodeAudioData(await response.arrayBuffer());
+    } catch {
+      performance.mark(`sound:missing:${name}`);
+      return null;
+    }
   };
   const loading = fetchAndDecode();
   buffers.set(name, loading);
   return loading;
+};
+
+const loadCues = (graph: Graph): void => {
+  if (sound.wanted === null) {
+    return;
+  }
+  for (const name of cuesOf[sound.wanted]) {
+    void load(graph, name);
+  }
 };
 
 const stateOf = (): string => {
@@ -104,6 +124,9 @@ const join = (graph: Graph, playing: Playing, pair: Waiting): void => {
 
 const arrive = async (graph: Graph, playing: Playing, layer: Layer): Promise<void> => {
   const buffer = await load(graph, layer.file);
+  if (buffer === null) {
+    return;
+  }
   performance.mark(`sound:decoded:${layer.file}`);
   if (sound.playing === playing) {
     join(graph, playing, { buffer, layer });
@@ -165,19 +188,28 @@ const prepare = (): Graph => {
     }
     mark();
   });
-  for (const name of cues) {
-    void load(graph, name);
-  }
+  loadCues(graph);
   return graph;
 };
 
+const wake = async (graph: Graph): Promise<void> => {
+  try {
+    await graph.context.resume();
+  } catch {
+    performance.mark('sound:unavailable');
+  }
+};
+
 const unlock = (): void => {
-  void prepare().context.resume();
+  void wake(prepare());
   mark();
 };
 
 const music = (track: Track): void => {
   sound.wanted = track;
+  if (sound.graph !== null) {
+    loadCues(sound.graph);
+  }
   startMusic();
 };
 
@@ -196,6 +228,9 @@ const record = (name: Cue): void => {
 
 const sounding = async (graph: Graph, name: Cue): Promise<number> => {
   const buffer = await load(graph, name);
+  if (buffer === null) {
+    return 0;
+  }
   const gain = graph.context.createGain();
   gain.gain.value = level.cue;
   gain.connect(graph.master);
@@ -244,7 +279,7 @@ for (const type of gestures) {
   document.addEventListener(type, unlock, { capture: true, signal: firstGesture.signal });
 }
 if (sound.switch === 'on') {
-  void prepare().context.resume();
+  void wake(prepare());
 }
 mark();
 

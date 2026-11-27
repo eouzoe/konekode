@@ -1,6 +1,5 @@
-import { type Sprite } from 'pixi.js';
-
-import { type Size } from './protocol';
+import type { Size } from './protocol';
+import type { Sprite } from 'pixi.js';
 
 interface Frame {
   readonly focusX?: number;

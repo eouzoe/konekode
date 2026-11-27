@@ -1,25 +1,29 @@
 ---
-import '@/styles/home.css';
+import '@konekode/views/home.css';
 
-import { preloads } from '@/art/sound-tracks';
 import Base from '@/layouts/base.astro';
-import { pages, websiteData } from '@/lib/site/pages';
+import { pages, site, websiteData } from '@/lib/site/pages';
 
 const data = websiteData(Astro.site ?? Astro.url);
-const sounds = preloads('home', ['enter', 'click']);
 ---
 
 <Base page={pages.home} data={data} full>
-  {sounds.map((href) => <link rel="preload" href={href} as="fetch" crossorigin="anonymous" />)}
   <div class="home">
     <div class="scene" data-role="scene"></div>
-    <h1 class="unseen">貓貓競程</h1>
-    <button class="account" data-role="around" type="button">登入</button>    <div class="actions" data-role="around">
-      <a class="start" href={pages.start.path} data-prepare>開始</a>
+    <h1 class="unseen">{site['home.heading']}</h1>
+    <button class="account" data-role="around" type="button">{site['home.account']}</button>
+    <div class="actions" data-role="around">
+      <a class="start" href={pages.start.path} data-prepare>{site['home.start']}</a>
     </div>
   </div>
 </Base>
 
 <script>
-  import '@/art/title';
+  addEventListener(
+    'load',
+    () => {
+      void import('@/art/title');
+    },
+    { once: true },
+  );
 </script>

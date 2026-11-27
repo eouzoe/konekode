@@ -6,7 +6,7 @@ interface Section {
   readonly title: string;
 }
 
-const sections: readonly Section[] = [
+const sections: ReadonlyArray<Section> = [
   { id: 'see-template', number: '01', title: '程式的樣子' },
   { id: 'demo-intro', number: '02', title: 'vim 練習' },
   { id: 'do-things', number: '03', title: '輸出' },

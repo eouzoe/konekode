@@ -1,5 +1,4 @@
 import { diagnose } from '@/lib/run/diagnose';
-import { type Check } from '@/lib/scene/machine';
 
 import { inSequence, wait } from './dom';
 import { tokensOf } from './drill-flow';
@@ -8,6 +7,8 @@ import { listen } from './turn';
 import { keysNow, messages, press, runs, type Beat } from './unit';
 import { parts } from './unit-parts';
 import { shownMode } from './unit-view';
+
+import type { Check } from '@/lib/scene/machine';
 
 interface Turn {
   readonly beat: Beat;

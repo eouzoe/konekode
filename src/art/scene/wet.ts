@@ -1,10 +1,10 @@
 import { Container, DisplacementFilter, Rectangle, Sprite, Texture } from 'pixi.js';
 
-import { type SceneLook } from './protocol';
+import type { SceneLook } from './protocol';
 
 interface Splashes {
-  readonly frames: readonly Texture[];
-  readonly sprites: readonly Sprite[];
+  readonly frames: ReadonlyArray<Texture>;
+  readonly sprites: ReadonlyArray<Sprite>;
   clock: number;
 }
 
@@ -90,7 +90,7 @@ const mapOver = (puddle: Sprite): Sprite => {
   return map;
 };
 
-const framesOf = (atlas: Texture): Texture[] =>
+const framesOf = (atlas: Texture): Array<Texture> =>
   Array.from(Array.from({ length: sheet.count }).keys(), (index) => {
     const across = (index % sheet.columns) * sheet.width;
     const down = Math.floor(index / sheet.columns) * sheet.height;

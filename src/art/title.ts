@@ -73,8 +73,10 @@ const open = (home: HTMLElement, host: HTMLElement): Stage => {
       wet: 0.802,
     },
     {
-      mark: () => {
-        actor.send({ type: 'REVEALING' });
+      mark: (name) => {
+        if (name === 'revealing') {
+          actor.send({ type: 'REVEALING' });
+        }
       },
     },
   );
@@ -136,6 +138,8 @@ if (import.meta.env.DEV || import.meta.env.PUBLIC_MODE === 'dev') {
 const home = document.querySelector<HTMLElement>('.home');
 const host = document.querySelector<HTMLElement>('[data-role="scene"]');
 if (home !== null && host !== null) {
+  home.dataset.dressed = '';
+  gsap.set(around, { animation: 'none' });
   listenSound(home);
   const stage = open(home, host);
   listenStart(home, stage);

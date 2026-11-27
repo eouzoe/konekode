@@ -2,7 +2,7 @@ const times = ['day', 'dusk', 'overcast', 'night'] as const;
 type Time = (typeof times)[number];
 
 type Motion = 'full' | 'reduced';
-type Mark = 'revealing';
+type Mark = 'loaded' | 'revealing';
 
 const timed = (motion: Motion, seconds: number): number => {
   if (motion === 'reduced') {
@@ -23,7 +23,7 @@ interface SceneLook {
   readonly focusX: number;
   readonly focusY: number;
   readonly glow: boolean;
-  readonly lamps: readonly Spot[];
+  readonly lamps: ReadonlyArray<Spot>;
   readonly overscan: number;
   readonly scenes: Readonly<Record<Time, string>>;
   readonly spirit: Spot | null;
