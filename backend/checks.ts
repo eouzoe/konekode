@@ -1,4 +1,4 @@
-import { Schema } from 'effect';
+import { Option, Schema } from 'effect';
 
 import { bodyLimit, closedFor, intakePath, status } from './limits';
 
@@ -19,6 +19,7 @@ type Fetch = (input: Request) => Promise<Response>;
 
 interface Probe {
   readonly fetch: Fetch;
+  readonly githubToken?: string | undefined;
   readonly target: Target;
 }
 
@@ -199,12 +200,53 @@ const isolation = async (probe: Probe): Promise<Array<Result>> => {
   return [...results, await apiResult(probe)];
 };
 
-const github = async (probe: Probe): Promise<Array<Result>> => {
-  const response = await probe.fetch(new Request(repository));
-  const listed = Schema.decodeUnknownSync(branchList)(await response.json());
-  const names = listed.map((branch) => branch.name).toSorted();
-  return [result('GitHub 分支', names.join(',') === branches, `有：${shown(names)}`)];
+const branchCheck = 'GitHub 分支';
+const githubRefusal = Schema.Struct({ message: Schema.String });
+
+const githubHeaders = (probe: Probe): Record<string, string> => {
+  if (probe.githubToken === undefined || probe.githubToken === '') {
+    return {};
+  }
+  return { authorization: `Bearer ${probe.githubToken}` };
 };
+
+const refusalOf = (body: unknown): string =>
+  Option.match(Schema.decodeUnknownOption(githubRefusal)(body), {
+    onNone: () => '沒有說明',
+    onSome: (refusal) => refusal.message,
+  });
+
+const github = async (probe: Probe): Promise<Array<Result>> => {
+  const response = await probe.fetch(new Request(repository, { headers: githubHeaders(probe) }));
+  const body: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    return [result(branchCheck, false, `GitHub 回 ${String(response.status)}：${refusalOf(body)}`)];
+  }
+  return Option.match(Schema.decodeUnknownOption(branchList)(body), {
+    onNone: () => [result(branchCheck, false, 'GitHub 回的不是分支清單')],
+    onSome: (listed) => {
+      const names = listed.map((branch) => branch.name).toSorted();
+      return [result(branchCheck, names.join(',') === branches, `有：${shown(names)}`)];
+    },
+  });
+};
+
+const reasonOf = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+};
+
+const guarded =
+  (name: string, check: (probe: Probe) => Promise<Array<Result>>) =>
+  async (probe: Probe): Promise<Array<Result>> => {
+    try {
+      return await check(probe);
+    } catch (error) {
+      return [result(name, false, `檢查本身出錯：${reasonOf(error)}`)];
+    }
+  };
 
 const dashboardOnly = [
   '追蹤：面板上一次上傳從 Site 到 Api 到 D1',
@@ -215,7 +257,13 @@ const dashboardOnly = [
 ];
 
 const checkAll = async (probe: Probe): Promise<Array<Result>> => {
-  const checks = [site, assets, intake, isolation, github];
+  const checks = [
+    guarded('頁面', site),
+    guarded('靜態檔', assets),
+    guarded('上傳', intake),
+    guarded('只轉發入口', isolation),
+    guarded(branchCheck, github),
+  ];
   const groups = await Promise.all(checks.map((check) => check(probe)));
   return groups.flat();
 };

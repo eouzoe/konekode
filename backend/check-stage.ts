@@ -54,7 +54,11 @@ const targetOf = (stage: string, recorded: Outputs, version: string | null): Tar
 if (import.meta.main) {
   const [stage = '', version] = Bun.argv.slice(argumentsStart);
   const target = targetOf(stage, await outputsOf(stage), optional(version));
-  const results = await checkAll({ fetch: (input) => fetch(input), target });
+  const results = await checkAll({
+    fetch: (input) => fetch(input),
+    githubToken: process.env.GITHUB_TOKEN,
+    target,
+  });
   process.stdout.write(`${report(results)}\n`);
   if (!results.every((each) => each.passed)) {
     process.exitCode = 1;

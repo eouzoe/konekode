@@ -139,6 +139,49 @@ test('prod passes with the intake closed for a year and the pages open to search
   expect(results.map((each) => each.name)).toContain('入口關著的 Retry-After');
 });
 
+const githubAnswering =
+  (answer: () => Promise<Response>, seen: Array<Request> = []) =>
+  async (request: Request): Promise<Response> => {
+    seen.push(request);
+    if (request.url.startsWith('https://api.github.com/')) {
+      return await answer();
+    }
+    return await fakeFetch({ intake: intakeOpen, live: false })(request);
+  };
+
+const limited = (): Promise<Response> =>
+  Promise.resolve(Response.json({ message: 'API rate limit exceeded' }, { status: 403 }));
+
+test('a refused GitHub answer fails only the branch check and says what GitHub said', async () => {
+  const results = await checkAll({ fetch: githubAnswering(limited), target: target(false) });
+  expect(failed(results)).toEqual(['GitHub 分支']);
+  expect(report(results)).toContain('✘ GitHub 分支：GitHub 回 403：API rate limit exceeded');
+  expect(results.map((each) => each.name)).toContain('上傳 204');
+});
+
+test('a check that throws is reported as failed while every other check still runs', async () => {
+  const unreachable = (): Promise<Response> => Promise.reject(new Error('connection reset'));
+  const results = await checkAll({ fetch: githubAnswering(unreachable), target: target(false) });
+  expect(failed(results)).toEqual(['GitHub 分支']);
+  expect(report(results)).toContain('connection reset');
+  expect(results.map((each) => each.name)).toContain('版本');
+});
+
+test('a GitHub token goes to GitHub and to nothing else', async () => {
+  const seen: Array<Request> = [];
+  const branchesListed = (): Promise<Response> =>
+    Promise.resolve(Response.json([{ name: 'dev' }, { name: 'main' }]));
+  const results = await checkAll({
+    fetch: githubAnswering(branchesListed, seen),
+    githubToken: 'token-for-test',
+    target: target(false),
+  });
+  expect(failed(results)).toEqual([]);
+  const carrying = seen.filter((request) => request.headers.has('authorization'));
+  expect(carrying.map((request) => new URL(request.url).hostname)).toEqual(['api.github.com']);
+  expect(carrying[0]?.headers.get('authorization')).toBe('Bearer token-for-test');
+});
+
 test('a missing header and an open intake on prod are named in the report', async () => {
   const shape = { dropHeader: 'x-frame-options', intake: intakeOpen, live: true };
   const results = await checkAll({ fetch: fakeFetch(shape), target: target(true) });
