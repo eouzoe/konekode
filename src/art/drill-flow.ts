@@ -1,7 +1,7 @@
+import { paced } from '@konekode/views/motion';
 import { gsap } from 'gsap';
 
 import { inSequence, wait } from './dom';
-import { paced } from './motion';
 import {
   beats,
   createBuffer,

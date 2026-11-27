@@ -1,4 +1,4 @@
-import { refsRoute } from './refs';
+import { refsRoute } from './scene/refs';
 
 type Track = 'home' | 'study';
 type Cue = 'click' | 'correct' | 'enter' | 'wrong';

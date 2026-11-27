@@ -1,6 +1,6 @@
 import { createBirpc, type BirpcReturn } from 'birpc';
 
-import { refsRoute } from '../refs';
+import { refsRoute } from './refs';
 
 import type { PageCalls, SceneCalls, SceneLook, Screen, Spot, Start, Time } from './protocol';
 

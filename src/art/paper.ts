@@ -1,7 +1,7 @@
+import { paced } from '@konekode/views/motion';
 import { gsap } from 'gsap';
 
 import { createCode } from './code';
-import { paced } from './motion';
 import { createBuffer, template, type Buffer } from './unit';
 
 type Mode = Buffer['mode'];

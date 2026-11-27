@@ -3,9 +3,9 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 import { homeAssets } from './home-assets';
-import { refsRoute } from './refs';
+import { refsRoute } from './scene/refs';
 
-const shipped = join(import.meta.dir, '../../public', refsRoute);
+const shipped = join(import.meta.dir, '../../../public', refsRoute);
 
 const walk = (folder: string): Array<string> =>
   readdirSync(folder, { withFileTypes: true }).flatMap((entry) =>
@@ -13,11 +13,7 @@ const walk = (folder: string): Array<string> =>
   );
 
 const styleAssets = (): Array<string> =>
-  [
-    ...readFileSync(join(import.meta.dir, '../../packages/views/src/home.css'), 'utf8').matchAll(
-      /url\('([^']+)'\)/gu,
-    ),
-  ]
+  [...readFileSync(join(import.meta.dir, 'home.css'), 'utf8').matchAll(/url\('([^']+)'\)/gu)]
     .map((match) => match[1] ?? '')
     .filter((href) => href.startsWith(`${refsRoute}/`))
     .map((href) => href.slice(refsRoute.length + 1));

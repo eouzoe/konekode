@@ -1,8 +1,9 @@
+import { cue } from '@konekode/views/sound';
+
 import { diagnose } from '@/lib/run/diagnose';
 
 import { inSequence, wait } from './dom';
 import { tokensOf } from './drill-flow';
-import { cue } from './sound';
 import { listen } from './turn';
 import { keysNow, messages, press, runs, type Beat } from './unit';
 import { parts } from './unit-parts';

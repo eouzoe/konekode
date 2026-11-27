@@ -1,17 +1,16 @@
 import { gsap } from 'gsap';
 import { createActor } from 'xstate';
 
-import { wait } from './dom';
 import { calm, onMotion, paced } from './motion';
 import { createStage, storefront, type Stage } from './scene/stage';
 import { cue, leave, music, open as openSound, probe } from './sound';
 import { titleMachine } from './title-machine';
+import { wait } from './wait';
 
 const around = '[data-role="around"]';
 const reveal = { duration: 0.6, ease: 'sine.out', opacity: 1 };
 const view: { fade: gsap.core.Tween | null } = { fade: null };
 const actor = createActor(titleMachine);
-const artUnit = '/art/unit';
 const fadeAround = 0.4;
 const guard = 3.2;
 
@@ -107,13 +106,13 @@ const enter = async (home: HTMLElement, stage: Stage, start: HTMLAnchorElement):
   go();
 };
 
-const listenStart = (home: HTMLElement, stage: Stage): void => {
+const listenStart = (home: HTMLElement, stage: Stage, unitHref: string | undefined): void => {
   const start = home.querySelector<HTMLAnchorElement>('.start');
   if (start === null) {
     return;
   }
-  if (import.meta.env.DEV) {
-    start.href = artUnit;
+  if (unitHref !== undefined) {
+    start.href = unitHref;
   }
   start.addEventListener('click', (event) => {
     if (!plain(event) || home.dataset.leaving === 'true') {
@@ -131,18 +130,25 @@ const listenSound = (home: HTMLElement): void => {
   });
 };
 
-if (import.meta.env.DEV || import.meta.env.PUBLIC_MODE === 'dev') {
-  Object.assign(globalThis, { soundProbe: probe });
+interface TitleOptions {
+  readonly probe: boolean;
+  readonly unitHref?: string;
 }
 
-const home = document.querySelector<HTMLElement>('.home');
-const host = document.querySelector<HTMLElement>('[data-role="scene"]');
-if (home !== null && host !== null) {
+const startTitle = async (options: TitleOptions): Promise<void> => {
+  if (options.probe) {
+    Object.assign(globalThis, { soundProbe: probe });
+  }
+  const home = document.querySelector<HTMLElement>('.home');
+  const host = document.querySelector<HTMLElement>('[data-role="scene"]');
+  if (home === null || host === null) {
+    return;
+  }
   home.dataset.dressed = '';
   gsap.set(around, { animation: 'none' });
   listenSound(home);
   const stage = open(home, host);
-  listenStart(home, stage);
+  listenStart(home, stage, options.unitHref);
   if (!calm()) {
     gsap.set(around, { opacity: 0 });
     skipOnInput();
@@ -153,4 +159,6 @@ if (home !== null && host !== null) {
   } finally {
     actor.send({ type: 'DONE' });
   }
-}
+};
+
+export { startTitle, type TitleOptions };

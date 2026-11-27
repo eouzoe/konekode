@@ -6,6 +6,8 @@ import { expect, test, type Page } from './test';
 const found = 200;
 const phone = { height: 780, width: 360 };
 const heavy = /compiler|llvm|\.wasm|std\.pch/u;
+const second = 1000;
+const sceneSeconds = 20;
 
 const head = async (page: Page, selector: string, attribute: string): Promise<string> =>
   (await page.locator(selector).getAttribute(attribute)) ?? '';
@@ -20,6 +22,15 @@ test('the home page says what the site is and leads to the first unit', async ({
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(site['home.heading']);
   await page.getByRole('link', { name: site['home.start'] }).click();
   await expect(page).toHaveURL(new RegExp(`${pages.start.path}$`, 'u'));
+});
+
+test('the home page loads its scene under the site security policy', async ({ page }) => {
+  await page.goto(pages.home.path);
+  await expect
+    .poll(async () => page.locator('[data-role="scene"]').getAttribute('data-mark'), {
+      timeout: sceneSeconds * second,
+    })
+    .toMatch(/^(?:loaded|revealing)$/u);
 });
 
 test('the home page fits a phone without scrolling sideways', async ({ page }) => {

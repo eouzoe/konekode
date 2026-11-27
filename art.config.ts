@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import sirv from 'sirv';
 
-import { refsRoute } from './src/art/refs';
+import { refsRoute } from './packages/views/src/scene/refs';
 
 import type { AstroIntegration } from 'astro';
 

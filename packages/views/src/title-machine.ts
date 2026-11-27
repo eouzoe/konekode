@@ -1,6 +1,8 @@
+import { Schema } from 'effect';
 import { createMachine } from 'xstate';
 
-import { object } from '@/lib/zod';
+const signal = <Name extends string>(name: Name) =>
+  Schema.toStandardSchemaV1(Schema.Struct({ type: Schema.Literal(name) }));
 
 const fallback = 4000;
 
@@ -9,9 +11,9 @@ const titleMachine = createMachine({
   initial: 'lighting',
   schemas: {
     events: {
-      DONE: object({}),
-      REVEALING: object({}),
-      SKIP: object({}),
+      DONE: signal('DONE'),
+      REVEALING: signal('REVEALING'),
+      SKIP: signal('SKIP'),
     },
   },
   states: {

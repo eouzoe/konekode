@@ -1,10 +1,11 @@
+import { createStage } from '@konekode/views/scene/stage';
+
 import { createDialogue } from './dialogue';
 import { element } from './dom';
 import { createDrillFlow } from './drill-flow';
 import { createKeyboard } from './keyboard';
 import { createPaper } from './paper';
 import { createRunFlow } from './run-flow';
-import { createStage } from './scene/stage';
 
 const sheet = element('sheet');
 const modeLine = element('mode');

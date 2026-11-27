@@ -27,7 +27,7 @@ import {
   type World,
 } from './world';
 
-await import('pixi.js/unsafe-eval');
+const evalFree = import('pixi.js/unsafe-eval');
 DOMAdapter.set(WebWorkerAdapter);
 Assets.setPreferences({ preferWorkers: false });
 
@@ -199,6 +199,7 @@ const resize = (world: World, screen: Screen): void => {
 };
 
 const start = async (setup: Setup): Promise<World> => {
+  await evalFree;
   const world = await build(setup);
   animate(world);
   return world;

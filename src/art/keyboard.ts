@@ -1,3 +1,4 @@
+import { paced } from '@konekode/views/motion';
 import { gsap } from 'gsap';
 
 import {
@@ -9,8 +10,6 @@ import {
   spaceKey,
   type KeyCap,
 } from '@/lib/typing/keyboard';
-
-import { paced } from './motion';
 
 interface Cap {
   readonly id: string;

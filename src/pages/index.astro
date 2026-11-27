@@ -19,10 +19,18 @@ const data = websiteData(Astro.site ?? Astro.url);
 </Base>
 
 <script>
+  const begin = async (): Promise<void> => {
+    const { startTitle } = await import('@konekode/views/title');
+    await startTitle({
+      probe: import.meta.env.DEV || import.meta.env.PUBLIC_MODE === 'dev',
+      ...(import.meta.env.DEV ? { unitHref: '/art/unit' } : {}),
+    });
+  };
+
   addEventListener(
     'load',
     () => {
-      void import('@/art/title');
+      void begin();
     },
     { once: true },
   );

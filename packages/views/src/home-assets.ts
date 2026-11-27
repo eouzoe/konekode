@@ -1,5 +1,5 @@
-import { refsRoute } from './refs';
 import { files } from './scene/files';
+import { refsRoute } from './scene/refs';
 import { storefront } from './scene/stage';
 import { preloads } from './sound-tracks';
 

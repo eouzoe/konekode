@@ -1,4 +1,4 @@
-import { gsap } from 'gsap';
+import { wait } from '@konekode/views/wait';
 
 const latinRun = /(?<latin>[A-Za-z0-9<>"'$.;:{}()\\+#-]+[。！？，]?)/u;
 const alternate = 2;
@@ -9,14 +9,6 @@ const element = (id: string): HTMLElement => {
     throw new Error(`missing #${id}`);
   }
   return found;
-};
-
-const wait = async (seconds: number): Promise<void> => {
-  const { promise, resolve } = Promise.withResolvers<null>();
-  gsap.delayedCall(seconds, () => {
-    resolve(null);
-  });
-  await promise;
 };
 
 const inSequence = async <Item>(

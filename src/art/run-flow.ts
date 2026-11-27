@@ -1,11 +1,11 @@
+import { paced } from '@konekode/views/motion';
 import { gsap } from 'gsap';
 
 import { element } from './dom';
-import { paced } from './motion';
 import { outputOf, type Beat } from './unit';
 
 import type { Paper } from './paper';
-import type { Stage } from './scene/stage';
+import type { Stage } from '@konekode/views/scene/stage';
 
 interface RunParts {
   readonly paper: Paper;

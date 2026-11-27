@@ -1,9 +1,9 @@
+import { calm, onMotion } from '@konekode/views/motion';
+import { cue, music, probe } from '@konekode/views/sound';
 import { gsap } from 'gsap';
 
 import { isFullScreen, watchFullScreen } from '@/lib/scene/conditions';
 
-import { calm, onMotion } from './motion';
-import { cue, music, probe } from './sound';
 import { beats, type Beat } from './unit';
 import { sceneAt, type Scene } from './unit-actor';
 import { listenMoves } from './unit-input';
